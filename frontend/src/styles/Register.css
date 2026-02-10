@@ -1,0 +1,9 @@
+.register-container {
+  flex-direction: row-reverse;
+}
+
+@media (max-width: 968px) {
+  .register-container {
+    flex-direction: column;
+  }
+}
