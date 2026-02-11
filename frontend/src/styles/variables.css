@@ -1,18 +1,57 @@
 :root {
-  --primary-color: #D4813F;
-  --secondary-color: #8B4513;
-  --accent-color: #F4A460;
+  /* ========== PRIMARY PALETTE ========== */
+  /* Browns - Main Brand Identity */
+  --primary-color: #C17D4A;
+  --primary-dark: #A0623A;
+  --primary-light: #D4813F;
+  --secondary-color: #A0623A;
+  
+  /* Beige/Cream - Backgrounds */
   --background-color: #FFF8DC;
+  --background-secondary: #F5E6D3;
+  --card-background: #FAFAF9;
+  
+  /* ========== TEXT COLORS ========== */
   --text-color: #2C1810;
-  --text-secondary: #57534E;
+  --text-secondary: #5D4E37;
   --text-light: #78716C;
-  --border-color: #E7E5E4;
-  --input-bg: #FAFAF9;
   --white: #FFFFFF;
-  --success: #10B981;
-  --error: #EF4444;
+  
+  /* ========== UI ELEMENTS ========== */
+  --border-color: #D6CFC7;
+  --border-light: #E8E5E1;
+  --shadow-color: rgba(44, 24, 16, 0.1);
+  
+  /* ========== STATUS COLORS ========== */
+  --status-pending: #F59E0B;
+  --status-approved: #10B981;
+  --status-rejected: #EF4444;
+  
+  /* ========== SPACING ========== */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  
+  /* ========== BORDER RADIUS ========== */
+  --radius-sm: 5px;
+  --radius-md: 10px;
+  --radius-lg: 15px;
+  --radius-xl: 20px;
+  
+  /* ========== SHADOWS ========== */
+  --shadow-sm: 0 2px 4px var(--shadow-color);
+  --shadow-md: 0 4px 8px var(--shadow-color);
+  --shadow-lg: 0 8px 16px var(--shadow-color);
+  
+  /* ========== TRANSITIONS ========== */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
 }
 
+/* ========== GLOBAL RESET ========== */
 * {
   margin: 0;
   padding: 0;
@@ -20,7 +59,12 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
   color: var(--text-color);
   background-color: var(--background-color);
-}
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+} 

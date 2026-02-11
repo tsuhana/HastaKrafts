@@ -31,4 +31,61 @@ API.interceptors.response.use(
   }
 );
 
+// ==================== AUTH ====================
+export const authAPI = {
+  login: (data) => API.post('/auth/login', data),
+  register: (data) => API.post('/auth/register/buyer', data),
+  registerSeller: (data) => API.post('/auth/register/seller', data),
+  forgotPassword: (data) => API.post('/auth/forgot-password', data),
+  verifyOTP: (data) => API.post('/auth/verify-otp', data),
+  resetPassword: (data) => API.post('/auth/reset-password', data),
+  getCurrentUser: () => API.get('/auth/me'),
+};
+
+// ==================== PRODUCTS ====================
+export const productAPI = {
+  getAllProducts: (params) => API.get('/products', { params }),
+  getProductById: (id) => API.get(`/products/${id}`),
+  getCategories: () => API.get('/products/categories'),
+  
+  // Seller only
+  createProduct: (formData) => API.post('/products', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  getSellerProducts: () => API.get('/products/seller/my-products'),
+  updateProduct: (id, formData) => API.put(`/products/${id}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  deleteProduct: (id) => API.delete(`/products/${id}`),
+};
+
+// ==================== ADMIN ====================
+export const adminAPI = {
+  getDashboardStats: () => API.get('/admin/stats'),
+  
+  // Sellers
+  getPendingSellers: () => API.get('/admin/sellers/pending'),
+  getAllSellers: () => API.get('/admin/sellers'),
+  approveSeller: (id) => API.post(`/admin/sellers/${id}/approve`),
+  rejectSeller: (id, data) => API.post(`/admin/sellers/${id}/reject`, data),
+  
+  // Products
+  getPendingProducts: () => API.get('/admin/products/pending'),
+  approveProduct: (id) => API.post(`/admin/products/${id}/approve`),
+  rejectProduct: (id, data) => API.post(`/admin/products/${id}/reject`, data),
+  
+  // Users
+  getAllUsers: () => API.get('/admin/users'),
+};
+
+// ==================== USER ====================
+export const userAPI = {
+  getProfile: () => API.get('/users/profile'),
+  updateProfile: (data) => API.put('/users/profile', data),
+  changePassword: (data) => API.put('/users/change-password', data),
+  uploadAvatar: (formData) => API.post('/users/upload-avatar', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+};
+
 export default API;

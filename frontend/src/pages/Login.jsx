@@ -29,7 +29,12 @@ const Login = () => {
         localStorage.setItem('token', response.data.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.data.user));
         
-        if (response.data.data.user.role === 'seller') {
+        // Redirect based on role
+        const userRole = response.data.data.user.role;
+        
+        if (userRole === 'admin') {
+          navigate('/admin/dashboard');
+        } else if (userRole === 'seller') {
           navigate('/seller/dashboard');
         } else {
           navigate('/');
