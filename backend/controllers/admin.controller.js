@@ -52,7 +52,7 @@ const getPendingSellers = async (req, res) => {
       include: [
         {
           model: db.User,
-          as: "user",
+          as: "user", // ✅ LOWERCASE - matches model definition
           attributes: ["user_id", "full_name", "email", "phone"],
         },
       ],
@@ -154,20 +154,20 @@ const getPendingProducts = async (req, res) => {
       include: [
         {
           model: db.Seller,
-          as: "seller",
+          as: "seller", 
           attributes: ["seller_id", "shop_name"],
           include: [
             {
               model: db.User,
-              as: "user",
+              as: "user", 
               attributes: ["full_name", "email"],
             },
           ],
         },
         {
           model: db.Category,
-          as: "category",
-          attributes: ["category_id", "name"],
+          as: "category", 
+          attributes: ["category_id", "name", "icon"],
         },
       ],
       order: [["created_at", "ASC"]],
@@ -289,7 +289,7 @@ const getAllSellers = async (req, res) => {
       include: [
         {
           model: db.User,
-          as: "user",
+          as: "user", 
           attributes: ["user_id", "full_name", "email", "phone"],
         },
       ],

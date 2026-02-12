@@ -1,13 +1,13 @@
-/* Fix for navbar covering content */
 .app {
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
 }
 
-main {
+.main-content {
   flex: 1;
-   padding-top: 78px;
+  display: flex;
+  flex-direction: column;
 }
 
 #root {

@@ -69,7 +69,7 @@ const AdminDashboard = () => {
     if (!reason) return;
 
     try {
-      const res = await adminAPI.rejectSeller(sellerId, { reason });
+      const res = await adminAPI.rejectSeller(sellerId, { rejection_reason:reason });
       if (res.data.success) {
         alert('Seller rejected');
         fetchDashboardData();
@@ -100,7 +100,7 @@ const AdminDashboard = () => {
     if (!reason) return;
 
     try {
-      const res = await adminAPI.rejectProduct(productId, { reason });
+      const res = await adminAPI.rejectProduct(productId, {  rejection_reason:reason });
       if (res.data.success) {
         alert('Product rejected');
         fetchDashboardData();
@@ -238,47 +238,114 @@ const AdminDashboard = () => {
 
         {/* Artisan Verification Tab */}
         {activeTab === 'sellers' && (
-          <div className="admin-content">
-            <h1>Artisan Verification Requests</h1>
-            
-            {pendingSellers.length === 0 ? (
-              <div className="empty-state">
-                <p>No pending seller verifications</p>
+  <div className="admin-content">
+    <h1>Artisan Verification Requests</h1>
+    
+    {pendingSellers.length === 0 ? (
+      <div className="empty-state">
+        <p>No pending seller verifications</p>
+      </div>
+    ) : (
+      <div className="verification-list">
+        {pendingSellers.map((seller) => (
+          <div key={seller.seller_id} className="verification-card-wide">
+            {/* Left Side - Avatar & Basic Info */}
+            <div className="verification-left">
+              <div className="seller-avatar-large">
+                {seller.User?.full_name?.substring(0, 2).toUpperCase()}
               </div>
-            ) : (
-              <div className="verification-grid">
-                {pendingSellers.map((seller) => (
-                  <div key={seller.seller_id} className="verification-card">
-                    <div className="seller-avatar">
-                      {seller.User?.full_name?.substring(0, 2).toUpperCase()}
-                    </div>
-                    <div className="seller-info">
-                      <h3>{seller.User?.full_name}</h3>
-                      <p className="craft-type">{seller.shop_name}</p>
-                      <p className="location">📍 {seller.city}, {seller.address}</p>
-                      <p className="experience">Experience: {seller.experience || 'N/A'}</p>
-                      <p className="applied">Applied: {new Date(seller.created_at).toLocaleDateString()}</p>
-                    </div>
-                    <div className="action-buttons">
-                      <button 
-                        onClick={() => handleApproveSeller(seller.seller_id)}
-                        className="btn-approve"
-                      >
-                        ✓ Approve
-                      </button>
-                      <button 
-                        onClick={() => handleRejectSeller(seller.seller_id)}
-                        className="btn-reject"
-                      >
-                        ✗ Reject
-                      </button>
-                    </div>
+              <div className="seller-title">
+                <h3>{seller.User?.full_name}</h3>
+                <p className="shop-name-badge">🏪 {seller.shop_name}</p>
+              </div>
+            </div>
+
+            {/* Center - Details Grid */}
+            <div className="verification-center">
+              <div className="details-compact">
+                <div className="detail-row">
+                  <span className="icon">📧</span>
+                  <div>
+                    <label>Email</label>
+                    <p>{seller.User?.email}</p>
                   </div>
-                ))}
+                </div>
+
+                <div className="detail-row">
+                  <span className="icon">📱</span>
+                  <div>
+                    <label>Phone</label>
+                    <p>{seller.User?.phone || 'N/A'}</p>
+                  </div>
+                </div>
+
+                <div className="detail-row">
+                  <span className="icon">📍</span>
+                  <div>
+                    <label>Location</label>
+                    <p>{seller.city}, {seller.address}</p>
+                  </div>
+                </div>
+
+                <div className="detail-row">
+                  <span className="icon">🆔</span>
+                  <div>
+                    <label>Citizenship</label>
+                    <p>{seller.citizenship_number}</p>
+                  </div>
+                </div>
+
+                {seller.bank_name && (
+                  <>
+                    <div className="detail-row">
+                      <span className="icon">🏦</span>
+                      <div>
+                        <label>Bank</label>
+                        <p>{seller.bank_name}</p>
+                      </div>
+                    </div>
+
+                    <div className="detail-row">
+                      <span className="icon">💳</span>
+                      <div>
+                        <label>Account</label>
+                        <p>{seller.bank_account_number}</p>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <div className="detail-row">
+                  <span className="icon">📅</span>
+                  <div>
+                    <label>Applied</label>
+                    <p>{new Date(seller.created_at).toLocaleDateString()}</p>
+                  </div>
+                </div>
               </div>
-            )}
+            </div>
+
+            {/* Right Side - Actions */}
+            <div className="verification-right">
+              <button 
+                onClick={() => handleApproveSeller(seller.seller_id)}
+                className="btn-approve"
+              >
+                ✓ Approve
+              </button>
+              <button 
+                onClick={() => handleRejectSeller(seller.seller_id)}
+                className="btn-reject"
+              >
+                ✗ Reject
+              </button>
+            </div>
           </div>
-        )}
+        ))}
+      </div>
+    )}
+  </div>
+)}
 
         {/* Products Tab */}
         {activeTab === 'products' && (
@@ -306,41 +373,67 @@ const AdminDashboard = () => {
                   </thead>
                   <tbody>
                     {pendingProducts.map((product) => (
-                      <tr key={product.product_id}>
-                        <td>
-                          <div className="product-image-cell">
-                            {product.images && product.images.length > 0 ? (
-                              <img 
-                                src={`${API_URL}${product.images[0]}`} 
-                                alt={product.name}
-                              />
-                            ) : (
-                              <div className="no-image">📦</div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="product-name">{product.name}</td>
-                        <td>{product.Seller?.User?.full_name}</td>
-                        <td>{product.Category?.name}</td>
-                        <td className="product-price">Rs. {parseFloat(product.price).toLocaleString()}</td>
-                        <td>{product.stock}</td>
-                        <td>{new Date(product.created_at).toLocaleDateString()}</td>
-                        <td className="actions-cell">
-                          <button 
-                            onClick={() => handleApproveProduct(product.product_id)}
-                            className="btn-approve"
-                          >
-                            ✓
-                          </button>
-                          <button 
-                            onClick={() => handleRejectProduct(product.product_id)}
-                            className="btn-reject"
-                          >
-                            ✗
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+  <tr key={product.product_id}>
+    <td>
+      <div className="product-image-cell">
+        {product.images && product.images.length > 0 ? (
+          <img 
+            src={`${API_URL}${product.images[0]}`} 
+            alt={product.name}
+            onError={(e) => {
+              e.target.style.display = 'none';
+              e.target.parentElement.innerHTML = '<div class="no-image">📦</div>';
+            }}
+          />
+        ) : (
+          <div className="no-image">📦</div>
+        )}
+      </div>
+    </td>
+    <td className="product-name">{product.name || 'N/A'}</td>
+    <td>{product.seller?.user?.full_name || 'Unknown'}</td>
+    <td>{product.category?.name || 'N/A'}</td>
+    <td className="product-price">
+      Rs. {product.price ? parseFloat(product.price).toLocaleString() : '0'}
+    </td>
+    <td>
+      <span className={
+        product.stock_quantity > 10 ? 'stock-good' : 
+        product.stock_quantity > 0 ? 'stock-low' : 
+        'stock-out'
+      }>
+        {product.stock_quantity || 0} units
+      </span>
+    </td>
+    <td>
+      {product.created_at 
+        ? new Date(product.created_at).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          })
+        : 'N/A'
+      }
+    </td>
+    <td className="actions-cell">
+      <button 
+        onClick={() => handleApproveProduct(product.product_id)}
+        className="btn-approve"
+        title="Approve Product"
+      >
+        ✓
+      </button>
+      <button 
+        onClick={() => handleRejectProduct(product.product_id)}
+        className="btn-reject"
+        title="Reject Product"
+      >
+        ✗
+      </button>
+    </td>
+  </tr>
+))}
+                        
                   </tbody>
                 </table>
               </div>

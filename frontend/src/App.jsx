@@ -27,13 +27,14 @@ import EditProduct from './pages/EditProduct';
 import AdminDashboard from './pages/AdminDashboard';
 
 import './styles/variables.css';
+import './App.css';
 
 function App() {
   return (
     <Router>
       <div className="app">
         <NavBar />
-        <main>
+        <main className="main-content">
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Home />} />

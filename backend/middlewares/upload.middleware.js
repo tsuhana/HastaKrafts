@@ -13,9 +13,9 @@ uploadDirs.forEach((dir) => {
 // Storage configuration
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    if (file.fieldname === "productImages") {
+    if (file.fieldname === "images") {  //  Changed from "productImages"
       cb(null, "uploads/products/");
-    } else if (file.fieldname === "profileImage") {
+    } else if (file.fieldname === "profile_picture") {  // ✅ Changed from "profileImage"
       cb(null, "uploads/profiles/");
     } else {
       cb(null, "uploads/");
@@ -45,12 +45,12 @@ const uploadProduct = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: fileFilter,
-}).array("productImages", 8); // Max 8 images
+}).array("images", 8); // ✅ Changed from "productImages" to "images"
 
 const uploadProfile = multer({
   storage: storage,
   limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
   fileFilter: fileFilter,
-}).single("profileImage");
+}).single("profile_picture"); // ✅ Changed from "profileImage"
 
 module.exports = { uploadProduct, uploadProfile };

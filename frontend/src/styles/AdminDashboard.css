@@ -3,6 +3,14 @@
   display: flex;
   min-height: calc(100vh - 80px);
   background: #FAFAF9;
+   margin-bottom: 0;
+}
+
+.admin-main {
+  flex: 1;
+  margin-left: 280px;
+  padding: 2rem;
+  padding-bottom: 4rem; /* ADDED space for footer */
 }
 
 /* Sidebar */
@@ -169,19 +177,17 @@
   gap: 1.5rem;
 }
 
-.verification-card {
+.verification-card-detailed {
   background: #FFFFFF;
-  padding: 1.5rem;
+  padding: 2rem;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  display: flex;
-  gap: 1rem;
   transition: all 0.3s ease;
 }
 
-.verification-card:hover {
-  box-shadow: 0 4px 16px rgba(193, 125, 74, 0.2);
-  transform: translateY(-2px);
+.verification-card-detailed:hover {
+  box-shadow: 0 6px 20px rgba(193, 125, 74, 0.15);
+  transform: translateY(-4px);
 }
 
 .seller-avatar {
@@ -393,4 +399,110 @@
   .admin-table td {
     padding: 0.75rem 0.5rem;
   }
+}
+
+.seller-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #F5E6D3;
+}
+
+.seller-basic-info h3 {
+  font-size: 1.2rem;
+  color: #2C1810;
+  margin: 0 0 0.25rem 0;
+  font-weight: 600;
+}
+
+.shop-name {
+  color: #C17D4A;
+  font-weight: 500;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.seller-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.detail-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.detail-label {
+  font-size: 0.85rem;
+  color: #5D4E37;
+  font-weight: 600;
+}
+
+.detail-value {
+  font-size: 0.95rem;
+  color: #2C1810;
+  word-break: break-word;
+}
+
+.shop-description {
+  background: #FFF8DC;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.shop-description p:first-child {
+  margin-bottom: 0.5rem;
+}
+
+.shop-description p:last-child {
+  margin: 0;
+  color: #2C1810;
+  line-height: 1.6;
+}
+
+.action-buttons-horizontal {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.action-buttons-horizontal .btn-approve,
+.action-buttons-horizontal .btn-reject {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+}
+
+/* Stock Status Indicators */
+.stock-good {
+  color: #10B981;
+  font-weight: 600;
+}
+
+.stock-low {
+  color: #F59E0B;
+  font-weight: 600;
+}
+
+.stock-out {
+  color: #EF4444;
+  font-weight: 600;
+}
+
+/* Product Image Error Handling */
+.product-image-cell img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #F5E6D3;
 }
