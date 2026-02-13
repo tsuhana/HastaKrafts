@@ -24,7 +24,7 @@ const User = sequelize.define(
     },
     password: {
       type: DataTypes.STRING(255),
-      allowNull: true, // NULL for Google OAuth users
+      allowNull: true,
     },
     role: {
       type: DataTypes.ENUM("buyer", "seller", "admin"),
@@ -32,6 +32,26 @@ const User = sequelize.define(
     },
     phone: {
       type: DataTypes.STRING(20),
+      allowNull: true,
+    },
+    address: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    city: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+    },
+    state: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+    },
+    postal_code: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+    },
+    landmark: {
+      type: DataTypes.STRING(255),
       allowNull: true,
     },
     profile_image: {
@@ -69,7 +89,7 @@ User.beforeUpdate(async (user) => {
 // Method to compare passwords
 User.prototype.comparePassword = async function (candidatePassword) {
   if (!this.password) {
-    return false; // OAuth users have no password
+    return false;
   }
   return await bcrypt.compare(candidatePassword, this.password);
 };

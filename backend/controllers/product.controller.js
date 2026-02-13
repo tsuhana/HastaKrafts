@@ -233,8 +233,18 @@ const getSellerProducts = async (req, res) => {
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, price, stock_quantity, category_id, sku } = req.body;
+    const {
+      name,
+      description,
+      price,
+      stock_quantity,
+      category_id,
+      sku,
+      existingImages,
+      imagesToDelete,
+    } = req.body;
 
+    // Find product
     const product = await db.Product.findByPk(id);
 
     if (!product) {
@@ -249,6 +259,13 @@ const updateProduct = async (req, res) => {
       where: { user_id: req.user.user_id },
     });
 
+    if (!seller) {
+      return res.status(404).json({
+        success: false,
+        message: "Seller profile not found",
+      });
+    }
+
     if (product.seller_id !== seller.seller_id && req.user.role !== "admin") {
       return res.status(403).json({
         success: false,
@@ -256,19 +273,57 @@ const updateProduct = async (req, res) => {
       });
     }
 
-    // Handle new images
-    let images = product.images;
-    if (req.files && req.files.length > 0) {
-      // Delete old images
-      product.images.forEach((img) => {
-        const filePath = path.join(__dirname, "..", img);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
-      });
-      images = req.files.map((file) => `/uploads/products/${file.filename}`);
+    // ===== IMAGE HANDLING LOGIC =====
+    let finalImages = [];
+
+    // Step 1: Parse existing images to keep (sent from frontend)
+    if (existingImages) {
+      try {
+        const existingImagesArray = JSON.parse(existingImages);
+        finalImages = [...existingImagesArray];
+      } catch (err) {
+        console.error("Error parsing existingImages:", err);
+      }
     }
 
+    // Step 2: Add newly uploaded images
+    if (req.files && req.files.length > 0) {
+      const newImagePaths = req.files.map((file) => `/uploads/products/${file.filename}`);
+      finalImages = [...finalImages, ...newImagePaths];
+    }
+
+    // Step 3: Validate total image count
+    if (finalImages.length < 3) {
+      return res.status(400).json({
+        success: false,
+        message: "Product must have at least 3 images",
+      });
+    }
+
+    if (finalImages.length > 8) {
+      return res.status(400).json({
+        success: false,
+        message: "Product can have maximum 8 images",
+      });
+    }
+
+    // Step 4: Delete image files that were removed (sent from frontend)
+    if (imagesToDelete) {
+      try {
+        const imagesToDeleteArray = JSON.parse(imagesToDelete);
+        imagesToDeleteArray.forEach((imagePath) => {
+          const fullPath = path.join(__dirname, "..", imagePath);
+          if (fs.existsSync(fullPath)) {
+            fs.unlinkSync(fullPath);
+            console.log(`Deleted old image: ${imagePath}`);
+          }
+        });
+      } catch (err) {
+        console.error("Error deleting images:", err);
+      }
+    }
+
+    // Update product
     await product.update({
       name: name || product.name,
       description: description || product.description,
@@ -276,20 +331,20 @@ const updateProduct = async (req, res) => {
       stock_quantity: stock_quantity !== undefined ? stock_quantity : product.stock_quantity,
       category_id: category_id || product.category_id,
       sku: sku || product.sku,
-      images,
-      status: "pending", // Reset to pending when updated
+      images: finalImages,
+      status: "pending", // Reset to pending after edit for admin review
     });
 
     res.status(200).json({
       success: true,
-      message: "Product updated successfully and is pending approval",
+      message: "Product updated successfully. It will be reviewed by admin.",
       data: product,
     });
   } catch (error) {
     console.error("Update product error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to update product",
+      message: error.message || "Failed to update product",
     });
   }
 };

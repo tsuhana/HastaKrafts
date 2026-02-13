@@ -40,7 +40,16 @@ const getUserProfile = async (req, res) => {
 // ==================== UPDATE USER PROFILE ====================
 const updateUserProfile = async (req, res) => {
   try {
-    const { full_name, phone } = req.body;
+    const { 
+      full_name, 
+      email,
+      phone, 
+      address, 
+      city, 
+      state, 
+      postal_code, 
+      landmark 
+    } = req.body;
 
     const user = await db.User.findByPk(req.user.user_id);
 
@@ -51,27 +60,42 @@ const updateUserProfile = async (req, res) => {
       });
     }
 
+    // Check if email is being changed and if it's already taken
+    if (email && email !== user.email) {
+      const existingUser = await db.User.findOne({ where: { email } });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: "Email already in use",
+        });
+      }
+    }
+
+    // Update all fields
     await user.update({
       full_name: full_name || user.full_name,
-      phone: phone || user.phone,
+      email: email || user.email,
+      phone: phone !== undefined ? phone : user.phone,
+      address: address !== undefined ? address : user.address,
+      city: city !== undefined ? city : user.city,
+      state: state !== undefined ? state : user.state,
+      postal_code: postal_code !== undefined ? postal_code : user.postal_code,
+      landmark: landmark !== undefined ? landmark : user.landmark,
     });
+
+    // Return updated user without password
+    const updatedUser = user.toJSON();
 
     res.status(200).json({
       success: true,
       message: "Profile updated successfully",
-      data: {
-        user_id: user.user_id,
-        full_name: user.full_name,
-        email: user.email,
-        phone: user.phone,
-        profile_image: user.profile_image,
-      },
+      data: updatedUser,
     });
   } catch (error) {
     console.error("Update profile error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to update profile",
+      message: error.message || "Failed to update profile",
     });
   }
 };
@@ -79,16 +103,18 @@ const updateUserProfile = async (req, res) => {
 // ==================== CHANGE PASSWORD ====================
 const changePassword = async (req, res) => {
   try {
-    const { current_password, new_password } = req.body;
+    // Accept both naming conventions
+    const currentPassword = req.body.current_password || req.body.currentPassword;
+    const newPassword = req.body.new_password || req.body.newPassword;
 
-    if (!current_password || !new_password) {
+    if (!currentPassword || !newPassword) {
       return res.status(400).json({
         success: false,
         message: "Please provide current and new password",
       });
     }
 
-    if (new_password.length < 6) {
+    if (newPassword.length < 6) {
       return res.status(400).json({
         success: false,
         message: "New password must be at least 6 characters",
@@ -111,7 +137,7 @@ const changePassword = async (req, res) => {
       });
     }
 
-    const isPasswordValid = await user.comparePassword(current_password);
+    const isPasswordValid = await user.comparePassword(currentPassword);
 
     if (!isPasswordValid) {
       return res.status(401).json({
@@ -120,7 +146,7 @@ const changePassword = async (req, res) => {
       });
     }
 
-    user.password = new_password;
+    user.password = newPassword;
     await user.save();
 
     res.status(200).json({

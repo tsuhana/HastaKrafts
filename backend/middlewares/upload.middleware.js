@@ -45,12 +45,12 @@ const uploadProduct = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: fileFilter,
-}).array("images", 8); // ✅ Changed from "productImages" to "images"
+}).array("images", 8); //  Changed from "productImages" to "images"
 
 const uploadProfile = multer({
   storage: storage,
   limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
   fileFilter: fileFilter,
-}).single("profile_picture"); // ✅ Changed from "profileImage"
+}).single("profile_picture"); //  Changed from "profileImage"
 
 module.exports = { uploadProduct, uploadProfile };
