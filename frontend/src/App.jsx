@@ -17,6 +17,7 @@ import VerifyOTP from './pages/VerifyOTP';
 
 // User Pages
 import UserProfile from './pages/UserProfile';
+import Cart from './pages/Cart'; // ✅ ADD
 
 // Seller Pages
 import SellerDashboard from './pages/SellerDashboard.jsx';
@@ -53,6 +54,16 @@ function App() {
               element={
                 <ProtectedRoute>
                   <UserProfile />
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* CART ROUTE */}
+            <Route
+              path="/cart"
+              element={
+                <ProtectedRoute>
+                  <Cart />
                 </ProtectedRoute>
               }
             />

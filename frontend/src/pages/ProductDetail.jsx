@@ -1,19 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { productAPI } from '../api/axios';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { productAPI, cartAPI } from '../api/axios';
 import '../styles/ProductDetail.css';
 
 const ProductDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const API_URL = 'http://localhost:5000';
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    setIsLoggedIn(!!token);
     fetchProduct();
   }, [id]);
 
@@ -37,6 +42,58 @@ const ProductDetail = () => {
     } else if (type === 'decrement' && quantity > 1) {
       setQuantity(prev => prev - 1);
     }
+  };
+
+  const handleAddToCart = async () => {
+    if (!isLoggedIn) {
+      alert('Please login to add items to cart');
+      navigate('/login');
+      return;
+    }
+
+    if (quantity < 1) {
+      alert('Please select at least 1 item');
+      return;
+    }
+
+    if (quantity > product.stock_quantity) {
+      alert(`Only ${product.stock_quantity} items available`);
+      return;
+    }
+
+    setAddingToCart(true);
+
+    try {
+      const res = await cartAPI.addToCart({
+        product_id: product.product_id,
+        quantity: quantity,
+      });
+
+      if (res.data.success) {
+        alert('Item added to cart!');
+        // Trigger cart update event for navbar
+        window.dispatchEvent(new Event('cartUpdated'));
+        // Optionally reset quantity
+        setQuantity(1);
+      }
+    } catch (err) {
+      console.error('Error adding to cart:', err);
+      alert(err.response?.data?.message || 'Failed to add item to cart');
+    } finally {
+      setAddingToCart(false);
+    }
+  };
+
+  const handleBuyNow = async () => {
+    if (!isLoggedIn) {
+      alert('Please login to purchase');
+      navigate('/login');
+      return;
+    }
+
+    // First add to cart, then redirect to checkout
+    await handleAddToCart();
+    navigate('/cart');
   };
 
   if (loading) {
@@ -194,11 +251,19 @@ const ProductDetail = () => {
                   </button>
                 </div>
 
-                <button className="btn-add-to-cart">
-                  Add to Cart
+                <button 
+                  className="btn-add-to-cart"
+                  onClick={handleAddToCart}
+                  disabled={addingToCart}
+                >
+                  {addingToCart ? 'Adding...' : 'Add to Cart'}
                 </button>
 
-                <button className="btn-buy-now">
+                <button 
+                  className="btn-buy-now"
+                  onClick={handleBuyNow}
+                  disabled={addingToCart}
+                >
                   Buy Now
                 </button>
               </div>

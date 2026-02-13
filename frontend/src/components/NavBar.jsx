@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { userAPI } from '../api/axios';
 import '../styles/NavBar.css';
 
 const NavBar = () => {
@@ -7,6 +8,7 @@ const NavBar = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -15,14 +17,39 @@ const NavBar = () => {
     if (token && userStr) {
       setIsLoggedIn(true);
       setUser(JSON.parse(userStr));
+      fetchCartCount();
     }
+
+    // Listen for cart updates
+    const handleCartUpdate = () => {
+      fetchCartCount();
+    };
+
+    window.addEventListener('cartUpdated', handleCartUpdate);
+
+    return () => {
+      window.removeEventListener('cartUpdated', handleCartUpdate);
+    };
   }, []);
+
+  const fetchCartCount = async () => {
+    try {
+      const res = await userAPI.getCart();
+      if (res.data.success) {
+        const itemCount = res.data.data.cart.items?.length || 0;
+        setCartCount(itemCount);
+      }
+    } catch (err) {
+      console.error('Error fetching cart:', err);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setIsLoggedIn(false);
     setUser(null);
+    setCartCount(0);
     navigate('/login');
   };
 
@@ -62,6 +89,15 @@ const NavBar = () => {
         </ul>
 
         <div className="nav-actions">
+          {isLoggedIn && (
+            <Link to="/cart" className="cart-button">
+              <span className="cart-icon">🛒</span>
+              {cartCount > 0 && (
+                <span className="cart-badge">{cartCount}</span>
+              )}
+            </Link>
+          )}
+
           {isLoggedIn ? (
             <div className="user-menu">
               <button 

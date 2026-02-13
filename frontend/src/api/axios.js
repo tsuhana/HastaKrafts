@@ -86,6 +86,16 @@ export const userAPI = {
   uploadAvatar: (formData) => API.post('/users/upload-avatar', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
+  getCart: () => API.get('/cart'), //  (for navbar badge)
+};
+
+// ==================== CART ==================== 
+export const cartAPI = {
+  getCart: () => API.get('/cart'),
+  addToCart: (data) => API.post('/cart/add', data),
+  updateCartItem: (cartItemId, data) => API.put(`/cart/items/${cartItemId}`, data),
+  removeFromCart: (cartItemId) => API.delete(`/cart/items/${cartItemId}`),
+  clearCart: () => API.delete('/cart/clear'),
 };
 
 export default API;
