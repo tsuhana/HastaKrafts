@@ -17,7 +17,9 @@ import VerifyOTP from './pages/VerifyOTP';
 
 // User Pages
 import UserProfile from './pages/UserProfile';
-import Cart from './pages/Cart'; // ✅ ADD
+import Cart from './pages/Cart';
+import Checkout from './pages/Checkout';
+import OrderConfirmation from './pages/OrderConfirmation';
 
 // Seller Pages
 import SellerDashboard from './pages/SellerDashboard.jsx';
@@ -58,7 +60,6 @@ function App() {
               }
             />
             
-            {/* CART ROUTE */}
             <Route
               path="/cart"
               element={
@@ -68,6 +69,23 @@ function App() {
               }
             />
 
+            <Route
+              path="/checkout"
+              element={
+                <ProtectedRoute>
+                  <Checkout />
+                </ProtectedRoute>
+              }
+            />
+              <Route
+                path="/order-confirmation/:id"
+                element={
+                 <ProtectedRoute>
+                  <OrderConfirmation />
+                </ProtectedRoute>
+              }
+            />
+            
             {/* Seller Protected Routes */}
             <Route
               path="/seller/dashboard"

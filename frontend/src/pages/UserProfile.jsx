@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { userAPI } from '../api/axios';
+import { userAPI, orderAPI } from '../api/axios';
 import '../styles/UserProfile.css';
 
 const UserProfile = () => {
@@ -31,7 +31,6 @@ const UserProfile = () => {
 
   const [errors, setErrors] = useState({});
 
-  // Nepal provinces
   const provinces = [
     'Bagmati',
     'Gandaki',
@@ -100,14 +99,12 @@ const UserProfile = () => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
       alert('Please upload a valid image (JPG, PNG, WEBP)');
       return;
     }
 
-    // Validate file size (2MB)
     if (file.size > 2 * 1024 * 1024) {
       alert('Image size must be less than 2MB');
       return;
@@ -273,7 +270,6 @@ const UserProfile = () => {
   return (
     <div className="user-profile-page">
       <div className="profile-container">
-        {/* Header Card */}
         <div className="profile-header-card">
           <div className="profile-avatar-section">
             <div className="avatar-wrapper">
@@ -311,7 +307,6 @@ const UserProfile = () => {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="profile-tabs">
           <button
             className={`tab-btn ${activeTab === 'profile' ? 'active' : ''}`}
@@ -335,9 +330,7 @@ const UserProfile = () => {
           )}
         </div>
 
-        {/* Content */}
         <div className="profile-content-card">
-          {/* Profile Tab */}
           {activeTab === 'profile' && (
             <div className="tab-content">
               <div className="content-header">
@@ -541,7 +534,6 @@ const UserProfile = () => {
             </div>
           )}
 
-          {/* Password Tab */}
           {activeTab === 'password' && (
             <div className="tab-content">
               <h2>Change Password</h2>
@@ -595,20 +587,133 @@ const UserProfile = () => {
             </div>
           )}
 
-          {/* Orders Tab */}
           {activeTab === 'orders' && (
             <div className="tab-content">
-              <h2>Order History</h2>
-              <div className="empty-state">
-                <p>No orders yet. Start shopping!</p>
-                <button onClick={() => navigate('/products')} className="btn-shop">
-                  Browse Products
-                </button>
-              </div>
+              <OrderHistory />
             </div>
           )}
         </div>
       </div>
+    </div>
+  );
+};
+
+const OrderHistory = () => {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      const res = await orderAPI.getMyOrders();
+      if (res.data.success) {
+        setOrders(res.data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching orders:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    const colors = {
+      pending: '#F59E0B',
+      processing: '#3B82F6',
+      shipped: '#8B5CF6',
+      delivered: '#10B981',
+      cancelled: '#EF4444',
+    };
+    return colors[status] || '#6B7280';
+  };
+
+  if (loading) {
+    return <div className="loading">Loading orders...</div>;
+  }
+
+  if (orders.length === 0) {
+    return (
+      <div className="empty-state">
+        <p>No orders yet</p>
+        <button onClick={() => window.location.href = '/products'} className="btn-primary">
+          Start Shopping
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="orders-list">
+      {orders.map((order) => (
+        <div key={order.order_id} className="order-card">
+          <div className="order-header">
+            <div>
+              <h3>Order #{order.order_number}</h3>
+              <p className="order-date">
+                {new Date(order.created_at).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </p>
+            </div>
+            <div className="order-status-badges">
+              <span 
+                className="status-badge" 
+                style={{ 
+                  background: `${getStatusColor(order.order_status)}20`,
+                  color: getStatusColor(order.order_status),
+                }}
+              >
+                {order.order_status}
+              </span>
+              <span 
+                className="payment-badge"
+                style={{ 
+                  background: order.payment_status === 'paid' ? '#10B98120' : '#F59E0B20',
+                  color: order.payment_status === 'paid' ? '#10B981' : '#F59E0B',
+                }}
+              >
+                {order.payment_status}
+              </span>
+            </div>
+          </div>
+
+          <div className="order-items">
+            {order.items && order.items.slice(0, 3).map((item) => (
+              <div key={item.order_item_id} className="order-item-preview">
+                <img 
+                  src={item.product_image ? `http://localhost:5000${item.product_image}` : '/placeholder.png'} 
+                  alt={item.product_name} 
+                />
+                <div>
+                  <p className="item-name">{item.product_name}</p>
+                  <p className="item-qty">Qty: {item.quantity}</p>
+                </div>
+              </div>
+            ))}
+            {order.items && order.items.length > 3 && (
+              <p className="more-items">+{order.items.length - 3} more items</p>
+            )}
+          </div>
+
+          <div className="order-footer">
+            <div className="order-total">
+              <span>Total:</span>
+              <span className="amount">Rs. {parseFloat(order.total).toLocaleString()}</span>
+            </div>
+            <button 
+              onClick={() => window.location.href = `/order-confirmation/${order.order_id}`}
+              className="btn-view-order"
+            >
+              View Details
+            </button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 };

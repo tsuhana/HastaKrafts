@@ -72,8 +72,7 @@ const Cart = () => {
   };
 
   const deliveryFee = 150;
-  const discount = 500;
-  const total = subtotal + deliveryFee - discount;
+  const total = subtotal + deliveryFee;
 
   if (loading) {
     return (
@@ -180,11 +179,7 @@ const Cart = () => {
                 <span>Rs. {deliveryFee}</span>
               </div>
 
-              <div className="summary-row discount">
-                <span>Discount</span>
-                <span>- Rs. {discount}</span>
-              </div>
-
+              
               <div className="summary-divider"></div>
 
               <div className="summary-total">

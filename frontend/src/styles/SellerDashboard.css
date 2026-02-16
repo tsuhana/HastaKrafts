@@ -405,3 +405,38 @@
     align-items: flex-start;
   }
 }
+
+.order-status-select {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  border: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.order-status-select.status-pending {
+  background: #FEF3C7;
+  color: #92400E;
+}
+
+.order-status-select.status-processing {
+  background: #DBEAFE;
+  color: #1E40AF;
+}
+
+.order-status-select.status-shipped {
+  background: #E9D5FF;
+  color: #6B21A8;
+}
+
+.order-status-select.status-delivered {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+.order-status-select.status-cancelled {
+  background: #FEE2E2;
+  color: #991B1B;
+}

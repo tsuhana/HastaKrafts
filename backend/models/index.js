@@ -5,8 +5,10 @@ const Seller = require("./seller.model");
 const PasswordReset = require("./passwordReset.model");
 const Category = require("./category.model");
 const Product = require("./product.model");
-const Cart = require("./cart.model");           
-const CartItem = require("./cartItem.model");   
+const Cart = require("./cart.model");
+const CartItem = require("./cartItem.model");
+const Order = require("./order.model");
+const OrderItem = require("./orderItem.model");
 
 const db = {};
 db.Sequelize = Sequelize;
@@ -16,8 +18,10 @@ db.Seller = Seller;
 db.PasswordReset = PasswordReset;
 db.Category = Category;
 db.Product = Product;
-db.Cart = Cart;           
-db.CartItem = CartItem;   
+db.Cart = Cart;
+db.CartItem = CartItem;
+db.Order = Order;
+db.OrderItem = OrderItem;
 
 // ========== ASSOCIATIONS ==========
 
@@ -53,5 +57,22 @@ CartItem.belongsTo(Cart, { foreignKey: "cart_id", as: "cart" });
 // Product <-> CartItem (One-to-Many)
 Product.hasMany(CartItem, { foreignKey: "product_id", as: "cartItems" });
 CartItem.belongsTo(Product, { foreignKey: "product_id", as: "product" });
+
+// ORDER ASSOCIATIONS
+// User <-> Order (One-to-Many)
+User.hasMany(Order, { foreignKey: "user_id", as: "orders" });
+Order.belongsTo(User, { foreignKey: "user_id", as: "user" });
+
+// Order <-> OrderItem (One-to-Many)
+Order.hasMany(OrderItem, { foreignKey: "order_id", as: "items" });
+OrderItem.belongsTo(Order, { foreignKey: "order_id", as: "order" });
+
+// Product <-> OrderItem (One-to-Many)
+Product.hasMany(OrderItem, { foreignKey: "product_id", as: "orderItems" });
+OrderItem.belongsTo(Product, { foreignKey: "product_id", as: "product" });
+
+// Seller <-> OrderItem (One-to-Many)
+Seller.hasMany(OrderItem, { foreignKey: "seller_id", as: "orderItems" });
+OrderItem.belongsTo(Seller, { foreignKey: "seller_id", as: "seller" }); 
 
 module.exports = db;
