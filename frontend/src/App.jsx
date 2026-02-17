@@ -5,6 +5,7 @@ import NavBar from "./components/NavBar";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
 import GoogleAuthSuccess from "./pages/GoogleAuthSuccess";
+import KhaltiCallback from './pages/KhaltiCallback';
 
 // ==================== PUBLIC PAGES ====================
 import Home from "./pages/Home";
@@ -62,6 +63,7 @@ function App() {
             <Route path="/verify-otp" element={<VerifyOTP />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/auth/google/success" element={<GoogleAuthSuccess />} />
+            <Route path="/payment/khalti/callback" element={<KhaltiCallback />} />
 
             {/* ==================== USER PROTECTED ROUTES ==================== */}
             <Route

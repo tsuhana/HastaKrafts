@@ -78,15 +78,20 @@ export const cartAPI = {
   clearCart: () => API.delete('/cart/clear'),
 };
 
-// ORDERS
 export const orderAPI = {
-  createOrder: (data) => API.post('/orders/create', data),
-  getMyOrders: () => API.get('/orders/my-orders'),
+  createOrder: (data) => API.post("/orders/create", data),
+  getMyOrders: () => API.get("/orders/my-orders"),
   getOrderById: (id) => API.get(`/orders/${id}`),
-  verifyKhaltiPayment: (data) => API.post('/orders/khalti/verify', data),
-  getSellerOrders: () => API.get('/orders/seller/orders'),
-  updateOrderStatus: (orderId, data) => API.put(`/orders/seller/${orderId}/status`, data),
+
+  // GET verify with query params
+  verifyKhaltiPayment: ({ pidx, order_id }) =>
+    API.get(`/orders/khalti/verify?pidx=${encodeURIComponent(pidx)}&order_id=${encodeURIComponent(order_id)}`),
+
+  getSellerOrders: () => API.get("/orders/seller/orders"),
+  updateOrderStatus: (orderId, data) =>
+    API.put(`/orders/seller/${orderId}/status`, data),
 };
+
 
 // AUCTIONS
 export const auctionAPI = {

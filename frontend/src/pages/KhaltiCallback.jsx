@@ -1,0 +1,48 @@
+import React, { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { orderAPI } from "../api/axios";
+
+const KhaltiCallback = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [msg, setMsg] = useState("Verifying payment...");
+
+  useEffect(() => {
+    const run = async () => {
+      const params = new URLSearchParams(location.search);
+
+      const pidx = params.get("pidx");
+      const status = params.get("status");
+      const order_id = params.get("order_id"); //added this in return_url
+
+      if (!pidx || !order_id) {
+        setMsg("Missing payment data. Please contact support.");
+        return;
+      }
+
+      try {
+        // If status already says Completed, still do lookup for safety
+        const res = await orderAPI.verifyKhaltiPayment({ pidx, order_id });
+
+        if (res.data.success) {
+          setMsg("Payment successful! Redirecting...");
+          setTimeout(() => navigate(`/order-confirmation/${order_id}`), 800);
+        } else {
+          setMsg(`Payment not completed: ${status || "Unknown"}`);
+        }
+      } catch (err) {
+        setMsg(err.response?.data?.message || "Payment verification failed");
+      }
+    };
+
+    run();
+  }, [location.search, navigate]);
+
+  return (
+    <div style={{ padding: "4rem 2rem", textAlign: "center" }}>
+      <h2>{msg}</h2>
+    </div>
+  );
+};
+
+export default KhaltiCallback;
