@@ -9,6 +9,9 @@ const Cart = require("./cart.model");
 const CartItem = require("./cartItem.model");
 const Order = require("./order.model");
 const OrderItem = require("./orderItem.model");
+const Auction = require("./auction.model");
+const Bid = require("./bid.model");
+const Message = require("./message.model");
 
 const db = {};
 db.Sequelize = Sequelize;
@@ -22,8 +25,11 @@ db.Cart = Cart;
 db.CartItem = CartItem;
 db.Order = Order;
 db.OrderItem = OrderItem;
+db.Auction = Auction;
+db.Bid = Bid;
+db.Message = Message;
 
-// ========== ASSOCIATIONS ==========
+//Relationships
 
 // User <-> Seller (One-to-One)
 User.hasOne(Seller, { foreignKey: "user_id", as: "sellerProfile" });
@@ -74,5 +80,32 @@ OrderItem.belongsTo(Product, { foreignKey: "product_id", as: "product" });
 // Seller <-> OrderItem (One-to-Many)
 Seller.hasMany(OrderItem, { foreignKey: "seller_id", as: "orderItems" });
 OrderItem.belongsTo(Seller, { foreignKey: "seller_id", as: "seller" }); 
+
+// AUCTION ASSOCIATIONS
+Seller.hasMany(Auction, { foreignKey: "seller_id", as: "auctions" });
+Auction.belongsTo(Seller, { foreignKey: "seller_id", as: "seller" });
+
+Product.hasMany(Auction, { foreignKey: "product_id", as: "auctions" });
+Auction.belongsTo(Product, { foreignKey: "product_id", as: "product" });
+
+User.hasMany(Auction, { foreignKey: "winner_id", as: "wonAuctions" });
+Auction.belongsTo(User, { foreignKey: "winner_id", as: "winner" });
+
+// BID ASSOCIATIONS
+Auction.hasMany(Bid, { foreignKey: "auction_id", as: "bids" });
+Bid.belongsTo(Auction, { foreignKey: "auction_id", as: "auction" });
+
+User.hasMany(Bid, { foreignKey: "user_id", as: "bids" });
+Bid.belongsTo(User, { foreignKey: "user_id", as: "user" });
+
+// MESSAGE ASSOCIATIONS
+User.hasMany(Message, { foreignKey: "sender_id", as: "sentMessages" });
+Message.belongsTo(User, { foreignKey: "sender_id", as: "sender" });
+
+User.hasMany(Message, { foreignKey: "receiver_id", as: "receivedMessages" });
+Message.belongsTo(User, { foreignKey: "receiver_id", as: "receiver" });
+
+Auction.hasMany(Message, { foreignKey: "auction_id", as: "messages" });
+Message.belongsTo(Auction, { foreignKey: "auction_id", as: "auction" });
 
 module.exports = db;

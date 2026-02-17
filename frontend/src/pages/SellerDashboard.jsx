@@ -100,13 +100,17 @@ const SellerDashboard = () => {
 
   return (
     <div className="artisan-dashboard">
-      <div className="dashboard-header-new">
-        <h1>Artisan Dashboard</h1>
+     <div className="dashboard-header-new">
+  <h1>Artisan Dashboard</h1>
+      <div style={{ display: 'flex', gap: '1rem' }}>
         <Link to="/seller/add-product" className="btn-add-product">
-          + Add New Product
+         + Add Product
         </Link>
-      </div>
-
+        <Link to="/seller/create-auction" className="btn-add-product">
+         + Create Auction
+        </Link>
+        </div>
+    </div>    
       <div className="stats-cards-modern">
         <div className="stat-card-modern stat-sales">
           <div className="stat-label">Total Sales</div>

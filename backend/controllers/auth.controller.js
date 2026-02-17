@@ -263,6 +263,7 @@ const login = async (req, res) => {
         email: user.email,
         role: user.role,
         phone: user.phone,
+        profile_image: user.profile_image,
       },
       token,
     };

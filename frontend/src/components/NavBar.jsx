@@ -81,11 +81,12 @@ const NavBar = () => {
             <Link to="/products" className="nav-link">Products</Link>
           </li>
           <li className="nav-item">
-            <Link to="/about" className="nav-link">About</Link>
+            <Link to="/auctions" className="nav-link">Auctions</Link>
           </li>
           <li className="nav-item">
-            <Link to="/contact" className="nav-link">Contact</Link>
+            <Link to="/messages" className="nav-link"> 💬Chat</Link>
           </li>
+          
         </ul>
 
         <div className="nav-actions">

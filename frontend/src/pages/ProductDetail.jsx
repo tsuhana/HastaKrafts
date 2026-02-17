@@ -1,24 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { productAPI, cartAPI } from '../api/axios';
-import '../styles/ProductDetail.css';
+import React, { useState, useEffect } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { productAPI, cartAPI } from "../api/axios";
+import "../styles/ProductDetail.css";
 
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const API_URL = 'http://localhost:5000';
+  const API_URL = "http://localhost:5000";
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const isLoggedIn = !!localStorage.getItem("token");
+  const isSeller = currentUser?.role === "seller";
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    setIsLoggedIn(!!token);
     fetchProduct();
   }, [id]);
 
@@ -27,32 +28,32 @@ const ProductDetail = () => {
       setLoading(true);
       const res = await productAPI.getProductById(id);
       setProduct(res.data.data);
-      setError('');
+      setError("");
     } catch (err) {
-      console.error('Fetch product error:', err);
-      setError('Product not found');
+      console.error("Fetch product error:", err);
+      setError("Product not found");
     } finally {
       setLoading(false);
     }
   };
 
   const handleQuantityChange = (type) => {
-    if (type === 'increment' && quantity < product.stock_quantity) {
-      setQuantity(prev => prev + 1);
-    } else if (type === 'decrement' && quantity > 1) {
-      setQuantity(prev => prev - 1);
+    if (type === "increment" && quantity < product.stock_quantity) {
+      setQuantity((prev) => prev + 1);
+    } else if (type === "decrement" && quantity > 1) {
+      setQuantity((prev) => prev - 1);
     }
   };
 
   const handleAddToCart = async () => {
     if (!isLoggedIn) {
-      alert('Please login to add items to cart');
-      navigate('/login');
+      alert("Please login to add items to cart");
+      navigate("/login");
       return;
     }
 
-    if (quantity < 1) {
-      alert('Please select at least 1 item');
+    if (isSeller) {
+      alert("Sellers cannot add items to cart");
       return;
     }
 
@@ -62,7 +63,6 @@ const ProductDetail = () => {
     }
 
     setAddingToCart(true);
-
     try {
       const res = await cartAPI.addToCart({
         product_id: product.product_id,
@@ -70,15 +70,13 @@ const ProductDetail = () => {
       });
 
       if (res.data.success) {
-        alert('Item added to cart!');
-        // Trigger cart update event for navbar
-        window.dispatchEvent(new Event('cartUpdated'));
-        // Optionally reset quantity
+        alert("Item added to cart!");
+        window.dispatchEvent(new Event("cartUpdated"));
         setQuantity(1);
       }
     } catch (err) {
-      console.error('Error adding to cart:', err);
-      alert(err.response?.data?.message || 'Failed to add item to cart');
+      console.error("Error adding to cart:", err);
+      alert(err.response?.data?.message || "Failed to add item to cart");
     } finally {
       setAddingToCart(false);
     }
@@ -86,16 +84,43 @@ const ProductDetail = () => {
 
   const handleBuyNow = async () => {
     if (!isLoggedIn) {
-      alert('Please login to purchase');
-      navigate('/login');
+      alert("Please login to purchase");
+      navigate("/login");
       return;
     }
 
-    // First add to cart, then redirect to checkout
+    if (isSeller) {
+      alert("Sellers cannot purchase items");
+      return;
+    }
+
     await handleAddToCart();
-    navigate('/cart');
+    navigate("/cart");
   };
 
+  // ==================== CHAT WITH ARTISAN ====================
+  const handleChatWithArtisan = () => {
+    if (!isLoggedIn) {
+      alert("Please login to chat with the artisan");
+      navigate("/login");
+      return;
+    }
+
+    if (isSeller) {
+      alert("Sellers cannot message other sellers");
+      return;
+    }
+
+    if (!product?.seller?.user_id) {
+      alert("Seller information not available");
+      return;
+    }
+
+    // Navigate to messages page with seller pre-selected
+    navigate(`/messages?partner=${product.seller.user_id}`);
+  };
+
+  // ==================== LOADING & ERROR ====================
   if (loading) {
     return (
       <div className="loading-container">
@@ -110,14 +135,18 @@ const ProductDetail = () => {
       <div className="error-container">
         <h2>Product Not Found</h2>
         <p>{error}</p>
-        <Link to="/products" className="btn-primary">Back to Products</Link>
+        <Link to="/products" className="btn-primary">
+          Back to Products
+        </Link>
       </div>
     );
   }
 
+  // ==================== RENDER ====================
   return (
     <div className="product-detail-page">
       <div className="product-detail-container">
+
         {/* Breadcrumb */}
         <nav className="breadcrumb">
           <Link to="/">Home</Link>
@@ -128,12 +157,13 @@ const ProductDetail = () => {
         </nav>
 
         <div className="product-detail-content">
-          {/* Image Gallery */}
+
+          {/* ===== IMAGE GALLERY ===== */}
           <div className="product-gallery">
             <div className="main-image">
               {product.images && product.images.length > 0 ? (
-                <img 
-                  src={`${API_URL}${product.images[selectedImage]}`} 
+                <img
+                  src={`${API_URL}${product.images[selectedImage]}`}
                   alt={product.name}
                 />
               ) : (
@@ -146,17 +176,22 @@ const ProductDetail = () => {
                 {product.images.map((img, index) => (
                   <button
                     key={index}
-                    className={`thumbnail ${index === selectedImage ? 'active' : ''}`}
+                    className={`thumbnail ${
+                      index === selectedImage ? "active" : ""
+                    }`}
                     onClick={() => setSelectedImage(index)}
                   >
-                    <img src={`${API_URL}${img}`} alt={`${product.name} ${index + 1}`} />
+                    <img
+                      src={`${API_URL}${img}`}
+                      alt={`${product.name} ${index + 1}`}
+                    />
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Product Info */}
+          {/* ===== PRODUCT INFO ===== */}
           <div className="product-info-section">
             <h1 className="product-title">{product.name}</h1>
 
@@ -165,7 +200,10 @@ const ProductDetail = () => {
               <div className="seller-info">
                 <div className="seller-avatar">
                   {product.seller.shop_logo ? (
-                    <img src={`${API_URL}${product.seller.shop_logo}`} alt={product.seller.shop_name} />
+                    <img
+                      src={`${API_URL}${product.seller.shop_logo}`}
+                      alt={product.seller.shop_name}
+                    />
                   ) : (
                     <span className="seller-icon">🏪</span>
                   )}
@@ -177,11 +215,9 @@ const ProductDetail = () => {
               </div>
             )}
 
-            {/* Rating Placeholder */}
+            {/* Rating */}
             <div className="product-rating">
-              <div className="stars">
-                {'⭐'.repeat(5)}
-              </div>
+              <div className="stars">{"⭐".repeat(5)}</div>
               <span className="rating-text">(0 reviews)</span>
             </div>
 
@@ -189,17 +225,23 @@ const ProductDetail = () => {
             <div className="product-price-section">
               <div className="price">
                 <span className="currency">Rs.</span>
-                <span className="amount">{parseFloat(product.price).toLocaleString()}</span>
+                <span className="amount">
+                  {parseFloat(product.price).toLocaleString()}
+                </span>
               </div>
-              
-              <div className={`stock ${product.stock_quantity > 0 ? 'in-stock' : 'out-of-stock'}`}>
+
+              <div
+                className={`stock ${
+                  product.stock_quantity > 0 ? "in-stock" : "out-of-stock"
+                }`}
+              >
                 {product.stock_quantity > 0 ? (
                   <>
                     <span className="stock-dot"></span>
                     {product.stock_quantity} in stock
                   </>
                 ) : (
-                  'Out of Stock'
+                  "Out of Stock"
                 )}
               </div>
             </div>
@@ -216,50 +258,50 @@ const ProductDetail = () => {
               <ul>
                 {product.category && (
                   <li>
-                    <strong>Category:</strong> {product.category.icon} {product.category.name}
+                    <strong>Category:</strong> {product.category.icon}{" "}
+                    {product.category.name}
                   </li>
                 )}
                 {product.sku && (
-                  <li><strong>SKU:</strong> {product.sku}</li>
+                  <li>
+                    <strong>SKU:</strong> {product.sku}
+                  </li>
                 )}
                 <li>
-                  <strong>Availability:</strong> {product.stock_quantity > 0 ? 'In Stock' : 'Out of Stock'}
+                  <strong>Availability:</strong>{" "}
+                  {product.stock_quantity > 0 ? "In Stock" : "Out of Stock"}
                 </li>
               </ul>
             </div>
 
-            {/* Quantity & Add to Cart */}
-            {product.stock_quantity > 0 && (
+            {/* Add to Cart & Buy Now — buyers only */}
+            {product.stock_quantity > 0 && !isSeller && (
               <div className="product-actions">
                 <div className="quantity-selector">
-                  <button 
-                    onClick={() => handleQuantityChange('decrement')}
+                  <button
+                    onClick={() => handleQuantityChange("decrement")}
                     disabled={quantity <= 1}
                   >
                     -
                   </button>
-                  <input 
-                    type="number" 
-                    value={quantity} 
-                    readOnly 
-                  />
-                  <button 
-                    onClick={() => handleQuantityChange('increment')}
+                  <input type="number" value={quantity} readOnly />
+                  <button
+                    onClick={() => handleQuantityChange("increment")}
                     disabled={quantity >= product.stock_quantity}
                   >
                     +
                   </button>
                 </div>
 
-                <button 
+                <button
                   className="btn-add-to-cart"
                   onClick={handleAddToCart}
                   disabled={addingToCart}
                 >
-                  {addingToCart ? 'Adding...' : 'Add to Cart'}
+                  {addingToCart ? "Adding..." : "Add to Cart"}
                 </button>
 
-                <button 
+                <button
                   className="btn-buy-now"
                   onClick={handleBuyNow}
                   disabled={addingToCart}
@@ -269,10 +311,12 @@ const ProductDetail = () => {
               </div>
             )}
 
-            {/* Chat with Artisan */}
-            <button className="btn-chat">
-              💬 Chat with Artisan
-            </button>
+            {/* Chat with Artisan — show for buyers and non-logged-in users */}
+            {!isSeller && (
+              <button className="btn-chat" onClick={handleChatWithArtisan}>
+                💬 Chat with Artisan
+              </button>
+            )}
           </div>
         </div>
       </div>

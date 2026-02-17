@@ -144,7 +144,7 @@ const getProductById = async (req, res) => {
         {
           model: db.Seller,
           as: "seller",
-          attributes: ["seller_id", "shop_name", "shop_description", "shop_logo", "city"],
+          attributes: ["seller_id", "shop_name", "shop_description", "shop_logo", "city", "user_id"],
           include: [
             {
               model: db.User,
