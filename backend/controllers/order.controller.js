@@ -388,7 +388,6 @@ const getSellerOrders = async (req, res) => {
   }
 };
 
-// ==================== UPDATE ORDER STATUS ====================
 const updateOrderStatus = async (req, res) => {
   try {
     const { order_id } = req.params;
@@ -408,6 +407,12 @@ const updateOrderStatus = async (req, res) => {
 
     if (order_status === "shipped" && !order.shipped_at) updateData.shipped_at = new Date();
     if (order_status === "delivered" && !order.delivered_at) updateData.delivered_at = new Date();
+
+    //mark COD as paid when delivered
+    if (order_status === "delivered" && order.payment_method === "cod") {
+      updateData.payment_status = "paid";
+      updateData.paid_at = new Date();
+    }
 
     await order.update(updateData);
 

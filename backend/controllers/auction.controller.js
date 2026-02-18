@@ -246,8 +246,6 @@ const getAuctionById = async (req, res) => {
               attributes: ["user_id", "full_name"]
             }
           ],
-          // NOTE: ordering inside include sometimes needs separate query,
-          // but leaving it as you had it
           order: [["bid_amount", "DESC"]]
         }
       ]
@@ -337,6 +335,14 @@ const placeBid = async (req, res) => {
   try {
     const { auction_id } = req.params;
     const { bid_amount } = req.body;
+
+    // Check if user is admin
+    if (req.user.role === "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Admins cannot place bids"
+      });
+    }
 
     const auction = await db.Auction.findByPk(auction_id, {
       include: [{ model: db.Seller, as: "seller" }]

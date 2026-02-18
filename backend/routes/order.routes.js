@@ -11,23 +11,36 @@ const {
 } = require("../controllers/order.controller");
 
 const { authenticate } = require("../middlewares/auth.middleware");
+const { checkRole, checkSellerApproval } = require("../middlewares/roleCheck.middleware");
 
-//(user must be logged in)
+// All order routes require login
 router.use(authenticate);
 
-// Create order
-router.post("/create", createOrder);
+// ==================== BUYER ROUTES ====================
+router.post("/create", checkRole("buyer"), createOrder);
 
-// Verify should be GET because controller uses req.query
-router.get("/khalti/verify", verifyKhaltiPayment);
+// verifyKhaltiPayment uses req.query so GET 
+router.get("/khalti/verify", checkRole("buyer"), verifyKhaltiPayment);
 
-// My orders
-router.get("/my-orders", getUserOrders);
+router.get("/my-orders", checkRole("buyer"), getUserOrders);
 
-// Seller routes MUST be before "/:id"
-router.get("/seller/orders", getSellerOrders);
-router.put("/seller/:order_id/status", updateOrderStatus);
+// buyer order details page
+router.get("/:id", checkRole("buyer", "admin"), getOrderById);
 
-router.get("/:id", getOrderById);
+// ==================== SELLER ROUTES ====================
+// KEEP THESE BEFORE "/:id" (already done)
+router.get(
+  "/seller/orders",
+  checkRole("seller"),
+  checkSellerApproval,
+  getSellerOrders
+);
+
+router.put(
+  "/seller/:order_id/status",
+  checkRole("seller"),
+  checkSellerApproval,
+  updateOrderStatus
+);
 
 module.exports = router;

@@ -229,10 +229,13 @@ const UserProfile = () => {
     }
   };
 
+  // ✅ FIXED: Handle both created_at and createdAt from Sequelize
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {
-      return new Date(dateString).toLocaleDateString('en-US', {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'N/A';
+      return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
@@ -300,7 +303,8 @@ const UserProfile = () => {
                   {user.role === 'seller' ? 'Seller' : user.role === 'admin' ? 'Admin' : 'Buyer'}
                 </span>
                 <span className="member-badge">
-                  Member since {formatDate(user.created_at)}
+                  {/* ✅ FIXED: Check both createdAt (Sequelize camelCase) and created_at */}
+                  Member since {formatDate(user.createdAt || user.created_at)}
                 </span>
               </div>
             </div>
@@ -598,6 +602,7 @@ const UserProfile = () => {
   );
 };
 
+// ==================== ORDER HISTORY COMPONENT ====================
 const OrderHistory = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -652,8 +657,9 @@ const OrderHistory = () => {
           <div className="order-header">
             <div>
               <h3>Order #{order.order_number}</h3>
+              {/* Check both createdAt and created_at */}
               <p className="order-date">
-                {new Date(order.created_at).toLocaleDateString('en-US', {
+                {new Date(order.createdAt || order.created_at).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric',

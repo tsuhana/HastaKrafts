@@ -11,26 +11,47 @@ const NavBar = () => {
   const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userStr = localStorage.getItem('user');
-    
-    if (token && userStr) {
-      setIsLoggedIn(true);
-      setUser(JSON.parse(userStr));
-      fetchCartCount();
-    }
+    // Check login status on mount
+    checkLoginStatus();
+
+    // Listen to login event from Login.jsx
+    const handleLogin = () => {
+      checkLoginStatus();
+    };
 
     // Listen for cart updates
     const handleCartUpdate = () => {
       fetchCartCount();
     };
 
+    window.addEventListener('userLoggedIn', handleLogin);
     window.addEventListener('cartUpdated', handleCartUpdate);
 
     return () => {
+      window.removeEventListener('userLoggedIn', handleLogin);
       window.removeEventListener('cartUpdated', handleCartUpdate);
     };
   }, []);
+
+  const checkLoginStatus = () => {
+    const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
+    
+    if (token && userStr) {
+      const userData = JSON.parse(userStr);
+      setIsLoggedIn(true);
+      setUser(userData);
+      
+      // Only fetch cart for buyers (not admin or seller)
+      if (userData.role === 'buyer') {
+        fetchCartCount();
+      }
+    } else {
+      setIsLoggedIn(false);
+      setUser(null);
+      setCartCount(0);
+    }
+  };
 
   const fetchCartCount = async () => {
     try {
@@ -84,13 +105,13 @@ const NavBar = () => {
             <Link to="/auctions" className="nav-link">Auctions</Link>
           </li>
           <li className="nav-item">
-            <Link to="/messages" className="nav-link"> 💬Chat</Link>
+            <Link to="/messages" className="nav-link">💬 Chat</Link>
           </li>
-          
         </ul>
 
         <div className="nav-actions">
-          {isLoggedIn && (
+          {/* Only show cart for buyers */}
+          {isLoggedIn && user?.role === 'buyer' && (
             <Link to="/cart" className="cart-button">
               <span className="cart-icon">🛒</span>
               {cartCount > 0 && (

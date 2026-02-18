@@ -54,8 +54,11 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/products" element={<Products />} />
             <Route path="/products/:id" element={<ProductDetail />} />
+            
+            {/* Auctions listing is public, but bidding restricted in AuctionDetail */}
             <Route path="/auctions" element={<Auctions />} />
             <Route path="/auctions/:id" element={<AuctionDetail />} />
+            
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/register-seller" element={<RegisterSeller />} />
@@ -65,7 +68,7 @@ function App() {
             <Route path="/auth/google/success" element={<GoogleAuthSuccess />} />
             <Route path="/payment/khalti/callback" element={<KhaltiCallback />} />
 
-            {/* ==================== USER PROTECTED ROUTES ==================== */}
+            {/* ==================== USER PROFILE (ALL ROLES) ==================== */}
             <Route
               path="/profile"
               element={
@@ -75,28 +78,31 @@ function App() {
               }
             />
 
+            {/* Cart only visible to buyer */}
             <Route
               path="/cart"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["buyer"]}>
                   <Cart />
                 </ProtectedRoute>
               }
             />
 
+            {/* Checkout is buyer feature*/}
             <Route
               path="/checkout"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["buyer"]}>
                   <Checkout />
                 </ProtectedRoute>
               }
             />
 
+            {/* Order confirmation is only buyer feature */}
             <Route
               path="/order-confirmation/:id"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["buyer"]}>
                   <OrderConfirmation />
                 </ProtectedRoute>
               }

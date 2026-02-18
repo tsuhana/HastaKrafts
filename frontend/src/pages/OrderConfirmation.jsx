@@ -28,6 +28,30 @@ const OrderConfirmation = () => {
     }
   };
 
+  const getStatusColor = (status) => {
+    const colors = {
+      pending: '#F59E0B',
+      processing: '#3B82F6',
+      shipped: '#8B5CF6',
+      delivered: '#10B981',
+      cancelled: '#EF4444',
+    };
+    return colors[status] || '#6B7280';
+  };
+  
+  // order status timeline
+  const getStatusSteps = () => {
+    const allSteps = ['pending', 'processing', 'shipped', 'delivered'];
+    const currentIndex = allSteps.indexOf(order?.order_status);
+    
+    return allSteps.map((step, index) => ({
+      label: step.charAt(0).toUpperCase() + step.slice(1),
+      status: step,
+      completed: index <= currentIndex,
+      active: index === currentIndex,
+    }));
+  };
+
   if (loading) {
     return (
       <div className="confirmation-loading">
@@ -55,6 +79,24 @@ const OrderConfirmation = () => {
         <h1>Order Placed Successfully!</h1>
         <p className="thank-you">Thank you for your order</p>
 
+        {/* Order Status Tracking Timeline */}
+        {order.order_status !== 'cancelled' && (
+          <div className="order-status-timeline">
+            <h3>Order Status</h3>
+            <div className="timeline-steps">
+              {getStatusSteps().map((step, index) => (
+                <div key={step.status} className={`timeline-step ${step.completed ? 'completed' : ''} ${step.active ? 'active' : ''}`}>
+                  <div className="step-circle">
+                    {step.completed ? '✓' : index + 1}
+                  </div>
+                  <div className="step-label">{step.label}</div>
+                  {index < 3 && <div className="step-line"></div>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="order-details-card">
           <div className="order-header">
             <h2>Order Details</h2>
@@ -64,7 +106,7 @@ const OrderConfirmation = () => {
           <div className="order-info-grid">
             <div className="info-item">
               <label>Order Date</label>
-              <p>{new Date(order.created_at).toLocaleDateString('en-US', {
+              <p>{new Date(order.createdAt || order.created_at).toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
@@ -75,13 +117,6 @@ const OrderConfirmation = () => {
               <label>Payment Method</label>
               <p className="payment-badge">
                 {order.payment_method === 'khalti' ? 'Khalti' : 'Cash on Delivery'}
-              </p>
-            </div>
-
-            <div className="info-item">
-              <label>Payment Status</label>
-              <p className={`status-badge ${order.payment_status}`}>
-                {order.payment_status}
               </p>
             </div>
 

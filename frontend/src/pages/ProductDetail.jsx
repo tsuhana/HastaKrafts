@@ -18,6 +18,8 @@ const ProductDetail = () => {
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const isLoggedIn = !!localStorage.getItem("token");
   const isSeller = currentUser?.role === "seller";
+  const isAdmin = currentUser?.role === "admin";
+  const canBuy = isLoggedIn && !isSeller && !isAdmin; // Only buyers can purchase
 
   useEffect(() => {
     fetchProduct();
@@ -52,8 +54,8 @@ const ProductDetail = () => {
       return;
     }
 
-    if (isSeller) {
-      alert("Sellers cannot add items to cart");
+    if (!canBuy) {
+      alert(isAdmin ? "Admins cannot purchase items" : "Sellers cannot purchase items");
       return;
     }
 
@@ -89,8 +91,8 @@ const ProductDetail = () => {
       return;
     }
 
-    if (isSeller) {
-      alert("Sellers cannot purchase items");
+    if (!canBuy) {
+      alert(isAdmin ? "Admins cannot purchase items" : "Sellers cannot purchase items");
       return;
     }
 
@@ -106,8 +108,8 @@ const ProductDetail = () => {
       return;
     }
 
-    if (isSeller) {
-      alert("Sellers cannot message other sellers");
+    if (!canBuy) {
+      alert(isAdmin ? "Admins cannot message sellers" : "Sellers cannot message other sellers");
       return;
     }
 
@@ -275,7 +277,7 @@ const ProductDetail = () => {
             </div>
 
             {/* Add to Cart & Buy Now — buyers only */}
-            {product.stock_quantity > 0 && !isSeller && (
+            {product.stock_quantity > 0 && canBuy && (
               <div className="product-actions">
                 <div className="quantity-selector">
                   <button
@@ -301,20 +303,14 @@ const ProductDetail = () => {
                   {addingToCart ? "Adding..." : "Add to Cart"}
                 </button>
 
-                <button
-                  className="btn-buy-now"
-                  onClick={handleBuyNow}
-                  disabled={addingToCart}
-                >
-                  Buy Now
-                </button>
+  
               </div>
             )}
 
-            {/* Chat with Artisan — show for buyers and non-logged-in users */}
-            {!isSeller && (
+            {/* Chat with Artisan — show for buyers only */}
+            {canBuy && (
               <button className="btn-chat" onClick={handleChatWithArtisan}>
-                💬 Chat with Artisan
+                 Chat with Artisan
               </button>
             )}
           </div>

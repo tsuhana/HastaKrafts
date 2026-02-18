@@ -42,6 +42,7 @@ router.get(
   "/seller/my-products",
   authenticate,
   checkRole("seller"),
+  checkSellerApproval,
   getSellerProducts
 );
 

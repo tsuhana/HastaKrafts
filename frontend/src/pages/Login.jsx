@@ -29,6 +29,9 @@ const Login = () => {
         localStorage.setItem('token', response.data.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.data.user));
         
+        // custom event to update navbar 
+        window.dispatchEvent(new Event('userLoggedIn'));
+        
         // Redirect based on role
         const userRole = response.data.data.user.role;
         

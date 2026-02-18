@@ -18,6 +18,7 @@ const AuctionDetail = () => {
   const [bidHistory, setBidHistory] = useState([]);
   const socketRef = useRef(null);
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const isAdmin = currentUser?.role === 'admin';
 
   useEffect(() => {
     fetchAuction();
@@ -124,7 +125,7 @@ const AuctionDetail = () => {
   const isLive = auction.status === 'live';
   const isEnded = auction.status === 'ended';
   const images = auction.images || [];
-  const canBid = isLive && !isOwner && !isSeller && currentUser?.user_id;
+  const canBid = isLive && !isOwner && !isSeller && !isAdmin && currentUser?.user_id;
 
   return (
     <div className="ad-page">
@@ -162,7 +163,7 @@ const AuctionDetail = () => {
 
             {isEnded && auction.winner && (
               <div className="ad-winner-block">
-                <span className="ad-winner-label">🏆 Winner</span>
+                <span className="ad-winner-label"> Winner</span>
                 <span className="ad-winner-name">{auction.winner.full_name}</span>
               </div>
             )}
@@ -192,7 +193,7 @@ const AuctionDetail = () => {
               <div className="ad-cant-bid">
                 {!currentUser?.user_id ? (
                   <span>Please <button onClick={() => navigate('/login')} style={{color:'#C17D4A',background:'none',border:'none',cursor:'pointer',fontWeight:700}}>login</button> to bid</span>
-                ) : isOwner ? 'You cannot bid on your own auction' : isSeller ? 'Sellers cannot place bids' : ''}
+                ) : isOwner ? 'You cannot bid on your own auction' : isSeller ? 'Sellers cannot place bids' : isAdmin ? 'Admins cannot place bids' : ''}
               </div>
             )}
 

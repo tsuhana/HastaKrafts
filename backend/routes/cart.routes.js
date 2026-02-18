@@ -8,9 +8,11 @@ const {
   clearCart,
 } = require("../controllers/cart.controller");
 const { authenticate } = require("../middlewares/auth.middleware");
+const { checkRole } = require("../middlewares/roleCheck.middleware"); 
 
-// All cart routes require authentication
+// All cart routes require authentication AND buyer role
 router.use(authenticate);
+router.use(checkRole("buyer")); //Only buyers can access cart
 
 router.get("/", getCart);
 router.post("/add", addToCart);

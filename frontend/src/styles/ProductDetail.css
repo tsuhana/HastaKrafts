@@ -1,6 +1,6 @@
 .product-detail-page {
   min-height: 100vh;
-  background: var(--background-color);
+  background: #fbf7e9;
   padding: 2rem 0;
 }
 
@@ -309,7 +309,7 @@
 }
 
 .btn-add-to-cart {
-  background: var(--white);
+  background: #1a6a18;
   color: var(--green-primary);
   border: 2px solid var(--green-primary);
   padding: 0.875rem 2rem;
@@ -390,3 +390,26 @@
     grid-template-columns: 1fr;
   }
 }
+
+.product-actions .btn-add-to-cart,
+.product-actions .btn-buy-now {
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  outline: none;
+  cursor: pointer;
+}
+
+/* Add to cart */
+.product-actions .btn-add-to-cart {
+  background: #1a6a18 !important;
+  color: var(--green-primary) !important;
+  border: 2px solid var(--green-primary) !important;
+  font-weight: 700;
+}
+
+.product-actions .btn-add-to-cart:hover:not(:disabled) {
+  background: var(--green-primary) !important;
+  color: #139d30 !important;
+}
+

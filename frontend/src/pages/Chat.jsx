@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import { messageAPI } from "../api/axios";
 import "../styles/Chat.css";
+
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import isToday from "dayjs/plugin/isToday";
@@ -13,13 +14,18 @@ dayjs.extend(relativeTime);
 dayjs.extend(isToday);
 dayjs.extend(isYesterday);
 
-// ── DATE HELPERS using dayjs ─────────────────────────────────
-// dayjs handles "2026-02-17 14:06:13.498+05:30" natively 
+// Supports createdAt OR created_at 
+const getMsgTime = (msg) =>
+  msg?.createdAt ||
+  msg?.created_at ||
+  msg?.created_at_local ||
+  msg?.created ||
+  null;
 
 const formatTime = (raw) => {
   if (!raw) return "";
   const d = dayjs(raw);
-  return d.isValid() ? d.format("h:mm A") : "";           // "2:06 PM"
+  return d.isValid() ? d.format("h:mm A") : "";
 };
 
 const formatRelativeTime = (raw) => {
@@ -27,19 +33,19 @@ const formatRelativeTime = (raw) => {
   const d = dayjs(raw);
   if (!d.isValid()) return "";
   const diff = dayjs().diff(d, "minute");
-  if (diff < 1)   return "Just now";
-  if (diff < 60)  return `${diff}m ago`;
+  if (diff < 1) return "Just now";
+  if (diff < 60) return `${diff}m ago`;
   if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
-  return d.format("MMM D");                                 // "Feb 17"
+  return d.format("MMM D");
 };
 
 const formatDateLabel = (raw) => {
   if (!raw) return "";
   const d = dayjs(raw);
   if (!d.isValid()) return "";
-  if (d.isToday())     return "Today";
+  if (d.isToday()) return "Today";
   if (d.isYesterday()) return "Yesterday";
-  return d.format("dddd, MMMM D");                         // "Monday, February 17"
+  return d.format("dddd, MMMM D");
 };
 
 const Chat = () => {
@@ -64,7 +70,7 @@ const Chat = () => {
     activePartnerRef.current = activePartner;
   }, [activePartner]);
 
-  // ── SOCKET ──────────────────────────────────────────────────
+  // ── SOCKET SETUP ────────────────────────────────────────────
   useEffect(() => {
     const socket = io("http://localhost:5000", {
       transports: ["websocket", "polling"],
@@ -99,6 +105,7 @@ const Chat = () => {
       const isRelevant =
         message.sender_id === partner?.partner_id ||
         message.receiver_id === partner?.partner_id;
+
       if (isRelevant) {
         setMessages((prev) => [...prev, message]);
         markAsRead(partner?.partner_id);
@@ -120,16 +127,18 @@ const Chat = () => {
     });
 
     fetchConversations();
+
     return () => socket.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── "Chat with Artisan" button
+  // ── "Chat with Artisan" button (URL partner param) ──────────
   useEffect(() => {
     const partnerId = searchParams.get("partner");
     if (!partnerId || partnerLoadedFromUrl) return;
 
     const numId = parseInt(partnerId);
-    const found = conversations.find((c) => c.partner_id === numId);
+    const found = conversations.find((c) => Number(c.partner_id) === numId);
 
     if (found) {
       selectConversation(found);
@@ -137,6 +146,7 @@ const Chat = () => {
       return;
     }
 
+    // Temporary partner if convo not loaded yet
     setActivePartner({
       partner_id: numId,
       partner_name: "Artisan",
@@ -145,17 +155,21 @@ const Chat = () => {
     });
     setPartnerLoadedFromUrl(true);
 
-    messageAPI.getMessages(numId)
-      .then((res) => { if (res.data.success) setMessages(res.data.data); })
+    messageAPI
+      .getMessages(numId)
+      .then((res) => {
+        if (res.data.success) setMessages(res.data.data);
+      })
       .catch(() => {});
-  }, [searchParams, conversations]);
+  }, [searchParams, conversations, partnerLoadedFromUrl]);
 
   // Update placeholder partner name once conversations load
   useEffect(() => {
     const partnerId = searchParams.get("partner");
     if (!partnerId || !activePartner) return;
     const numId = parseInt(partnerId);
-    const found = conversations.find((c) => c.partner_id === numId);
+    const found = conversations.find((c) => Number(c.partner_id) === numId);
+
     if (found && activePartner.partner_name === "Artisan") {
       setActivePartner((prev) => ({
         ...prev,
@@ -163,13 +177,14 @@ const Chat = () => {
         partner_image: found.partner_image,
       }));
     }
-  }, [conversations]);
+  }, [conversations, searchParams, activePartner]);
 
+  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ── API
+  // ── API CALLS 
   const fetchConversations = async () => {
     try {
       const res = await messageAPI.getConversations();
@@ -217,11 +232,13 @@ const Chat = () => {
     setNewMessage("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     setSending(true);
+
     try {
       const res = await messageAPI.sendMessage({
         receiver_id: activePartner.partner_id,
         message_text: text,
       });
+
       if (res.data.success) {
         setMessages((prev) => [...prev, res.data.data]);
         fetchConversations();
@@ -241,10 +258,16 @@ const Chat = () => {
     }
   };
 
-  // ── HELPERS ──────────────────────────────────────────────────
+  // ── HELPERS 
   const getInitials = (name) => {
     if (!name || name === "Artisan") return "?";
-    return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+    return name
+      .split(" ")
+      .filter(Boolean)
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   const getMyImage = () => currentUser.profile_image || null;
@@ -254,17 +277,27 @@ const Chat = () => {
   // Sent = ✓ gray | Delivered = ✓✓ gray | Seen = ✓✓ green
   const getMessageStatus = (msg, isLastMine) => {
     if (msg.sender_id !== currentUser.user_id) return null;
-    if (msg.is_read) return {
-      ticks: "✓✓", tickColor: "#10B981",
-      label: isLastMine ? "Seen" : null, labelColor: "#10B981",
-    };
-    if (msg.message_id) return {
-      ticks: "✓✓", tickColor: "#9CA3AF",
-      label: isLastMine ? "Delivered" : null, labelColor: "#9CA3AF",
-    };
+    if (msg.is_read)
+      return {
+        ticks: "✓✓",
+        tickColor: "#10B981",
+        label: isLastMine ? "Seen" : null,
+        labelColor: "#10B981",
+      };
+
+    if (msg.message_id)
+      return {
+        ticks: "✓✓",
+        tickColor: "#9CA3AF",
+        label: isLastMine ? "Delivered" : null,
+        labelColor: "#9CA3AF",
+      };
+
     return {
-      ticks: "✓", tickColor: "#9CA3AF",
-      label: isLastMine ? "Sent" : null, labelColor: "#9CA3AF",
+      ticks: "✓",
+      tickColor: "#9CA3AF",
+      label: isLastMine ? "Sent" : null,
+      labelColor: "#9CA3AF",
     };
   };
 
@@ -272,15 +305,20 @@ const Chat = () => {
   const groupMessagesByDate = (msgs) => {
     const groups = [];
     let lastKey = null;
+
     msgs.forEach((msg) => {
-      const d = dayjs(msg.created_at);
+      const rawTime = getMsgTime(msg);
+      const d = dayjs(rawTime);
       const key = d.isValid() ? d.format("YYYY-MM-DD") : "unknown";
+
       if (key !== lastKey) {
-        groups.push({ type: "date", dateStr: msg.created_at });
+        groups.push({ type: "date", dateStr: rawTime });
         lastKey = key;
       }
+
       groups.push({ type: "msg", data: msg });
     });
+
     return groups;
   };
 
@@ -302,6 +340,13 @@ const Chat = () => {
     );
   }
 
+  // Quick debug in console 
+  console.log(
+    "CHAT_FIRST_MSG_TIME:",
+    messages?.[0]?.createdAt,
+    messages?.[0]?.created_at
+  );
+
   const grouped = groupMessagesByDate(messages);
   const lastMineId = getLastMineId(messages);
   const myImage = getMyImage();
@@ -313,7 +358,6 @@ const Chat = () => {
       <h1 className="chat-page-title">Messages</h1>
 
       <div className="chat-container">
-
         {/* ── SIDEBAR ── */}
         <div className={`chat-sidebar ${activePartner ? "hide-mobile" : ""}`}>
           <div className="chat-sidebar-header">
@@ -343,12 +387,17 @@ const Chat = () => {
                   <div className="conv-avatar-wrap">
                     <div className="conv-avatar">
                       {conv.partner_image ? (
-                        <img src={`http://localhost:5000${conv.partner_image}`} alt={conv.partner_name} />
+                        <img
+                          src={`http://localhost:5000${conv.partner_image}`}
+                          alt={conv.partner_name}
+                        />
                       ) : (
                         <span>{getInitials(conv.partner_name)}</span>
                       )}
                     </div>
-                    {isOnline(conv.partner_id) && <div className="conv-online-dot" />}
+                    {isOnline(conv.partner_id) && (
+                      <div className="conv-online-dot" />
+                    )}
                   </div>
 
                   <div className="conv-info">
@@ -359,7 +408,11 @@ const Chat = () => {
                       </span>
                     </div>
                     <div className="conv-preview">
-                      <span className={`conv-last-msg ${conv.unread_count > 0 ? "unread-msg" : ""}`}>
+                      <span
+                        className={`conv-last-msg ${
+                          conv.unread_count > 0 ? "unread-msg" : ""
+                        }`}
+                      >
                         {conv.last_message || "Start a conversation"}
                       </span>
                       {conv.unread_count > 0 && (
@@ -385,16 +438,36 @@ const Chat = () => {
             <>
               {/* Header */}
               <div className="chat-header">
-                <button className="back-btn" onClick={() => { setActivePartner(null); setMessages([]); }}>←</button>
+                <button
+                  className="back-btn"
+                  onClick={() => {
+                    setActivePartner(null);
+                    setMessages([]);
+                  }}
+                >
+                  ←
+                </button>
+
                 <div className="chat-header-avatar">
-                  {activePartner.partner_image
-                    ? <img src={`http://localhost:5000${activePartner.partner_image}`} alt="" />
-                    : <span>{getInitials(activePartner.partner_name)}</span>
-                  }
+                  {activePartner.partner_image ? (
+                    <img
+                      src={`http://localhost:5000${activePartner.partner_image}`}
+                      alt=""
+                    />
+                  ) : (
+                    <span>{getInitials(activePartner.partner_name)}</span>
+                  )}
                 </div>
+
                 <div className="chat-header-info">
                   <h3>{activePartner.partner_name}</h3>
-                  <span className={`partner-status ${isOnline(activePartner.partner_id) ? "is-online" : "is-offline"}`}>
+                  <span
+                    className={`partner-status ${
+                      isOnline(activePartner.partner_id)
+                        ? "is-online"
+                        : "is-offline"
+                    }`}
+                  >
                     {isOnline(activePartner.partner_id) ? "● Online" : "● Offline"}
                   </span>
                 </div>
@@ -405,10 +478,14 @@ const Chat = () => {
                 {messages.length === 0 ? (
                   <div className="no-messages">
                     <div className="no-msg-avatar">
-                      {activePartner.partner_image
-                        ? <img src={`http://localhost:5000${activePartner.partner_image}`} alt="" />
-                        : <span>{getInitials(activePartner.partner_name)}</span>
-                      }
+                      {activePartner.partner_image ? (
+                        <img
+                          src={`http://localhost:5000${activePartner.partner_image}`}
+                          alt=""
+                        />
+                      ) : (
+                        <span>{getInitials(activePartner.partner_name)}</span>
+                      )}
                     </div>
                     <p className="no-msg-name">{activePartner.partner_name}</p>
                     <p className="no-msg-hint">No messages yet — say hello! 👋</p>
@@ -427,7 +504,9 @@ const Chat = () => {
                     const isMine = msg.sender_id === currentUser.user_id;
                     const isLastMine = isMine && msg.message_id === lastMineId;
                     const status = getMessageStatus(msg, isLastMine);
-                    const timeStr = formatTime(msg.created_at);
+
+                    const raw = getMsgTime(msg);
+                    const timeStr = formatTime(raw);
 
                     return (
                       <div
@@ -436,31 +515,52 @@ const Chat = () => {
                       >
                         {/* Avatar — both sides */}
                         <div className="msg-avatar">
-                          {isMine
-                            ? myImage
-                              ? <img src={`http://localhost:5000${myImage}`} alt="me" />
-                              : <span>{getInitials(myName)}</span>
-                            : activePartner.partner_image
-                              ? <img src={`http://localhost:5000${activePartner.partner_image}`} alt="" />
-                              : <span>{getInitials(activePartner.partner_name)}</span>
-                          }
+                          {isMine ? (
+                            myImage ? (
+                              <img
+                                src={`http://localhost:5000${myImage}`}
+                                alt="me"
+                              />
+                            ) : (
+                              <span>{getInitials(myName)}</span>
+                            )
+                          ) : activePartner.partner_image ? (
+                            <img
+                              src={`http://localhost:5000${activePartner.partner_image}`}
+                              alt=""
+                            />
+                          ) : (
+                            <span>{getInitials(activePartner.partner_name)}</span>
+                          )}
                         </div>
 
                         <div className="message-bubble-group">
-                          <div className={`message-bubble ${isMine ? "bubble-mine" : "bubble-theirs"}`}>
+                          <div
+                            className={`message-bubble ${
+                              isMine ? "bubble-mine" : "bubble-theirs"
+                            }`}
+                          >
                             {msg.message_text}
                           </div>
 
                           {/* Time + ticks + Sent/Delivered/Seen */}
                           <div className="message-meta">
-                            {timeStr && <span className="message-time">{timeStr}</span>}
+                            {timeStr && (
+                              <span className="message-time">{timeStr}</span>
+                            )}
                             {status && (
                               <>
-                                <span className="message-ticks" style={{ color: status.tickColor }}>
+                                <span
+                                  className="message-ticks"
+                                  style={{ color: status.tickColor }}
+                                >
                                   {status.ticks}
                                 </span>
                                 {status.label && (
-                                  <span className="message-status-label" style={{ color: status.labelColor }}>
+                                  <span
+                                    className="message-status-label"
+                                    style={{ color: status.labelColor }}
+                                  >
                                     {status.label}
                                   </span>
                                 )}
@@ -485,7 +585,8 @@ const Chat = () => {
                     onChange={(e) => {
                       setNewMessage(e.target.value);
                       e.target.style.height = "auto";
-                      e.target.style.height = Math.min(e.target.scrollHeight, 100) + "px";
+                      e.target.style.height =
+                        Math.min(e.target.scrollHeight, 100) + "px";
                     }}
                     onKeyDown={handleKeyDown}
                     placeholder="Type your message..."
@@ -503,7 +604,6 @@ const Chat = () => {
             </>
           )}
         </div>
-
       </div>
     </div>
   );

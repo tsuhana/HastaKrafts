@@ -103,19 +103,22 @@ const Products = () => {
 
           {/* Search */}
           <div className="filter-section">
-            <h3>Search</h3>
-            <form onSubmit={handleSearch}>
-              <input
-                type="text"
-                name="search"
-                value={filters.search}
-                onChange={handleFilterChange}
-                placeholder="Search products..."
-                className="search-input"
+          <h3>Search</h3>
+
+            <form onSubmit={handleSearch} className="search-form">
+            <input
+              type="text"
+              name="search"
+              value={filters.search}
+              onChange={handleFilterChange}
+              placeholder="Search products..."
+              className="filter-input"
               />
-              <button type="submit" className="search-btn">Search</button>
-            </form>
-          </div>
+            <button type="submit" className="filter-btn">
+            Search
+          </button>
+          </form>
+        </div>
 
           {/* Categories */}
           <div className="filter-section">
@@ -150,29 +153,32 @@ const Products = () => {
           {/* Price Range */}
           <div className="filter-section">
             <h3>Price Range</h3>
-            <div className="price-inputs">
-              <input
+
+            <div className="price-row">
+               <input
                 type="number"
                 name="minPrice"
                 value={filters.minPrice}
                 onChange={handleFilterChange}
                 placeholder="Min"
-                className="price-input"
-              />
-              <span>-</span>
-              <input
-                type="number"
-                name="maxPrice"
-                value={filters.maxPrice}
-                onChange={handleFilterChange}
-                placeholder="Max"
-                className="price-input"
-              />
-            </div>
-            <button onClick={fetchProducts} className="apply-price-btn">
-              Apply
-            </button>
+                className="filter-input"
+                />
+            <span className="price-sep">—</span>
+            <input
+             type="number"
+            name="maxPrice"
+            value={filters.maxPrice}
+            onChange={handleFilterChange}
+            placeholder="Max"
+            className="filter-input"
+            />
           </div>
+
+  <button type="button" onClick={fetchProducts} className="filter-btn full">
+    Apply
+  </button>
+</div>
+
         </aside>
 
         {/* Products Grid */}

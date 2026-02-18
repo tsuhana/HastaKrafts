@@ -1,23 +1,46 @@
 const express = require("express");
 const router = express.Router();
+
 const {
   createAuction,
   getAllAuctions,
   getAuctionById,
   getSellerAuctions,
   placeBid,
-  getAuctionBids
+  getAuctionBids,
 } = require("../controllers/auction.controller");
-const { authenticate } = require("../middlewares/auth.middleware");
 
-// Public routes
+const { authenticate } = require("../middlewares/auth.middleware");
+const { checkRole, checkSellerApproval } = require("../middlewares/roleCheck.middleware");
+
+// ==================== PUBLIC ROUTES ====================
 router.get("/", getAllAuctions);
 router.get("/:id", getAuctionById);
 router.get("/:auction_id/bids", getAuctionBids);
 
-// Protected routes (require authentication)
-router.post("/create", authenticate, createAuction);
-router.get("/seller/my-auctions", authenticate, getSellerAuctions);
-router.post("/:auction_id/bid", authenticate, placeBid);
+// ==================== SELLER ROUTES ====================
+router.post(
+  "/create",
+  authenticate,
+  checkRole("seller"),
+  checkSellerApproval,
+  createAuction
+);
+
+router.get(
+  "/seller/my-auctions",
+  authenticate,
+  checkRole("seller"),
+  checkSellerApproval,
+  getSellerAuctions
+);
+
+// ==================== BUYER ROUTES ====================
+router.post(
+  "/:auction_id/bid",
+  authenticate,
+  checkRole("buyer"),
+  placeBid
+);
 
 module.exports = router;
