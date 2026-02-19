@@ -91,8 +91,8 @@ const Reviews = ({ productId, currentUser, isLoggedIn, canBuy, onStatsChange }) 
 
   const removePreview = (i) => {
     URL.revokeObjectURL(previews[i]);
-    setImages(p   => p.filter((_,j)  => j !== i));
-    setPreviews(p => p.filter((_,j)  => j !== i));
+    setImages(p   => p.filter((_,j) => j !== i));
+    setPreviews(p => p.filter((_,j) => j !== i));
   };
 
   const submit = async () => {
@@ -120,8 +120,11 @@ const Reviews = ({ productId, currentUser, isLoggedIn, canBuy, onStatsChange }) 
   const fmtDate = (raw) => {
     if (!raw) return "";
     const d = new Date(raw);
-    return isNaN(d) ? "" : d.toLocaleDateString("en-US", { year:"numeric", month:"short", day:"numeric" });
+    return isNaN(d) ? "" : d.toLocaleDateString("en-GB", { year:"numeric", month:"short", day:"numeric" });
   };
+
+  // handles both snake_case (created_at) and camelCase (createdAt) from backend
+  const getDate = (r) => r.created_at || r.createdAt || "";
 
   const initials = (name = "") => {
     const p = name.trim().split(" ").filter(Boolean);
@@ -150,8 +153,6 @@ const Reviews = ({ productId, currentUser, isLoggedIn, canBuy, onStatsChange }) 
 
       {/* SUMMARY */}
       <div className="rvSummary">
-
-        {/* Left: big score */}
         <div className="rvScoreCard">
           <div className="rvScoreTop">
             <div className="rvScoreNum">
@@ -164,7 +165,6 @@ const Reviews = ({ productId, currentUser, isLoggedIn, canBuy, onStatsChange }) 
           </div>
         </div>
 
-        {/* Right: single-column bars */}
         <div className="rvBarsCard">
           {[5, 4, 3, 2, 1].map((s) => {
             const c = stats.ratingCounts?.[s] || 0;
@@ -180,10 +180,9 @@ const Reviews = ({ productId, currentUser, isLoggedIn, canBuy, onStatsChange }) 
             );
           })}
         </div>
-
       </div>
 
-      {/* WRITE FORM */}
+      {/* FORM */}
       {showForm && (
         <div className="rvForm">
           <div className="rvFormHead">
@@ -229,7 +228,7 @@ const Reviews = ({ productId, currentUser, isLoggedIn, canBuy, onStatsChange }) 
 
           <div className="rvFormActions">
             <button className="rvSecondaryBtn" onClick={closeForm} disabled={saving}>Cancel</button>
-            <button className="rvPrimaryBtn"   onClick={submit}    disabled={saving || !rating}>
+            <button className="rvPrimaryBtn" onClick={submit} disabled={saving || !rating}>
               {saving ? "Posting…" : "Post Review"}
             </button>
           </div>
@@ -253,6 +252,7 @@ const Reviews = ({ productId, currentUser, isLoggedIn, canBuy, onStatsChange }) 
             return (
               <div className="rvCard" key={r.review_id}>
 
+                {/* ROW 1: avatar | name+stars+badge | date | delete */}
                 <div className="rvCardTop">
                   <div className="rvUser">
                     <div className="rvAvatar">
@@ -260,7 +260,8 @@ const Reviews = ({ productId, currentUser, isLoggedIn, canBuy, onStatsChange }) 
                         ? <img src={`${API_URL}${r.user.profile_image}`} alt="" />
                         : initials(name)}
                     </div>
-                    <div>
+                    {/* name + stars stacked */}
+                    <div className="rvUserInfo">
                       <div className="rvName">{name}</div>
                       <div className="rvRowSmall">
                         <Stars value={r.rating} size={13} />
@@ -269,16 +270,21 @@ const Reviews = ({ productId, currentUser, isLoggedIn, canBuy, onStatsChange }) 
                     </div>
                   </div>
 
+                  {/* date + delete always on far right */}
                   <div className="rvMeta">
-                    <span className="rvDate">{fmtDate(r.created_at)}</span>
+                    <span className="rvDate">{fmtDate(getDate(r))}</span>
                     {currentUser?.user_id === r.user_id && (
-                      <button className="rvDangerBtn" onClick={() => removeReview(r.review_id)}>Delete</button>
+                      <button className="rvDangerBtn" onClick={() => removeReview(r.review_id)}>
+                        Delete
+                      </button>
                     )}
                   </div>
                 </div>
 
+                {/* ROW 2: comment full width */}
                 {r.comment && <p className="rvComment">{r.comment}</p>}
 
+                {/* ROW 3: images full width */}
                 {r.images?.length > 0 && (
                   <div className="rvImgs">
                     {r.images.map((img, i) => (
