@@ -1,21 +1,86 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import Icons from '../utils/icons';
+import { wishlistAPI } from '../api/axios';
 import '../styles/ProductCard.css';
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product, showWishlist = true }) => {
+  const navigate = useNavigate();
   const API_URL = 'http://localhost:5000';
+  
+  const [inWishlist, setInWishlist] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
+  
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const isLoggedIn = !!localStorage.getItem('token');
+  const isBuyer = currentUser?.role === 'buyer';
+
+  useEffect(() => {
+    if (isLoggedIn && isBuyer && showWishlist) {
+      checkWishlistStatus();
+    }
+  }, [product.product_id]);
+
+  const checkWishlistStatus = async () => {
+    try {
+      const res = await wishlistAPI.checkWishlist(product.product_id);
+      setInWishlist(res.data.inWishlist);
+    } catch (err) {
+      console.error('Check wishlist error:', err);
+    }
+  };
+
+  const toggleWishlist = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!isLoggedIn) {
+      alert('Please login to add items to wishlist');
+      navigate('/login');
+      return;
+    }
+
+    if (!isBuyer) {
+      alert('Only buyers can use wishlist');
+      return;
+    }
+
+    setWishlistLoading(true);
+    try {
+      if (inWishlist) {
+        await wishlistAPI.removeFromWishlist(product.product_id);
+        setInWishlist(false);
+      } else {
+        await wishlistAPI.addToWishlist({ product_id: product.product_id });
+        setInWishlist(true);
+      }
+    } catch (err) {
+      console.error('Wishlist toggle error:', err);
+      alert(err.response?.data?.message || 'Failed to update wishlist');
+    } finally {
+      setWishlistLoading(false);
+    }
+  };
   
   const getStatusBadge = () => {
     if (!product.status) return null;
     
     const badges = {
-      pending: { class: 'badge-pending', text: 'Pending' },
-      approved: { class: 'badge-approved', text: 'Live' },
-      rejected: { class: 'badge-rejected', text: 'Rejected' },
+      pending: { class: 'badge-pending', text: 'Pending', icon: Icons.Clock },
+      approved: { class: 'badge-approved', text: 'Live', icon: Icons.CheckCircle },
+      rejected: { class: 'badge-rejected', text: 'Rejected', icon: Icons.CloseCircle },
     };
     
     const badge = badges[product.status];
-    return badge ? <span className={`status-badge ${badge.class}`}>{badge.text}</span> : null;
+    if (!badge) return null;
+    
+    const BadgeIcon = badge.icon;
+    return (
+      <span className={`status-badge ${badge.class}`}>
+        <BadgeIcon size={12} />
+        {badge.text}
+      </span>
+    );
   };
 
   return (
@@ -30,12 +95,36 @@ const ProductCard = ({ product }) => {
             />
           ) : (
             <div className="product-image-placeholder">
+              <Icons.Package size={48} />
               <span>No Image</span>
             </div>
           )}
+          
           {getStatusBadge()}
+          
           {product.is_featured && (
-            <span className="featured-badge">Featured</span>
+            <span className="featured-badge">
+              <Icons.TrendingUp size={12} />
+              Featured
+            </span>
+          )}
+
+          {/* Wishlist Heart Button - Only show for buyers */}
+          {isLoggedIn && isBuyer && showWishlist && (
+            <button 
+              className={`wishlist-btn ${inWishlist ? 'active' : ''}`}
+              onClick={toggleWishlist}
+              disabled={wishlistLoading}
+              title={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+            >
+              {wishlistLoading ? (
+                <div className="wishlist-spinner" />
+              ) : inWishlist ? (
+                <Icons.HeartFilled size={20} />
+              ) : (
+                <Icons.Heart size={20} />
+              )}
+            </button>
           )}
         </div>
 
@@ -44,14 +133,14 @@ const ProductCard = ({ product }) => {
           
           {product.seller && (
             <p className="product-seller">
-              <span className="seller-icon">🏪</span>
+              <Icons.Shop size={16} />
               {product.seller.shop_name}
             </p>
           )}
 
           {product.category && (
             <p className="product-category">
-              <span className="category-icon">{product.category.icon}</span>
+              <Icons.Tag size={16} />
               {product.category.name}
             </p>
           )}

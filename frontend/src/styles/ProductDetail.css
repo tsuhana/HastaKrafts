@@ -1,6 +1,6 @@
 .product-detail-page {
   min-height: 100vh;
-  background: #fbf7e9;
+  background: #fdf2f0;   /* ← yo rakhnuhos jastai cha, pinky cream */
   padding: 2rem 0;
 }
 
@@ -88,13 +88,8 @@
   background: var(--background-secondary);
 }
 
-.thumbnail:hover {
-  border-color: var(--primary-light);
-}
-
-.thumbnail.active {
-  border-color: var(--primary-color);
-}
+.thumbnail:hover { border-color: var(--primary-light); }
+.thumbnail.active { border-color: var(--primary-color); }
 
 .thumbnail img {
   width: 100%;
@@ -136,27 +131,10 @@
   overflow: hidden;
 }
 
-.seller-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
+.seller-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-.seller-icon {
-  font-size: 1.5rem;
-}
-
-.seller-name {
-  font-weight: 600;
-  color: var(--text-color);
-  margin: 0;
-}
-
-.seller-location {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  margin: 0;
-}
+.seller-name { font-weight: 600; color: var(--text-color); margin: 0; }
+.seller-location { font-size: 0.875rem; color: var(--text-secondary); margin: 0; }
 
 /* Rating */
 .product-rating {
@@ -165,15 +143,8 @@
   gap: 0.5rem;
 }
 
-.stars {
-  color: var(--gold);
-  font-size: 1.2rem;
-}
-
-.rating-text {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-}
+.stars { color: var(--gold); font-size: 1.2rem; }
+.rating-text { color: var(--text-secondary); font-size: 0.9rem; }
 
 /* Price Section */
 .product-price-section {
@@ -185,44 +156,14 @@
   border-radius: var(--radius-md);
 }
 
-.price {
-  display: flex;
-  align-items: baseline;
-  gap: 0.25rem;
-  color: var(--primary-color);
-}
+.price { display: flex; align-items: baseline; gap: 0.25rem; color: var(--primary-color); }
+.currency { font-size: 1.2rem; font-weight: 600; }
+.amount { font-size: 2.5rem; font-weight: 700; }
 
-.currency {
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-
-.amount {
-  font-size: 2.5rem;
-  font-weight: 700;
-}
-
-.stock {
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.stock.in-stock {
-  color: var(--status-approved);
-}
-
-.stock.out-of-stock {
-  color: var(--status-rejected);
-}
-
-.stock-dot {
-  width: 8px;
-  height: 8px;
-  background: var(--status-approved);
-  border-radius: 50%;
-}
+.stock { font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+.stock.in-stock { color: var(--status-approved); }
+.stock.out-of-stock { color: var(--status-rejected); }
+.stock-dot { width: 8px; height: 8px; background: var(--status-approved); border-radius: 50%; }
 
 /* Description & Details */
 .product-description,
@@ -238,10 +179,7 @@
   color: var(--text-color);
 }
 
-.product-description p {
-  color: var(--text-secondary);
-  line-height: 1.8;
-}
+.product-description p { color: var(--text-secondary); line-height: 1.8; }
 
 .product-details ul {
   list-style: none;
@@ -251,16 +189,8 @@
   gap: 0.75rem;
 }
 
-.product-details li {
-  color: var(--text-secondary);
-  display: flex;
-  gap: 0.5rem;
-}
-
-.product-details strong {
-  color: var(--text-color);
-  min-width: 120px;
-}
+.product-details li { color: var(--text-secondary); display: flex; gap: 0.5rem; }
+.product-details strong { color: var(--text-color); min-width: 120px; }
 
 /* Actions */
 .product-actions {
@@ -294,10 +224,7 @@
   color: var(--white);
 }
 
-.quantity-selector button:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
+.quantity-selector button:disabled { opacity: 0.3; cursor: not-allowed; }
 
 .quantity-selector input {
   width: 60px;
@@ -309,39 +236,24 @@
 }
 
 .btn-add-to-cart {
-  background: #1a6a18;
-  color: var(--green-primary);
-  border: 2px solid var(--green-primary);
+  background: #2e7d32;
+  color: #fff;
+  border: none;
   padding: 0.875rem 2rem;
   border-radius: var(--radius-md);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 1rem;
+  cursor: pointer;
   transition: var(--transition-fast);
 }
 
-.btn-add-to-cart:hover {
-  background: var(--green-primary);
-  color: var(--white);
-  transform: translateY(-2px);
+.btn-add-to-cart:hover:not(:disabled) {
+  background: #1b5e20;
+  transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
 
-.btn-buy-now {
-  background: var(--green-primary);
-  color: var(--white);
-  padding: 0.875rem 2rem;
-  border-radius: var(--radius-md);
-  font-weight: 600;
-  font-size: 1rem;
-  grid-column: 1 / -1;
-  transition: var(--transition-fast);
-}
-
-.btn-buy-now:hover {
-  background: var(--green-hover);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
+.btn-add-to-cart:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .btn-chat {
   width: 100%;
@@ -352,6 +264,11 @@
   font-weight: 600;
   transition: var(--transition-fast);
   border: 2px solid var(--border-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .btn-chat:hover {
@@ -370,46 +287,23 @@
   gap: 1rem;
 }
 
+/* ── Reviews section wrapper inside the cream page ── */
+/* This gives the white Reviews card a clean shadow so it
+   sits nicely above the #fdf2f0 pinky cream background    */
+.product-detail-container > .rvWrap {
+  margin-top: 2rem;
+  background: #ffffff !important;
+  box-shadow: 0 2px 16px rgba(80, 30, 10, 0.1);
+  border: 1px solid #e8ddd8;
+}
+
 /* Responsive */
 @media (max-width: 968px) {
-  .product-detail-content {
-    grid-template-columns: 1fr;
-  }
+  .product-detail-content { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {
-  .product-title {
-    font-size: 1.5rem;
-  }
-  
-  .amount {
-    font-size: 2rem;
-  }
-  
-  .product-actions {
-    grid-template-columns: 1fr;
-  }
+  .product-title { font-size: 1.5rem; }
+  .amount { font-size: 2rem; }
+  .product-actions { grid-template-columns: 1fr; }
 }
-
-.product-actions .btn-add-to-cart,
-.product-actions .btn-buy-now {
-  appearance: none;
-  -webkit-appearance: none;
-  border: none;
-  outline: none;
-  cursor: pointer;
-}
-
-/* Add to cart */
-.product-actions .btn-add-to-cart {
-  background: #1a6a18 !important;
-  color: var(--green-primary) !important;
-  border: 2px solid var(--green-primary) !important;
-  font-weight: 700;
-}
-
-.product-actions .btn-add-to-cart:hover:not(:disabled) {
-  background: var(--green-primary) !important;
-  color: #139d30 !important;
-}
-

@@ -16,6 +16,8 @@ const cartRoutes = require("./routes/cart.routes");
 const orderRoutes = require("./routes/order.routes");
 const auctionRoutes = require("./routes/auction.routes");
 const messageRoutes = require("./routes/message.routes");
+const reviewRoutes = require("./routes/review.routes");
+const wishlistRoutes = require("./routes/wishlist.routes");
 
 const app = express();
 const server = http.createServer(app);
@@ -59,6 +61,8 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/auctions", auctionRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/wishlist", wishlistRoutes);
 
 // ══════════════════════════════════════════════════════════════
 // SOCKET.IO — Online tracking + messaging + auctions

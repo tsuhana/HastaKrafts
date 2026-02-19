@@ -24,6 +24,7 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import Chat from "./pages/Chat";
+import Wishlist from "./pages/Wishlist";
 
 // ==================== AUCTION PAGES ====================
 import Auctions from "./pages/Auctions";
@@ -78,7 +79,8 @@ function App() {
               }
             />
 
-            {/* Cart only visible to buyer */}
+            {/* ==================== BUYER-ONLY ROUTES ==================== */}
+            {/* Cart */}
             <Route
               path="/cart"
               element={
@@ -88,7 +90,17 @@ function App() {
               }
             />
 
-            {/* Checkout is buyer feature*/}
+            {/* Wishlist - Buyers only */}
+            <Route
+              path="/wishlist"
+              element={
+                <ProtectedRoute allowedRoles={["buyer"]}>
+                  <Wishlist />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Checkout */}
             <Route
               path="/checkout"
               element={
@@ -98,7 +110,7 @@ function App() {
               }
             />
 
-            {/* Order confirmation is only buyer feature */}
+            {/* Order confirmation */}
             <Route
               path="/order-confirmation/:id"
               element={

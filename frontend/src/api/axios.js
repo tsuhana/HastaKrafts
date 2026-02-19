@@ -78,20 +78,17 @@ export const cartAPI = {
   clearCart: () => API.delete('/cart/clear'),
 };
 
+// ORDERS
 export const orderAPI = {
   createOrder: (data) => API.post("/orders/create", data),
   getMyOrders: () => API.get("/orders/my-orders"),
   getOrderById: (id) => API.get(`/orders/${id}`),
-
-  // GET verify with query params
   verifyKhaltiPayment: ({ pidx, order_id }) =>
     API.get(`/orders/khalti/verify?pidx=${encodeURIComponent(pidx)}&order_id=${encodeURIComponent(order_id)}`),
-
   getSellerOrders: () => API.get("/orders/seller/orders"),
   updateOrderStatus: (orderId, data) =>
     API.put(`/orders/seller/${orderId}/status`, data),
 };
-
 
 // AUCTIONS
 export const auctionAPI = {
@@ -109,6 +106,26 @@ export const messageAPI = {
   getConversations: () => API.get('/messages/conversations'),
   getMessages: (partnerId) => API.get(`/messages/${partnerId}`),
   getUnreadCount: () => API.get('/messages/unread-count'),
+};
+
+// ==================== WISHLIST API ====================
+export const wishlistAPI = {
+  getWishlist: () => API.get('/wishlist'),
+  addToWishlist: (data) => API.post('/wishlist/add', data),
+  removeFromWishlist: (product_id) => API.delete(`/wishlist/remove/${product_id}`),
+  checkWishlist: (product_id) => API.get(`/wishlist/check/${product_id}`),
+  clearWishlist: () => API.delete('/wishlist/clear'),
+};
+
+// ==================== REVIEW API ====================
+export const reviewAPI = {
+  getProductReviews: (product_id) => API.get(`/reviews/product/${product_id}`),
+  createReview: (formData) => API.post('/reviews', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  getMyReviews: () => API.get('/reviews/my-reviews'),
+  updateReview: (review_id, data) => API.put(`/reviews/${review_id}`, data),
+  deleteReview: (review_id) => API.delete(`/reviews/${review_id}`),
 };
 
 export default API;

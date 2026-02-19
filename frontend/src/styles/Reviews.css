@@ -1,0 +1,530 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+
+/* ─────────────────────────────────────────
+   WRAPPER
+───────────────────────────────────────── */
+.rvWrap {
+  font-family: 'DM Sans', sans-serif;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  overflow: hidden;
+  margin-top: 2rem;
+  color: #222;
+}
+
+/* ─────────────────────────────────────────
+   HEADER
+───────────────────────────────────────── */
+.rvHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #efefef;
+}
+.rvTitle {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #111;
+}
+.rvSub {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  color: #999;
+}
+
+/* ─────────────────────────────────────────
+   HINT
+───────────────────────────────────────── */
+.rvHint {
+  margin: 0;
+  padding: 0.7rem 1.5rem;
+  border-bottom: 1px solid #efefef;
+  font-size: 0.85rem;
+  color: #888;
+  background: #fafafa;
+}
+.rvHint a { color: #2e7d32; font-weight: 700; }
+
+/* ─────────────────────────────────────────
+   BUTTONS
+───────────────────────────────────────── */
+.rvPrimaryBtn {
+  background: #2e7d32;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 1.1rem;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s;
+}
+.rvPrimaryBtn:hover    { background: #1b5e20; }
+.rvPrimaryBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.rvSecondaryBtn {
+  background: #fff;
+  color: #333;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  padding: 0.55rem 1.1rem;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.rvSecondaryBtn:hover { background: #f5f5f5; }
+
+.rvGhostBtn {
+  background: transparent;
+  border: none;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #bbb;
+  padding: 0 0.4rem;
+  border-radius: 6px;
+}
+.rvGhostBtn:hover { background: #f0f0f0; }
+
+/* ─────────────────────────────────────────
+   SUMMARY  —  EXACTLY DARAZ LAYOUT
+   Left: big score + stars
+   Right: 5 rating bars in ONE column
+───────────────────────────────────────── */
+.rvSummary {
+  display: flex;              /* flex row */
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0;
+  padding: 1.5rem;
+  border-bottom: 1px solid #efefef;
+  background: #fff;
+}
+
+/* ── Score block (left) ── */
+.rvScoreCard {
+  flex: 0 0 200px;            /* fixed width, no shrink/grow */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding-right: 2rem;
+  border-right: 1px solid #e8e8e8;
+}
+
+.rvScoreTop {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+}
+
+.rvScoreNum {
+  font-size: 4rem;
+  font-weight: 800;
+  color: #111;
+  line-height: 1;
+  letter-spacing: -2px;
+}
+
+.rvScoreRight {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.rvScoreMeta {
+  font-size: 0.8rem;
+  color: #999;
+  margin-top: 0.1rem;
+}
+
+/* ── Bars block (right) — SINGLE COLUMN ── */
+.rvBarsCard {
+  flex: 1;                    /* take remaining space */
+  display: flex;
+  flex-direction: column;     /* stack bars vertically */
+  gap: 0.55rem;
+  padding-left: 2rem;
+}
+
+/* Each bar row: [number] [bar track] [count] */
+.rvBarRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+}
+
+.rvBarLeft {
+  flex: 0 0 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #666;
+  text-align: right;
+}
+
+.rvBarTrack {
+  flex: 1;                    /* bar fills remaining space */
+  height: 8px;
+  border-radius: 999px;
+  background: #ebebeb;
+  overflow: hidden;
+}
+
+.rvBarFill {
+  height: 100%;
+  border-radius: 999px;
+  background: #f5a623;
+}
+
+.rvBarCount {
+  flex: 0 0 24px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #999;
+  text-align: right;
+}
+
+/* ─────────────────────────────────────────
+   STARS
+───────────────────────────────────────── */
+.rv-stars {
+  display: flex;
+  flex-direction: row;
+  gap: 1px;
+}
+
+.rv-starBtn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: default;
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+.rv-starBtn.isPick { cursor: pointer; }
+
+.rv-starSvg                { color: #e0e0e0; display: block; }
+.rv-starFilled .rv-starSvg { color: #f5a623; }
+.rv-starEmpty  .rv-starSvg { color: #e0e0e0; }
+
+.rvLabelTag {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #2e7d32;
+  background: #e8f5e9;
+  border: 1px solid #c8e6c9;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+}
+
+/* ─────────────────────────────────────────
+   FORM
+───────────────────────────────────────── */
+.rvForm {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #efefef;
+  background: #fff;
+}
+
+.rvFormHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+.rvFormHead h3 { margin: 0; font-size: 1rem; font-weight: 800; }
+
+.rvField { margin-bottom: 1rem; }
+.rvField label {
+  display: block;
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 0.4rem;
+}
+.rvReq { color: #e53e3e; }
+.rvOpt { color: #aaa; font-size: 0.76rem; font-weight: 500; }
+
+.rvFieldRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rvTextarea {
+  width: 100%;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0.65rem 0.9rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.88rem;
+  color: #222;
+  background: #fff;
+  resize: vertical;
+  display: block;
+}
+.rvTextarea:focus {
+  outline: none;
+  border-color: #66bb6a;
+  box-shadow: 0 0 0 3px rgba(46,125,50,0.09);
+}
+
+.rvChar { text-align: right; margin-top: 0.2rem; font-size: 0.72rem; color: #bbb; }
+
+.rvPhotos { display: flex; flex-direction: row; gap: 0.5rem; flex-wrap: wrap; }
+
+.rvPhoto {
+  width: 76px; height: 76px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1.5px solid #e0e0e0;
+  position: relative;
+  flex-shrink: 0;
+}
+.rvPhoto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.rvPhotoRm {
+  position: absolute; top: 4px; right: 4px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.58);
+  color: #fff;
+  cursor: pointer;
+  font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.rvPhotoAdd {
+  width: 76px; height: 76px;
+  border-radius: 8px;
+  border: 2px dashed #ccc;
+  background: transparent;
+  color: #aaa;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  font-size: 0.74rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.rvPhotoAdd:hover { border-color: #66bb6a; color: #2e7d32; background: #e8f5e9; }
+
+.rvFormActions {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  border-top: 1px solid #eee;
+  padding-top: 1rem;
+  margin-top: 0.8rem;
+}
+
+/* ─────────────────────────────────────────
+   EMPTY / LOADING
+───────────────────────────────────────── */
+.rvState { text-align: center; padding: 2.5rem; color: #bbb; }
+
+.rvEmpty {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  background: #fafafa;
+}
+.rvEmptyIcon  { font-size: 2rem; margin-bottom: 0.5rem; }
+.rvEmptyTitle { font-weight: 800; color: #333; font-size: 0.95rem; }
+.rvEmptyText  { color: #bbb; margin-top: 0.2rem; font-size: 0.84rem; }
+
+/* ─────────────────────────────────────────
+   REVIEW LIST  —  DARAZ STYLE
+   No boxes, just top divider + row dividers
+───────────────────────────────────────── */
+.rvList {
+  display: flex;
+  flex-direction: column;
+}
+
+/* "Product Reviews" label */
+.rvListLabel {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #111;
+  padding: 1rem 1.5rem 0.75rem;
+  border-bottom: 1px solid #efefef;
+  border-top: 1px solid #efefef;
+}
+
+/* Single review row */
+.rvCard {
+  padding: 1.2rem 1.5rem;
+  border-bottom: 1px solid #efefef;
+  background: #fff;
+}
+.rvCard:last-child { border-bottom: none; }
+
+/* Top row: avatar+name+stars LEFT  |  date+delete RIGHT */
+.rvCardTop {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.6rem;
+}
+
+.rvUser {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.rvAvatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2e7d32, #66bb6a);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 0.72rem;
+  overflow: hidden; flex-shrink: 0;
+}
+.rvAvatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.rvName {
+  font-weight: 700;
+  font-size: 0.87rem;
+  color: #111;
+  margin-bottom: 0.2rem;
+}
+
+.rvRowSmall {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.rvBadge {
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: #2e7d32;
+  background: #e8f5e9;
+  border: 1px solid #c8e6c9;
+  padding: 0.08rem 0.38rem;
+  border-radius: 999px;
+}
+
+.rvMeta {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+.rvDate { color: #bbb; font-size: 0.77rem; }
+
+.rvDangerBtn {
+  border: 1px solid #fecaca;
+  background: #fff5f5;
+  color: #e53e3e;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  font-size: 0.73rem;
+  padding: 0.22rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.rvDangerBtn:hover { background: #fee2e2; }
+
+/* Comment — full width below card top */
+.rvComment {
+  font-size: 0.88rem;
+  color: #333;
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* Images row */
+.rvImgs {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.7rem;
+}
+
+.rvImg {
+  width: 80px; height: 80px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  object-fit: cover;
+  cursor: zoom-in;
+  display: block;
+  transition: transform 0.15s;
+}
+.rvImg:hover { transform: scale(1.05); }
+
+/* ─────────────────────────────────────────
+   LIGHTBOX
+───────────────────────────────────────── */
+.rvLightbox {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.92);
+  z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  padding: 2rem;
+  cursor: zoom-out;
+}
+.rvLightboxImg {
+  max-width: 90vw; max-height: 90vh;
+  object-fit: contain;
+  border-radius: 10px;
+}
+.rvLightboxX {
+  position: fixed; top: 16px; right: 16px;
+  width: 36px; height: 36px;
+  border-radius: 50%; border: none;
+  background: rgba(255,255,255,0.2);
+  color: #fff; font-size: 20px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ─────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────── */
+@media (max-width: 640px) {
+  .rvSummary {
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .rvScoreCard {
+    flex: none;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+    padding-right: 0;
+    border-right: none;
+    border-bottom: 1px solid #e8e8e8;
+    padding-bottom: 1rem;
+  }
+  .rvBarsCard {
+    padding-left: 0;
+  }
+  .rvHeader { flex-direction: column; align-items: stretch; gap: 0.75rem; }
+  .rvPrimaryBtn { text-align: center; }
+  .rvFormActions { flex-direction: column; }
+  .rvSecondaryBtn { width: 100%; }
+}

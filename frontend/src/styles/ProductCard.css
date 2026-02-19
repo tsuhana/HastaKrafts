@@ -1,3 +1,4 @@
+/* ==================== PRODUCT CARD ==================== */
 .product-card {
   background: var(--card-background);
   border-radius: var(--radius-lg);
@@ -22,6 +23,7 @@
   height: 100%;
 }
 
+/* ==================== IMAGE CONTAINER ==================== */
 .product-image-container {
   position: relative;
   width: 100%;
@@ -51,24 +53,33 @@
   width: 100%;
   height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 0.5rem;
   background: var(--background-secondary);
   color: var(--text-light);
   font-size: 0.9rem;
 }
 
-/* Badges */
-.status-badge {
+/* ==================== BADGES ==================== */
+.status-badge,
+.featured-badge {
   position: absolute;
   top: 10px;
-  right: 10px;
   padding: 0.25rem 0.75rem;
   border-radius: var(--radius-sm);
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.status-badge {
+  right: 10px;
 }
 
 .badge-pending {
@@ -87,20 +98,65 @@
 }
 
 .featured-badge {
-  position: absolute;
-  top: 10px;
   left: 10px;
   background: var(--nepal-red);
   color: var(--white);
-  padding: 0.25rem 0.75rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  z-index: 2;
 }
 
-/* Product Info */
+/* ==================== WISHLIST BUTTON ==================== */
+.wishlist-btn {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #5D4E37;
+  transition: all 0.3s ease;
+  z-index: 3;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.wishlist-btn:hover {
+  background: #FFFFFF;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.wishlist-btn.active {
+  color: #DC2626;
+  background: #FEE2E2;
+}
+
+.wishlist-btn.active:hover {
+  background: #FECACA;
+}
+
+.wishlist-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.wishlist-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #E8E5E1;
+  border-top-color: #5D4E37;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ==================== PRODUCT INFO ==================== */
 .product-info {
   padding: 1.25rem;
   display: flex;
@@ -131,11 +187,7 @@
   gap: 0.5rem;
 }
 
-.seller-icon,
-.category-icon {
-  font-size: 1rem;
-}
-
+/* ==================== FOOTER ==================== */
 .product-footer {
   display: flex;
   justify-content: space-between;
@@ -185,7 +237,7 @@
   display: inline-block;
 }
 
-/* Responsive */
+/* ==================== RESPONSIVE ==================== */
 @media (max-width: 768px) {
   .product-info {
     padding: 1rem;
@@ -197,5 +249,10 @@
   
   .amount {
     font-size: 1.2rem;
+  }
+
+  .wishlist-btn {
+    width: 36px;
+    height: 36px;
   }
 }

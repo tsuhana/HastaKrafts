@@ -12,6 +12,8 @@ const OrderItem = require("./orderItem.model");
 const Auction = require("./auction.model");
 const Bid = require("./bid.model");
 const Message = require("./message.model");
+const Review = require("./review.model");
+const Wishlist = require("./wishlist.model");
 
 const db = {};
 db.Sequelize = Sequelize;
@@ -28,8 +30,10 @@ db.OrderItem = OrderItem;
 db.Auction = Auction;
 db.Bid = Bid;
 db.Message = Message;
+db.Review = Review;
+db.Wishlist = Wishlist;
 
-//Relationships
+// ==================== EXISTING RELATIONSHIPS ====================
 
 // User <-> Seller (One-to-One)
 User.hasOne(Seller, { foreignKey: "user_id", as: "sellerProfile" });
@@ -52,32 +56,25 @@ User.hasMany(Product, { foreignKey: "approved_by", as: "approvedProducts" });
 Product.belongsTo(User, { foreignKey: "approved_by", as: "approver" });
 
 // CART ASSOCIATIONS
-// User <-> Cart (One-to-One)
 User.hasOne(Cart, { foreignKey: "user_id", as: "cart" });
 Cart.belongsTo(User, { foreignKey: "user_id", as: "user" });
 
-// Cart <-> CartItem (One-to-Many)
 Cart.hasMany(CartItem, { foreignKey: "cart_id", as: "items" });
 CartItem.belongsTo(Cart, { foreignKey: "cart_id", as: "cart" });
 
-// Product <-> CartItem (One-to-Many)
 Product.hasMany(CartItem, { foreignKey: "product_id", as: "cartItems" });
 CartItem.belongsTo(Product, { foreignKey: "product_id", as: "product" });
 
 // ORDER ASSOCIATIONS
-// User <-> Order (One-to-Many)
 User.hasMany(Order, { foreignKey: "user_id", as: "orders" });
 Order.belongsTo(User, { foreignKey: "user_id", as: "user" });
 
-// Order <-> OrderItem (One-to-Many)
 Order.hasMany(OrderItem, { foreignKey: "order_id", as: "items" });
 OrderItem.belongsTo(Order, { foreignKey: "order_id", as: "order" });
 
-// Product <-> OrderItem (One-to-Many)
 Product.hasMany(OrderItem, { foreignKey: "product_id", as: "orderItems" });
 OrderItem.belongsTo(Product, { foreignKey: "product_id", as: "product" });
 
-// Seller <-> OrderItem (One-to-Many)
 Seller.hasMany(OrderItem, { foreignKey: "seller_id", as: "orderItems" });
 OrderItem.belongsTo(Seller, { foreignKey: "seller_id", as: "seller" }); 
 
@@ -107,5 +104,27 @@ Message.belongsTo(User, { foreignKey: "receiver_id", as: "receiver" });
 
 Auction.hasMany(Message, { foreignKey: "auction_id", as: "messages" });
 Message.belongsTo(Auction, { foreignKey: "auction_id", as: "auction" });
+
+// REVIEW 
+// Product <-> Review (One-to-Many)
+Product.hasMany(Review, { foreignKey: "product_id", as: "reviews" });
+Review.belongsTo(Product, { foreignKey: "product_id", as: "product" });
+
+// User <-> Review (One-to-Many)
+User.hasMany(Review, { foreignKey: "user_id", as: "reviews" });
+Review.belongsTo(User, { foreignKey: "user_id", as: "user" });
+
+// Order <-> Review (One-to-Many) - to verify purchase
+Order.hasMany(Review, { foreignKey: "order_id", as: "reviews" });
+Review.belongsTo(Order, { foreignKey: "order_id", as: "order" });
+
+// WISHLIST ASSOCIATIONS 
+// User <-> Wishlist (One-to-Many)
+User.hasMany(Wishlist, { foreignKey: "user_id", as: "wishlist" });
+Wishlist.belongsTo(User, { foreignKey: "user_id", as: "user" });
+
+// Product <-> Wishlist (One-to-Many)
+Product.hasMany(Wishlist, { foreignKey: "product_id", as: "wishlists" });
+Wishlist.belongsTo(Product, { foreignKey: "product_id", as: "product" });
 
 module.exports = db;

@@ -1,49 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { userAPI } from '../api/axios';
+import { cartAPI } from '../api/axios';
+import Icons from '../utils/icons';
 import '../styles/NavBar.css';
 
 const NavBar = () => {
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
-  const [showDropdown, setShowDropdown] = useState(false);
   const [cartCount, setCartCount] = useState(0);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   useEffect(() => {
-    // Check login status on mount
     checkLoginStatus();
-
-    // Listen to login event from Login.jsx
+    
     const handleLogin = () => {
       checkLoginStatus();
     };
-
-    // Listen for cart updates
-    const handleCartUpdate = () => {
-      fetchCartCount();
-    };
-
+    
     window.addEventListener('userLoggedIn', handleLogin);
-    window.addEventListener('cartUpdated', handleCartUpdate);
-
+    window.addEventListener('cartUpdated', fetchCartCount);
+    
     return () => {
       window.removeEventListener('userLoggedIn', handleLogin);
-      window.removeEventListener('cartUpdated', handleCartUpdate);
+      window.removeEventListener('cartUpdated', fetchCartCount);
     };
   }, []);
 
   const checkLoginStatus = () => {
     const token = localStorage.getItem('token');
-    const userStr = localStorage.getItem('user');
+    const userData = localStorage.getItem('user');
     
-    if (token && userStr) {
-      const userData = JSON.parse(userStr);
+    if (token && userData) {
       setIsLoggedIn(true);
-      setUser(userData);
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
       
-      // Only fetch cart for buyers (not admin or seller)
-      if (userData.role === 'buyer') {
+      if (parsedUser.role === 'buyer') {
         fetchCartCount();
       }
     } else {
@@ -55,13 +49,13 @@ const NavBar = () => {
 
   const fetchCartCount = async () => {
     try {
-      const res = await userAPI.getCart();
-      if (res.data.success) {
-        const itemCount = res.data.data.cart.items?.length || 0;
-        setCartCount(itemCount);
-      }
+      const res = await cartAPI.getCart();
+      const items = res.data.data.items || [];
+      const totalCount = items.reduce((sum, item) => sum + item.quantity, 0);
+      setCartCount(totalCount);
     } catch (err) {
-      console.error('Error fetching cart:', err);
+      console.error('Cart count error:', err);
+      setCartCount(0);
     }
   };
 
@@ -71,12 +65,12 @@ const NavBar = () => {
     setIsLoggedIn(false);
     setUser(null);
     setCartCount(0);
+    setShowDropdown(false);
     navigate('/login');
   };
 
   const getDashboardLink = () => {
     if (!user) return '/';
-    
     switch (user.role) {
       case 'admin':
         return '/admin/dashboard';
@@ -89,74 +83,168 @@ const NavBar = () => {
 
   return (
     <nav className="navbar">
-      <div className="nav-container">
-        <Link to="/" className="nav-logo">
-          हस्त KRAFTS
+      <div className="navbar-container">
+        {/* Logo */}
+        <Link to="/" className="navbar-logo">
+          <span className="logo-text">हस्तKrafts</span>
         </Link>
 
-        <ul className="nav-menu">
-          <li className="nav-item">
-            <Link to="/" className="nav-link">Home</Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/products" className="nav-link">Products</Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/auctions" className="nav-link">Auctions</Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/messages" className="nav-link">💬 Chat</Link>
-          </li>
-        </ul>
+        {/* Desktop Navigation */}
+        <div className="navbar-links">
+          <Link to="/" className="nav-link">
+            <Icons.Home size={18} />
+            <span>Home</span>
+          </Link>
+          <Link to="/products" className="nav-link">
+            <Icons.Package size={18} />
+            <span>Products</span>
+          </Link>
+          <Link to="/auctions" className="nav-link">
+            <Icons.TrendingUp size={18} />
+            <span>Auctions</span>
+          </Link>
+        </div>
 
-        <div className="nav-actions">
-          {/* Only show cart for buyers */}
-          {isLoggedIn && user?.role === 'buyer' && (
-            <Link to="/cart" className="cart-button">
-              <span className="cart-icon">🛒</span>
-              {cartCount > 0 && (
-                <span className="cart-badge">{cartCount}</span>
-              )}
-            </Link>
-          )}
-
+        {/* Right Side Icons */}
+        <div className="navbar-actions">
           {isLoggedIn ? (
-            <div className="user-menu">
-              <button 
-                className="user-button"
-                onClick={() => setShowDropdown(!showDropdown)}
-              >
-                <span className="user-name">{user?.full_name}</span>
-                <span className="user-role-badge">{user?.role}</span>
-              </button>
-              
-              {showDropdown && (
-                <div className="dropdown-menu">
-                  <Link to={getDashboardLink()} className="dropdown-item">
-                    Dashboard
-                  </Link>
-                  <Link to="/profile" className="dropdown-item">
-                    Profile
-                  </Link>
-                  {user?.role === 'seller' && (
-                    <Link to="/seller/add-product" className="dropdown-item">
-                      Add Product
-                    </Link>
-                  )}
-                  <button onClick={handleLogout} className="dropdown-item logout">
-                    Logout
-                  </button>
-                </div>
+            <>
+              {/* Wishlist - Buyers only */}
+              {user?.role === 'buyer' && (
+                <Link to="/wishlist" className="nav-icon-btn" title="Wishlist">
+                  <Icons.Heart size={22} />
+                </Link>
               )}
-            </div>
+
+              {/* Cart - Buyers only */}
+              {user?.role === 'buyer' && (
+                <Link to="/cart" className="nav-icon-btn cart-btn" title="Cart">
+                  <Icons.Cart size={22} />
+                  {cartCount > 0 && (
+                    <span className="cart-badge">{cartCount}</span>
+                  )}
+                </Link>
+              )}
+
+              {/* Messages - All roles */}
+              <Link to="/messages" className="nav-icon-btn" title="Messages">
+                <Icons.Messages size={22} />
+              </Link>
+
+              {/* User Dropdown */}
+              <div className="user-dropdown-container">
+                <button
+                  className="user-dropdown-btn"
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  title="Account"
+                >
+                  <Icons.User size={22} />
+                  <span className="user-name">{user?.full_name}</span>
+                </button>
+
+                {showDropdown && (
+                  <div className="dropdown-menu">
+                    <div className="dropdown-header">
+                      <p className="dropdown-user-name">{user?.full_name}</p>
+                      <p className="dropdown-user-role">{user?.role}</p>
+                    </div>
+                    
+                    <Link 
+                      to={getDashboardLink()} 
+                      className="dropdown-item"
+                      onClick={() => setShowDropdown(false)}
+                    >
+                      <Icons.Home size={18} />
+                      <span>Dashboard</span>
+                    </Link>
+                    
+                    <Link 
+                      to="/profile" 
+                      className="dropdown-item"
+                      onClick={() => setShowDropdown(false)}
+                    >
+                      <Icons.User size={18} />
+                      <span>Profile</span>
+                    </Link>
+                    
+                    <button 
+                      onClick={handleLogout} 
+                      className="dropdown-item logout-item"
+                    >
+                      <Icons.LogOut size={18} />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
           ) : (
             <>
-              <Link to="/login" className="nav-btn">Login</Link>
-              <Link to="/register-seller" className="nav-btn-primary">Become a Seller</Link>
+              <Link to="/login" className="btn-login">
+                Login
+              </Link>
+              <Link to="/register" className="btn-register">
+                Get Started
+              </Link>
+            </>
+          )}
+
+          {/* Mobile Menu Toggle */}
+          <button 
+            className="mobile-menu-btn"
+            onClick={() => setShowMobileMenu(!showMobileMenu)}
+          >
+            {showMobileMenu ? <Icons.Close size={24} /> : '☰'}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Menu */}
+      {showMobileMenu && (
+        <div className="mobile-menu">
+          <Link to="/" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
+            <Icons.Home size={20} />
+            <span>Home</span>
+          </Link>
+          <Link to="/products" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
+            <Icons.Package size={20} />
+            <span>Products</span>
+          </Link>
+          <Link to="/auctions" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
+            <Icons.TrendingUp size={20} />
+            <span>Auctions</span>
+          </Link>
+          
+          {isLoggedIn && (
+            <>
+              {user?.role === 'buyer' && (
+                <>
+                  <Link to="/wishlist" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
+                    <Icons.Heart size={20} />
+                    <span>Wishlist</span>
+                  </Link>
+                  <Link to="/cart" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
+                    <Icons.Cart size={20} />
+                    <span>Cart {cartCount > 0 && `(${cartCount})`}</span>
+                  </Link>
+                </>
+              )}
+              <Link to="/messages" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
+                <Icons.Messages size={20} />
+                <span>Messages</span>
+              </Link>
+              <Link to="/profile" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
+                <Icons.User size={20} />
+                <span>Profile</span>
+              </Link>
+              <button onClick={handleLogout} className="mobile-link logout-link">
+                <Icons.LogOut size={20} />
+                <span>Logout</span>
+              </button>
             </>
           )}
         </div>
-      </div>
+      )}
     </nav>
   );
 };

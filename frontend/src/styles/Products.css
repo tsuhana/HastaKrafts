@@ -247,7 +247,6 @@
   background: #fbf7e9 !important;
 }
 
-/* ===== Search + Inputs fixed (invisible issue) ===== */
 .search-form {
   display: grid;
   grid-template-columns: 1fr;
