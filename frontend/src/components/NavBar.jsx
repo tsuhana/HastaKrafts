@@ -103,6 +103,10 @@ const NavBar = () => {
             <Icons.TrendingUp size={18} />
             <span>Auctions</span>
           </Link>
+          <Link to="/contact" className="nav-link">
+            <Icons.Mail size={18} />
+            <span>Contact</span>
+          </Link>
         </div>
 
         {/* Right Side Icons */}
@@ -194,7 +198,7 @@ const NavBar = () => {
             className="mobile-menu-btn"
             onClick={() => setShowMobileMenu(!showMobileMenu)}
           >
-            {showMobileMenu ? <Icons.Close size={24} /> : '☰'}
+            {showMobileMenu ? <Icons.CloseCircle size={24} /> : '☰'}
           </button>
         </div>
       </div>
@@ -213,6 +217,10 @@ const NavBar = () => {
           <Link to="/auctions" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
             <Icons.TrendingUp size={20} />
             <span>Auctions</span>
+          </Link>
+          <Link to="/contact" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
+            <Icons.Mail size={20} />
+            <span>Contact</span>
           </Link>
           
           {isLoggedIn && (

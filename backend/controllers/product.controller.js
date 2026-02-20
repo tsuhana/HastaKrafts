@@ -419,6 +419,218 @@ const getAllCategories = async (req, res) => {
   }
 };
 
+// ==================== HOMEPAGE FUNCTIONS ====================
+
+// Get Featured Products (admin marks products as featured)
+const getFeaturedProducts = async (req, res) => {
+  try {
+    const products = await db.Product.findAll({
+      where: {
+        status: 'approved',
+        is_featured: true,
+        stock_quantity: { [db.Sequelize.Op.gt]: 0 }
+      },
+      include: [
+        {
+          model: db.Seller,
+          as: 'seller',
+          attributes: ['seller_id', 'shop_name', 'city', 'shop_logo']
+        },
+        {
+          model: db.Category,
+          as: 'category',
+          attributes: ['category_id', 'name', 'icon']
+        }
+      ],
+      limit: 8,
+      order: [['created_at', 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      data: products
+    });
+  } catch (error) {
+    console.error('Get featured products error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch featured products'
+    });
+  }
+};
+
+// Get Trending Products (most ordered in last 30 days)
+const getTrendingProducts = async (req, res) => {
+  try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    // Get products with most order items in last 30 days
+    const trendingProducts = await db.Product.findAll({
+      where: {
+        status: 'approved',
+        stock_quantity: { [db.Sequelize.Op.gt]: 0 }
+      },
+      include: [
+        {
+          model: db.OrderItem,
+          as: 'orderItems',
+          attributes: [],
+          include: [{
+            model: db.Order,
+            as: 'order',
+            where: {
+              created_at: { [db.Sequelize.Op.gte]: thirtyDaysAgo }
+            },
+            attributes: [],
+            required: false
+          }]
+        },
+        {
+          model: db.Seller,
+          as: 'seller',
+          attributes: ['seller_id', 'shop_name', 'city', 'shop_logo']
+        },
+        {
+          model: db.Category,
+          as: 'category',
+          attributes: ['category_id', 'name', 'icon']
+        }
+      ],
+      attributes: {
+        include: [
+          [
+            db.Sequelize.fn('COUNT', db.Sequelize.col('orderItems.order_item_id')),
+            'order_count'
+          ]
+        ]
+      },
+      group: ['Product.product_id', 'seller.seller_id', 'category.category_id'],
+      order: [[db.Sequelize.literal('order_count'), 'DESC']],
+      limit: 8,
+      subQuery: false
+    });
+
+    res.json({
+      success: true,
+      data: trendingProducts
+    });
+  } catch (error) {
+    console.error('Get trending products error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch trending products'
+    });
+  }
+};
+
+// Get Random Products for Homepage (fallback if no featured/trending)
+const getRandomProducts = async (req, res) => {
+  try {
+    const products = await db.Product.findAll({
+      where: {
+        status: 'approved',
+        stock_quantity: { [db.Sequelize.Op.gt]: 0 }
+      },
+      include: [
+        {
+          model: db.Seller,
+          as: 'seller',
+          attributes: ['seller_id', 'shop_name', 'city', 'shop_logo']
+        },
+        {
+          model: db.Category,
+          as: 'category',
+          attributes: ['category_id', 'name', 'icon']
+        }
+      ],
+      order: db.Sequelize.literal('RANDOM()'),
+      limit: 8
+    });
+
+    res.json({
+      success: true,
+      data: products
+    });
+  } catch (error) {
+    console.error('Get random products error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch products'
+    });
+  }
+};
+
+// Get Top Categories (categories with most products)
+const getTopCategories = async (req, res) => {
+  try {
+    const categories = await db.Category.findAll({
+      attributes: {
+        include: [
+          [
+            db.Sequelize.fn('COUNT', db.Sequelize.col('products.product_id')),
+            'product_count'
+          ]
+        ]
+      },
+      include: [{
+        model: db.Product,
+        as: 'products',
+        attributes: [],
+        where: { status: 'approved' },
+        required: false
+      }],
+      group: ['Category.category_id'],
+      order: [[db.Sequelize.literal('product_count'), 'DESC']],
+      limit: 8,
+      subQuery: false
+    });
+
+    res.json({
+      success: true,
+      data: categories
+    });
+  } catch (error) {
+    console.error('Get top categories error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch categories'
+    });
+  }
+};
+
+// Toggle Featured Status (ADMIN ONLY)
+const toggleFeatured = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const product = await db.Product.findByPk(id);
+    
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Toggle the featured status
+    product.is_featured = !product.is_featured;
+    await product.save();
+
+    res.json({
+      success: true,
+      message: `Product ${product.is_featured ? 'marked as' : 'removed from'} featured`,
+      data: product
+    });
+  } catch (error) {
+    console.error('Toggle featured error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update featured status'
+    });
+  }
+};
+
 module.exports = {
   createProduct,
   getAllProducts,
@@ -427,4 +639,9 @@ module.exports = {
   updateProduct,
   deleteProduct,
   getAllCategories,
+  getFeaturedProducts,
+  getTrendingProducts,
+  getRandomProducts,
+  getTopCategories,
+  toggleFeatured,
 };

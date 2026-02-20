@@ -13,9 +13,9 @@ uploadDirs.forEach((dir) => {
 // Storage configuration
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    if (file.fieldname === "images") {  //  Changed from "productImages"
+    if (file.fieldname === "images") { 
       cb(null, "uploads/products/");
-    } else if (file.fieldname === "profile_picture") {  // ✅ Changed from "profileImage"
+    } else if (file.fieldname === "profile_picture") { 
       cb(null, "uploads/profiles/");
     } else {
       cb(null, "uploads/");
@@ -45,12 +45,40 @@ const uploadProduct = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: fileFilter,
-}).array("images", 8); //  Changed from "productImages" to "images"
+}).array("images", 8);
 
 const uploadProfile = multer({
   storage: storage,
   limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
   fileFilter: fileFilter,
-}).single("profile_picture"); //  Changed from "profileImage"
+}).single("profile_picture");
 
-module.exports = { uploadProduct, uploadProfile };
+// Add this to your upload.middleware.js
+
+const uploadBanner = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      const dir = path.join(__dirname, '..', 'uploads', 'banners');
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      cb(null, `banner-${uniqueSuffix}${path.extname(file.originalname)}`);
+    },
+  }),
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  },
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+}).single('image');
+
+
+
+module.exports = { uploadProduct, uploadProfile,uploadBanner };

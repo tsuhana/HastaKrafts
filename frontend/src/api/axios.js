@@ -45,6 +45,15 @@ export const productAPI = {
   getSellerProducts: () => API.get('/products/seller/my-products'),
   updateProduct: (id, formData) => API.put(`/products/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   deleteProduct: (id) => API.delete(`/products/${id}`),
+  
+  // HOMEPAGE ENDPOINTS
+  getFeaturedProducts: () => API.get('/products/featured'),
+  getTrendingProducts: () => API.get('/products/trending'),
+  getRandomProducts: () => API.get('/products/random'),
+  getTopCategories: () => API.get('/products/categories/top'),
+  
+  // BANNERS
+  getActiveBanners: () => API.get('/banners/active'),
 };
 
 // ADMIN
@@ -58,6 +67,17 @@ export const adminAPI = {
   approveProduct: (id) => API.post(`/admin/products/${id}/approve`),
   rejectProduct: (id, data) => API.post(`/admin/products/${id}/reject`, data),
   getAllUsers: () => API.get('/admin/users'),
+  toggleFeatured: (product_id) => API.put(`/admin/products/${product_id}/featured`),
+  getAllContactMessages: (params) => API.get('/contact', { params }),
+  updateContactStatus: (id, data) => API.put(`/contact/${id}`, data),
+  deleteContactMessage: (id) => API.delete(`/contact/${id}`),
+
+  // BANNER MANAGEMENT
+  getAllBanners: () => API.get('/banners'),
+  createBanner: (formData) => API.post('/banners', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  updateBanner: (id, formData) => API.put(`/banners/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  deleteBanner: (id) => API.delete(`/banners/${id}`),
+  toggleBannerStatus: (id) => API.put(`/banners/${id}/toggle`),
 };
 
 // USER
@@ -126,6 +146,14 @@ export const reviewAPI = {
   getMyReviews: () => API.get('/reviews/my-reviews'),
   updateReview: (review_id, data) => API.put(`/reviews/${review_id}`, data),
   deleteReview: (review_id) => API.delete(`/reviews/${review_id}`),
+};
+
+// ==================== CONTACT API ====================
+export const contactAPI = {
+  submitMessage: (data) => API.post('/contact/submit', data),
+  getAllMessages: (params) => API.get('/contact', { params }),
+  updateMessage: (id, data) => API.put(`/contact/${id}`, data),
+  deleteMessage: (id) => API.delete(`/contact/${id}`),
 };
 
 export default API;

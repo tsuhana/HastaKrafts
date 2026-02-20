@@ -17,7 +17,7 @@ import RegisterSeller from "./pages/RegisterSeller";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import VerifyOTP from "./pages/VerifyOTP";
-
+import Contact from "./pages/Contact";
 // ==================== USER PAGES ====================
 import UserProfile from "./pages/UserProfile";
 import Cart from "./pages/Cart";
@@ -55,7 +55,8 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/products" element={<Products />} />
             <Route path="/products/:id" element={<ProductDetail />} />
-            
+            <Route path="/contact" element={<Contact />} />
+
             {/* Auctions listing is public, but bidding restricted in AuctionDetail */}
             <Route path="/auctions" element={<Auctions />} />
             <Route path="/auctions/:id" element={<AuctionDetail />} />
@@ -187,15 +188,9 @@ function App() {
               }
             />
 
-            <Route
-              path="/contact"
-              element={
-                <div style={{ padding: "4rem 2rem", textAlign: "center" }}>
-                  Contact - Coming Soon
-                </div>
-              }
-            />
-
+            
+            
+            
             <Route
               path="*"
               element={

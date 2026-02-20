@@ -1,7 +1,7 @@
 .admin-dashboard-container {
   display: flex;
   min-height: calc(100vh - 80px);
-  background: #FAFAF9;
+  background: #efefe5;
   position: relative;
   flex: 1;
 }
@@ -17,7 +17,7 @@
 /* Sidebar */
 .admin-sidebar {
   width: 280px;
-  background: #FFFFFF;
+  background: #418551;
   border-right: 1px solid #E8E5E1;
   position: fixed;
   height: calc(100vh - 80px);
@@ -50,7 +50,7 @@
   background: none;
   border: none;
   border-left: 3px solid transparent;
-  color: #5D4E37;
+  color: #37260d;
   font-size: 1rem;
   font-weight: 500;
   cursor: pointer;
@@ -60,12 +60,12 @@
 }
 
 .nav-item:hover {
-  background: #FFF8DC;
-  color: #C17D4A;
+  background: #fffae6;
+  color: #5e310e;
 }
 
 .nav-item.active {
-  background: #FFF8DC;
+  background: #f1f0eb;
   border-left-color: #C17D4A;
   color: #C17D4A;
   font-weight: 600;
@@ -607,9 +607,177 @@
   font-weight: 600;
 }
 
-/* ============================================
-   RESPONSIVE (UNCHANGED for sellers/products)
-   ============================================ */
+/*BANNERS TAB STYLES
+*/
+
+.banner-upload-section {
+  background: #FFFFFF;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-bottom: 2rem;
+}
+
+.banner-upload-section h3 {
+  font-size: 1.2rem;
+  color: #2C1810;
+  margin: 0 0 1.5rem 0;
+  font-weight: 600;
+}
+
+.banner-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #2C1810;
+  font-size: 0.9rem;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 0.75rem;
+  border: 2px solid #E8E5E1;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #C17D4A;
+}
+
+.form-group input[type="file"] {
+  padding: 0.5rem;
+  cursor: pointer;
+}
+
+.banners-list-section {
+  background: #FFFFFF;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.banners-list-section h3 {
+  font-size: 1.2rem;
+  color: #2C1810;
+  margin: 0 0 1.5rem 0;
+  font-weight: 600;
+}
+
+.banners-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.banner-card {
+  border: 2px solid #E8E5E1;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.banner-card:hover {
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.banner-image-preview {
+  position: relative;
+  width: 100%;
+  height: 180px;
+  background: #F5E6D3;
+  overflow: hidden;
+}
+
+.banner-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.banner-inactive-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.banner-info {
+  padding: 1.25rem;
+}
+
+.banner-info h4 {
+  font-size: 1.1rem;
+  color: #2C1810;
+  margin: 0 0 0.75rem 0;
+  font-weight: 600;
+}
+
+.banner-desc {
+  font-size: 0.9rem;
+  color: #5D4E37;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.5;
+}
+
+.banner-link {
+  font-size: 0.85rem;
+  color: #C17D4A;
+  margin: 0 0 1rem 0;
+  font-weight: 500;
+}
+
+.banner-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.banner-actions button {
+  flex: 1;
+}
+
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .banners-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/*RESPONSIVE*/
 
 @media (max-width: 1200px) {
   .stats-grid {
@@ -686,4 +854,285 @@
   .admin-table td {
     padding: 0.75rem 0.5rem;
   }
+}
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+
+
+/* ───── PAGE HEADER ───── */
+
+.contact-messages-page {
+  font-family: 'DM Sans', sans-serif;
+}
+
+.contact-messages-page h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #2C1810;
+  margin: 0 0 0.3rem;
+}
+
+.contact-messages-page .page-subtitle {
+  font-size: 0.88rem;
+  color: #a08878;
+  margin: 0 0 1.75rem;
+}
+
+
+/* ───── FILTER TABS (if you have status filters) ───── */
+
+.messages-filters {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.filter-tab {
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  border: 1.5px solid #e0d8cf;
+  background: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #5D4E37;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.filter-tab:hover {
+  border-color: #C17D4A;
+  color: #C17D4A;
+  background: #fdf7f2;
+}
+
+.filter-tab.active {
+  background: #C17D4A;
+  border-color: #C17D4A;
+  color: #fff;
+}
+
+
+/* ───── LIST ───── */
+
+.contact-messages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  font-family: 'DM Sans', sans-serif;
+}
+
+
+/* ───── CARD ───── */
+
+.contact-message-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1.5px solid #ece7e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.contact-message-card:hover {
+  box-shadow: 0 6px 20px rgba(193, 125, 74, 0.1);
+  transform: translateY(-2px);
+}
+
+
+/* ───── CARD TOP HEADER ───── */
+
+.contact-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.1rem 1.4rem;
+  background: #fdfaf7;
+  border-bottom: 1px solid #ece7e0;
+  gap: 1rem;
+}
+
+.contact-user-info h3 {
+  font-size: 0.97rem;
+  color: #2C1810;
+  margin: 0 0 0.2rem;
+  font-weight: 700;
+}
+
+.contact-email {
+  color: #C17D4A;
+  font-size: 0.82rem;
+  margin: 0.1rem 0;
+  font-weight: 500;
+}
+
+.contact-phone {
+  color: #5D4E37;
+  font-size: 0.8rem;
+  margin: 0.1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.contact-status-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.contact-date {
+  font-size: 0.75rem;
+  color: #a08878;
+  white-space: nowrap;
+}
+
+
+/* ───── STATUS BADGES ───── */
+
+.status-badge {
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.status-pending {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.status-replied {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.status-resolved {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+
+/* ───── CARD BODY ───── */
+
+.contact-body {
+  padding: 1.1rem 1.4rem;
+}
+
+.contact-subject {
+  font-size: 0.87rem;
+  color: #2C1810;
+  margin: 0 0 0.65rem;
+  font-weight: 500;
+}
+
+.contact-subject strong {
+  color: #C17D4A;
+  font-weight: 700;
+}
+
+.contact-message {
+  color: #5D4E37;
+  line-height: 1.7;
+  font-size: 0.87rem;
+  margin: 0;
+  white-space: pre-wrap;
+  background: #fdfaf7;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #ece7e0;
+}
+
+
+/* ───── CARD FOOTER ACTIONS ───── */
+
+.contact-actions {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.9rem 1.4rem;
+  border-top: 1px solid #ece7e0;
+  background: #fafaf8;
+  flex-wrap: wrap;
+}
+
+.contact-actions button {
+  padding: 0.42rem 0.9rem;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  border: 1.5px solid transparent;
+}
+
+.btn-reply {
+  background: #C17D4A;
+  color: #fff;
+  border-color: #C17D4A;
+}
+
+.btn-reply:hover {
+  background: #a0623a;
+  border-color: #a0623a;
+}
+
+.btn-resolve {
+  background: #d1fae5;
+  color: #065f46;
+  border-color: #a7f3d0;
+}
+
+.btn-resolve:hover {
+  background: #a7f3d0;
+}
+
+.btn-delete {
+  background: #fff5f5;
+  color: #e53e3e;
+  border-color: #fecaca;
+}
+
+.btn-delete:hover {
+  background: #fee2e2;
+}
+
+
+/* ───── EMPTY STATE ───── */
+
+.no-messages {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #a08878;
+  font-size: 0.92rem;
+  background: #fff;
+  border-radius: 12px;
+  border: 1.5px dashed #ece7e0;
+}
+
+
+/* ───── RESPONSIVE ───── */
+
+@media (max-width: 640px) {
+
+  .contact-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .contact-status-actions {
+    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
 }

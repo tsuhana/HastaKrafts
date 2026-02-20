@@ -1,24 +1,25 @@
 const express = require("express");
 const router = express.Router();
-const {
-  createProduct,
-  getAllProducts,
-  getProductById,
-  getSellerProducts,
-  updateProduct,
-  deleteProduct,
-  getAllCategories,
-} = require("../controllers/product.controller");
+const productController = require("../controllers/product.controller");
 const { authenticate } = require("../middlewares/auth.middleware");
 const { checkRole, checkSellerApproval } = require("../middlewares/roleCheck.middleware");
 const { uploadProduct } = require("../middlewares/upload.middleware");
 
-// Public routes
-router.get("/", getAllProducts);
-router.get("/categories", getAllCategories);
-router.get("/:id", getProductById);
+// ==================== PUBLIC ROUTES ====================
+// Homepage specific routes 
+router.get('/featured', productController.getFeaturedProducts);
+router.get('/trending', productController.getTrendingProducts);
+router.get('/random', productController.getRandomProducts);
+router.get('/categories/top', productController.getTopCategories);
 
-// Seller routes (protected)
+// General public routes
+router.get("/", productController.getAllProducts);
+router.get("/categories", productController.getAllCategories);
+
+// Dynamic route 
+router.get("/:id", productController.getProductById);
+
+// ==================== SELLER ROUTES (PROTECTED) ====================
 router.post(
   "/",
   authenticate,
@@ -35,7 +36,7 @@ router.post(
       next();
     });
   },
-  createProduct
+  productController.createProduct
 );
 
 router.get(
@@ -43,7 +44,7 @@ router.get(
   authenticate,
   checkRole("seller"),
   checkSellerApproval,
-  getSellerProducts
+  productController.getSellerProducts
 );
 
 router.put(
@@ -61,14 +62,14 @@ router.put(
       next();
     });
   },
-  updateProduct
+  productController.updateProduct
 );
 
 router.delete(
   "/:id",
   authenticate,
   checkRole("seller", "admin"),
-  deleteProduct
+  productController.deleteProduct
 );
 
 module.exports = router;

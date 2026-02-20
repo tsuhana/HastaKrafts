@@ -14,6 +14,8 @@ const Bid = require("./bid.model");
 const Message = require("./message.model");
 const Review = require("./review.model");
 const Wishlist = require("./wishlist.model");
+const Banner = require('./banner.model');
+const Contact = require('./contact.model');
 
 const db = {};
 db.Sequelize = Sequelize;
@@ -32,6 +34,8 @@ db.Bid = Bid;
 db.Message = Message;
 db.Review = Review;
 db.Wishlist = Wishlist;
+db.Banner = Banner;
+db.Contact = Contact;
 
 // ==================== EXISTING RELATIONSHIPS ====================
 

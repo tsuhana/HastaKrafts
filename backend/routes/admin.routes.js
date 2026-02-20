@@ -11,6 +11,7 @@ const {
   getAllUsers,
   getAllSellers,
 } = require("../controllers/admin.controller");
+const productController = require("../controllers/product.controller"); 
 const { authenticate } = require("../middlewares/auth.middleware");
 const { checkRole } = require("../middlewares/roleCheck.middleware");
 
@@ -31,6 +32,7 @@ router.post("/sellers/:id/reject", rejectSeller);
 router.get("/products/pending", getPendingProducts);
 router.post("/products/:id/approve", approveProduct);
 router.post("/products/:id/reject", rejectProduct);
+router.put("/products/:id/featured", productController.toggleFeatured); 
 
 // User management
 router.get("/users", getAllUsers);

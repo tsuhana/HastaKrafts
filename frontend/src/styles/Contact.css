@@ -1,0 +1,464 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;0,800;1,700&display=swap');
+
+.contact-page {
+  min-height: 100vh;
+  background: #f5efe8;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.container {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.contact-content {
+  padding: 4rem 0 5rem;
+}
+
+/* ───── SPLIT CARD ───── */
+
+.contact-main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border-radius: 0 0 20px 20px;
+  overflow: hidden;
+  box-shadow: 0 16px 48px rgba(44,24,16,0.14);
+  margin-bottom: 3.5rem;
+}
+
+
+/* LEFT — dark brown panel */
+
+.form-section {
+  background: #563122;
+  padding: 3rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+
+.form-section::before {
+  content: '';
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  border: 35px solid rgba(193,125,74,0.1);
+  bottom: -70px;
+  left: -70px;
+  pointer-events: none;
+}
+
+.form-section::after {
+  content: '';
+  position: absolute;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  border: 22px solid rgba(193,125,74,0.07);
+  top: -40px;
+  right: -30px;
+  pointer-events: none;
+}
+
+.form-section h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 0.65rem;
+  line-height: 1.25;
+  position: relative;
+}
+
+.form-section > p {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.45);
+  margin: 0 0 2.5rem;
+  line-height: 1.7;
+  position: relative;
+}
+
+.ct-info-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+  position: relative;
+}
+
+.ct-info-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ct-info-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(193,125,74,0.15);
+  border: 1px solid rgba(193,125,74,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #C17D4A;
+  flex-shrink: 0;
+}
+
+.ct-info-text {
+  font-size: 0.87rem;
+  color: rgba(255,255,255,0.78);
+  font-weight: 500;
+}
+
+.ct-divider {
+  width: 36px;
+  height: 2px;
+  background: #C17D4A;
+  margin-bottom: 1.5rem;
+  border-radius: 2px;
+  position: relative;
+}
+
+.ct-hours {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(122,158,126,0.15);
+  border: 1px solid rgba(122,158,126,0.28);
+  color: #7a9e7e;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 0.42rem 0.9rem;
+  border-radius: 999px;
+  width: fit-content;
+  position: relative;
+}
+
+.ct-hours::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #7a9e7e;
+  display: inline-block;
+}
+
+
+/* RIGHT — white form */
+
+.faq-section {
+  background: #fff;
+  padding: 3rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.faq-section h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #2C1810;
+  margin: 0 0 0.3rem;
+}
+
+.faq-subtitle {
+  font-size: 0.82rem;
+  color: #a08878;
+  margin: 0 0 1.75rem;
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.form-group label {
+  font-size: 0.69rem;
+  font-weight: 700;
+  color: #a08878;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.4rem;
+}
+
+.form-group input,
+.form-group textarea {
+  border: none;
+  border-bottom: 1.5px solid #e0d8cf;
+  border-radius: 0;
+  padding: 0.45rem 0;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  color: #2C1810;
+  background: transparent;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #C17D4A;
+}
+
+.form-group::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: #C17D4A;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.form-group:focus-within::after {
+  width: 100%;
+}
+
+.form-group textarea {
+  resize: none;
+  min-height: 90px;
+}
+
+.btn-submit {
+  margin-top: auto;
+  padding: 0.85rem 1.5rem;
+  background: #2C1810;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: #C17D4A;
+  transform: translateY(-1px);
+}
+
+.btn-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.spinner-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.faq-list {
+  display: none;
+}
+/* ───── FAQ SECTION BELOW ───── */
+
+.faq-standalone {
+  margin-top: 0;
+}
+
+.faq-standalone-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+}
+
+.faq-standalone-header h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #34863e;
+  margin: 0;
+}
+
+.faq-standalone-header h2 span {
+  color: #C17D4A;
+}
+
+.faq-standalone-header p {
+  font-size: 0.85rem;
+  color: #458143;
+  margin: 0;
+  text-align: right;
+}
+
+.faq-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.faq-accordion-item {
+  background: #fff;
+  border-radius: 12px;
+  border: 1.5px solid #ece7e0;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.faq-accordion-item.open {
+  border-color: #C17D4A;
+  box-shadow: 0 4px 16px rgba(193,125,74,0.1);
+}
+
+.faq-accordion-btn {
+  width: 100%;
+  padding: 1rem 1.2rem;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.87rem;
+  font-weight: 700;
+  color: #225826;
+  cursor: pointer;
+  gap: 1rem;
+  transition: background 0.2s;
+}
+
+.faq-accordion-btn:hover {
+  background: #fdf7f2;
+}
+
+.faq-accordion-item.open .faq-accordion-btn {
+  background: #fdf7f2;
+  color: #40a456;
+}
+
+.faq-toggle-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #f0e8df;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #C17D4A;
+  transition: background 0.2s, transform 0.25s;
+}
+
+.faq-accordion-item.open .faq-toggle-icon {
+  background: #C17D4A;
+  color: #fff;
+  transform: rotate(45deg);
+}
+
+.faq-accordion-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.32s ease;
+  background: #fdfaf7;
+}
+
+.faq-accordion-item.open .faq-accordion-body {
+  max-height: 300px;
+}
+
+.faq-accordion-body p {
+  margin: 0;
+  padding: 0.8rem 1.2rem 1rem;
+  font-size: 0.84rem;
+  color: #5D4E37;
+  line-height: 1.75;
+  border-top: 1px solid #ece7e0;
+}
+
+
+/* ───── RESPONSIVE ───── */
+
+@media (max-width: 900px) {
+
+  .contact-main {
+    grid-template-columns: 1fr;
+  }
+
+  .faq-section {
+    border-radius: 0 0 20px 20px;
+  }
+
+  .contact-info-grid {
+    flex-direction: column;
+  }
+
+  .info-card {
+    border-right: none;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+  }
+
+  .info-card:last-child {
+    border-bottom: none;
+  }
+
+  .faq-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .faq-standalone-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .faq-standalone-header p {
+    text-align: left;
+  }
+
+}
+
+@media (max-width: 600px) {
+
+  .contact-header {
+    padding: 3rem 0 2.5rem;
+  }
+
+  .contact-header h1 {
+    font-size: 2rem;
+  }
+
+  .form-section,
+  .faq-section {
+    padding: 2.25rem 1.5rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+}

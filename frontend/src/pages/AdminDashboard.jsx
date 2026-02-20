@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { adminAPI } from "../api/axios";
+import { adminAPI, productAPI } from "../api/axios";
 import "../styles/AdminDashboard.css";
 
 const AdminDashboard = () => {
@@ -22,11 +22,17 @@ const AdminDashboard = () => {
 
   const [pendingSellers, setPendingSellers] = useState([]);
   const [pendingProducts, setPendingProducts] = useState([]);
+  const [allProducts, setAllProducts] = useState([]);
+  const [banners, setBanners] = useState([]);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [contactMessages, setContactMessages] = useState([]); 
 
   const API_URL = "http://localhost:5000";
 
   useEffect(() => {
     fetchDashboardData();
+    fetchBanners();
+    fetchContactMessages(); //
     // eslint-disable-next-line
   }, []);
 
@@ -94,10 +100,102 @@ const AdminDashboard = () => {
       if (productsRes?.data?.success) {
         setPendingProducts(productsRes.data.data || []);
       }
+
+      try {
+        const approvedProductsRes = await productAPI.getAllProducts({ status: 'approved' });
+        setAllProducts(approvedProductsRes.data.data.products || []);
+      } catch (err) {
+        console.error('Fetch all products error:', err);
+      }
     } catch (err) {
       console.error("fetchDashboardData error:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBanners = async () => {
+    try {
+      const res = await adminAPI.getAllBanners();
+      if (res.data.success) {
+        setBanners(res.data.data || []);
+      }
+    } catch (err) {
+      console.error('Fetch banners error:', err);
+    }
+  };
+
+  
+  const fetchContactMessages = async () => {
+    try {
+      const res = await adminAPI.getAllContactMessages();
+      if (res.data.success) {
+        setContactMessages(res.data.data || []);
+      }
+    } catch (err) {
+      console.error('Fetch contact messages error:', err);
+    }
+  };
+
+  const handleUploadBanner = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+
+    setUploadingBanner(true);
+    try {
+      const res = await adminAPI.createBanner(formData);
+      if (res.data.success) {
+        alert('Banner uploaded successfully!');
+        fetchBanners();
+        e.target.reset();
+      }
+    } catch (err) {
+      console.error('Upload banner error:', err);
+      alert(err.response?.data?.message || 'Failed to upload banner');
+    } finally {
+      setUploadingBanner(false);
+    }
+  };
+
+  const handleToggleBanner = async (bannerId) => {
+    try {
+      const res = await adminAPI.toggleBannerStatus(bannerId);
+      if (res.data.success) {
+        alert(res.data.message);
+        fetchBanners();
+      }
+    } catch (err) {
+      console.error('Toggle banner error:', err);
+      alert('Failed to toggle banner status');
+    }
+  };
+
+  const handleDeleteBanner = async (bannerId) => {
+    if (!window.confirm('Delete this banner?')) return;
+    
+    try {
+      const res = await adminAPI.deleteBanner(bannerId);
+      if (res.data.success) {
+        alert('Banner deleted');
+        fetchBanners();
+      }
+    } catch (err) {
+      console.error('Delete banner error:', err);
+      alert('Failed to delete banner');
+    }
+  };
+
+  
+  const handleUpdateContactStatus = async (contactId, status) => {
+    try {
+      const res = await adminAPI.updateContactStatus(contactId, { status });
+      if (res.data.success) {
+        alert('Status updated');
+        fetchContactMessages();
+      }
+    } catch (err) {
+      console.error('Update contact error:', err);
+      alert('Failed to update status');
     }
   };
 
@@ -110,7 +208,7 @@ const AdminDashboard = () => {
   };
 
   const handleRejectSeller = async (sellerId) => {
-    const reason = prompt("Enter rejection reason:");
+    const reason = window.prompt("Enter rejection reason:");
     if (!reason) return;
     try {
       const res = await adminAPI.rejectSeller(sellerId, { rejection_reason: reason });
@@ -127,7 +225,7 @@ const AdminDashboard = () => {
   };
 
   const handleRejectProduct = async (productId) => {
-    const reason = prompt("Enter rejection reason:");
+    const reason = window.prompt("Enter rejection reason:");
     if (!reason) return;
     try {
       const res = await adminAPI.rejectProduct(productId, { rejection_reason: reason });
@@ -135,11 +233,27 @@ const AdminDashboard = () => {
     } catch (err) { console.error(err); alert("Failed to reject product"); }
   };
 
+  const handleToggleFeatured = async (productId) => {
+    try {
+      const res = await adminAPI.toggleFeatured(productId);
+      if (res.data.success) {
+        alert(res.data.message);
+        fetchDashboardData();
+      }
+    } catch (err) {
+      console.error("Toggle featured error:", err);
+      alert(err.response?.data?.message || "Failed to update featured status");
+    }
+  };
+
   const nav = useMemo(
     () => [
       { key: "overview", label: "Overview", badge: 0 },
       { key: "sellers", label: "Artisan Verification", badge: pendingSellers.length },
       { key: "products", label: "Product Approvals", badge: pendingProducts.length },
+      { key: "featured", label: "Featured Products", badge: 0 },
+      { key: "banners", label: "Festival Banners", badge: 0 },
+      { key: "contacts", label: "Contact Messages", badge: 0 }, 
     ],
     [pendingSellers.length, pendingProducts.length]
   );
@@ -160,7 +274,6 @@ const AdminDashboard = () => {
 
   return (
     <div className="admin-dashboard-container">
-      {/* Sidebar - UNCHANGED */}
       <aside className="admin-sidebar">
         <div className="sidebar-header">
           <h2>Admin Panel</h2>
@@ -180,7 +293,7 @@ const AdminDashboard = () => {
       </aside>
 
       <main className="admin-main">
-        {/* ===================== OVERVIEW (REDESIGNED) ===================== */}
+        {/* ===================== OVERVIEW ===================== */}
         {activeTab === "overview" && (
           <div className="admin-content">
             <div className="overview-top">
@@ -188,7 +301,6 @@ const AdminDashboard = () => {
               <button className="btn-refresh" onClick={fetchDashboardData}>Refresh</button>
             </div>
 
-            {/* Pending Alert */}
             {(stats.pendingSellers > 0 || stats.pendingProducts > 0) && (
               <div className="pending-alert">
                 <span className="pending-dot"></span>
@@ -211,7 +323,6 @@ const AdminDashboard = () => {
               </div>
             )}
 
-            {/* Stats */}
             <div className="stats-grid">
               <div className="stat-card">
                 <span className="stat-label">Total Users</span>
@@ -256,7 +367,6 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            {/* Insights */}
             <div className="insights-grid">
               <div className="insight-card">
                 <h4>Seller Approval Rate</h4>
@@ -301,7 +411,7 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* ===================== SELLERS (UNCHANGED) ===================== */}
+        {/* ===================== SELLERS ===================== */}
         {activeTab === "sellers" && (
           <div className="admin-content">
             <h1>Artisan Verification Requests</h1>
@@ -354,7 +464,7 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* ===================== PRODUCTS (UNCHANGED) ===================== */}
+        {/* ===================== PRODUCTS ===================== */}
         {activeTab === "products" && (
           <div className="admin-content">
             <h1>Pending Product Approvals</h1>
@@ -412,6 +522,282 @@ const AdminDashboard = () => {
                     })}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===================== FEATURED PRODUCTS ===================== */}
+        {activeTab === "featured" && (
+          <div className="admin-content">
+            <h1>Manage Featured Products</h1>
+            <p style={{ color: '#5D4E37', marginBottom: '2rem' }}>
+              Featured products appear on the homepage. Select multiple products to showcase.
+            </p>
+
+            {allProducts.length === 0 ? (
+              <div className="empty-state">
+                <p>No approved products available</p>
+              </div>
+            ) : (
+              <div className="products-table-container">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Image</th>
+                      <th>Product Name</th>
+                      <th>Seller</th>
+                      <th>Category</th>
+                      <th>Price</th>
+                      <th>Featured</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allProducts.map((product) => (
+                      <tr key={product.product_id}>
+                        <td>
+                          <div className="product-image-cell">
+                            {product.images && product.images.length > 0 ? (
+                              <img 
+                                src={`${API_URL}${product.images[0]}`} 
+                                alt={product.name}
+                                onError={(e) => { e.currentTarget.style.display = "none"; }}
+                              />
+                            ) : (
+                              <div className="no-image">No</div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="product-name">{product.name || "N/A"}</td>
+                        <td>{product?.seller?.shop_name || "Unknown"}</td>
+                        <td>{product?.category?.name || "N/A"}</td>
+                        <td className="product-price">
+                          Rs. {product.price ? parseFloat(product.price).toLocaleString() : "0"}
+                        </td>
+                        <td>
+                          {product.is_featured ? (
+                            <span style={{ 
+                              background: '#FEE2E2', 
+                              color: '#DC2626', 
+                              padding: '0.25rem 0.75rem', 
+                              borderRadius: '6px', 
+                              fontSize: '0.85rem', 
+                              fontWeight: '600',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem'
+                            }}>
+                              ⭐ Featured
+                            </span>
+                          ) : (
+                            <span style={{ color: '#9CA3AF', fontSize: '0.85rem' }}>Not featured</span>
+                          )}
+                        </td>
+                        <td className="actions-cell">
+                          <button
+                            onClick={() => handleToggleFeatured(product.product_id)}
+                            className={product.is_featured ? "btn-reject" : "btn-approve"}
+                            style={{ width: '120px' }}
+                          >
+                            {product.is_featured ? 'Remove' : 'Make Featured'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===================== BANNERS ===================== */}
+        {activeTab === "banners" && (
+          <div className="admin-content">
+            <h1>Manage Festival Banners</h1>
+            <p style={{ color: '#5D4E37', marginBottom: '2rem' }}>
+              Upload banners to display on homepage. Recommended size: 1920x600px
+            </p>
+
+            <div className="banner-upload-section">
+              <h3>Upload New Banner</h3>
+              <form onSubmit={handleUploadBanner} className="banner-form">
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Title *</label>
+                    <input 
+                      type="text" 
+                      name="title" 
+                      required 
+                      placeholder="e.g., Dashain Festival Sale"
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label>Banner Image * (1920x600px recommended)</label>
+                    <input 
+                      type="file" 
+                      name="image" 
+                      accept="image/*" 
+                      required 
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Link URL (optional)</label>
+                    <input 
+                      type="text" 
+                      name="link_url" 
+                      placeholder="/products?category=1 or external URL"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Link Type</label>
+                    <select name="link_type">
+                      <option value="none">No Link</option>
+                      <option value="category">Category</option>
+                      <option value="product">Product</option>
+                      <option value="external">External</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Description (optional)</label>
+                  <textarea 
+                    name="description" 
+                    rows="3" 
+                    placeholder="Brief description..."
+                  />
+                </div>
+
+                <button 
+                  type="submit" 
+                  className="btn-approve"
+                  disabled={uploadingBanner}
+                >
+                  {uploadingBanner ? 'Uploading...' : 'Upload Banner'}
+                </button>
+              </form>
+            </div>
+
+            <div className="banners-list-section">
+              <h3>Existing Banners ({banners.length})</h3>
+              
+              {banners.length === 0 ? (
+                <div className="empty-state">
+                  <p>No banners uploaded yet</p>
+                </div>
+              ) : (
+                <div className="banners-grid">
+                  {banners.map((banner) => (
+                    <div key={banner.banner_id} className="banner-card">
+                      <div className="banner-image-preview">
+                        <img 
+                          src={`${API_URL}${banner.image}`} 
+                          alt={banner.title}
+                        />
+                        {!banner.is_active && (
+                          <div className="banner-inactive-overlay">
+                            Inactive
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="banner-info">
+                        <h4>{banner.title}</h4>
+                        {banner.description && (
+                          <p className="banner-desc">{banner.description}</p>
+                        )}
+                        {banner.link_url && (
+                          <p className="banner-link">
+                            🔗 {banner.link_type}: {banner.link_url}
+                          </p>
+                        )}
+                        
+                        <div className="banner-actions">
+                          <button
+                            onClick={() => handleToggleBanner(banner.banner_id)}
+                            className={banner.is_active ? "btn-reject" : "btn-approve"}
+                          >
+                            {banner.is_active ? 'Deactivate' : 'Activate'}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteBanner(banner.banner_id)}
+                            className="btn-reject"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ===================== CONTACT MESSAGES ===================== */}
+        {activeTab === "contacts" && (
+          <div className="admin-content">
+            <h1>Contact Messages</h1>
+            <p style={{ color: '#5D4E37', marginBottom: '2rem' }}>
+              Messages from users via contact form
+            </p>
+
+            {contactMessages.length === 0 ? (
+              <div className="empty-state">
+                <p>No contact messages</p>
+              </div>
+            ) : (
+              <div className="contact-messages-list">
+                {contactMessages.map((contact) => {
+                  const created = parseDateSafe(contact.created_at);
+                  return (
+                    <div key={contact.contact_id} className="contact-message-card">
+                      <div className="contact-header">
+                        <div>
+                          <h3>{contact.name}</h3>
+                          <p className="contact-email">{contact.email}</p>
+                          {contact.phone && <p className="contact-phone">📞 {contact.phone}</p>}
+                        </div>
+                        <div className="contact-status-actions">
+                          <span className={`status-badge status-${contact.status}`}>
+                            {contact.status}
+                          </span>
+                          {created && (
+                            <span className="contact-date">
+                              {created.toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="contact-body">
+                        <p className="contact-subject">
+                          <strong>Subject:</strong> {contact.subject}
+                        </p>
+                        <p className="contact-message">{contact.message}</p>
+                      </div>
+
+                      {contact.status === 'pending' && (
+                        <div className="contact-actions">
+                          <button
+                            onClick={() => handleUpdateContactStatus(contact.contact_id, 'resolved')}
+                            className="btn-approve"
+                          >
+                            Mark as Resolved
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

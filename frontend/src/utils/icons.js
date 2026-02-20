@@ -1,4 +1,3 @@
-
 import { 
   FiShoppingCart, 
   FiHeart, 
@@ -11,6 +10,7 @@ import {
   FiCheck,
   FiX,
   FiChevronRight,
+  FiChevronDown, // ✅ ADD THIS for FAQ
   FiFilter,
   FiGrid,
   FiList,
@@ -36,7 +36,9 @@ import {
   FiAlertCircle,
   FiCheckCircle,
   FiXCircle,
-  FiInfo
+  FiInfo,
+  FiSend, // ✅ ADD THIS for Contact form
+  FiLoader // ✅ ADD THIS for loading spinner
 } from 'react-icons/fi';
 
 import { 
@@ -95,6 +97,7 @@ export const Icons = {
   Upload: FiUpload,
   Download: FiDownload,
   Filter: FiFilter,
+  Send: FiSend, // ✅ NEW
   
   // Status
   Check: FiCheck,
@@ -103,15 +106,19 @@ export const Icons = {
   CloseCircle: FiXCircle,
   Alert: FiAlertCircle,
   Info: FiInfo,
+  Loader: FiLoader, // ✅ NEW
   
   // Other
   TrendingUp: FiTrendingUp,
   ChevronRight: FiChevronRight,
+  ChevronDown: FiChevronDown, // ✅ NEW
   Grid: FiGrid,
   List: FiList,
   Location: FiMapPin,
+  MapPin: FiMapPin, // ✅ Alias
   Phone: FiPhone,
   Email: FiMail,
+  Mail: FiMail, // ✅ NEW - Alias for Email
   Clock: FiClock,
   Calendar: FiCalendar,
   Dollar: FiDollarSign,
