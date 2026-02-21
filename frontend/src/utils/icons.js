@@ -10,7 +10,7 @@ import {
   FiCheck,
   FiX,
   FiChevronRight,
-  FiChevronDown, // ✅ ADD THIS for FAQ
+  FiChevronDown,
   FiFilter,
   FiGrid,
   FiList,
@@ -37,8 +37,9 @@ import {
   FiCheckCircle,
   FiXCircle,
   FiInfo,
-  FiSend, // ✅ ADD THIS for Contact form
-  FiLoader // ✅ ADD THIS for loading spinner
+  FiSend, 
+  FiLoader,
+  FiBookOpen
 } from 'react-icons/fi';
 
 import { 
@@ -67,6 +68,7 @@ export const Icons = {
   User: FiUser,
   Search: FiSearch,
   Home: FiHome,
+  Book: FiBookOpen, 
   Settings: FiSettings,
   LogOut: FiLogOut,
   
@@ -97,7 +99,7 @@ export const Icons = {
   Upload: FiUpload,
   Download: FiDownload,
   Filter: FiFilter,
-  Send: FiSend, // ✅ NEW
+  Send: FiSend, 
   
   // Status
   Check: FiCheck,
@@ -106,19 +108,19 @@ export const Icons = {
   CloseCircle: FiXCircle,
   Alert: FiAlertCircle,
   Info: FiInfo,
-  Loader: FiLoader, // ✅ NEW
+  Loader: FiLoader,
   
   // Other
   TrendingUp: FiTrendingUp,
   ChevronRight: FiChevronRight,
-  ChevronDown: FiChevronDown, // ✅ NEW
+  ChevronDown: FiChevronDown, 
   Grid: FiGrid,
   List: FiList,
   Location: FiMapPin,
-  MapPin: FiMapPin, // ✅ Alias
+  MapPin: FiMapPin,
   Phone: FiPhone,
   Email: FiMail,
-  Mail: FiMail, // ✅ NEW - Alias for Email
+  Mail: FiMail, 
   Clock: FiClock,
   Calendar: FiCalendar,
   Dollar: FiDollarSign,

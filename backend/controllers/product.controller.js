@@ -1,11 +1,13 @@
 const db = require("../models");
 const fs = require("fs");
 const path = require("path");
+const { translateText, SUPPORTED_LANGUAGES } = require('../utils/translate.util');
 
 // ==================== CREATE PRODUCT ====================
 const createProduct = async (req, res) => {
   try {
-    const { name, description, price, stock_quantity, category_id, sku } = req.body;
+    // ✅ has_discount + discount_percentage added
+    const { name, description, price, stock_quantity, category_id, sku, has_discount, discount_percentage } = req.body;
 
     if (!name || !description || !price || !category_id) {
       return res.status(400).json({
@@ -36,6 +38,10 @@ const createProduct = async (req, res) => {
       });
     }
 
+    // ✅ Coerce FormData strings to proper booleans/numbers
+    const hasDiscount = has_discount === 'true' || has_discount === true;
+    const discountPct = hasDiscount ? (parseInt(discount_percentage) || 0) : 0;
+
     const product = await db.Product.create({
       seller_id: seller.seller_id,
       category_id,
@@ -46,6 +52,8 @@ const createProduct = async (req, res) => {
       sku: sku || null,
       images,
       status: "pending",
+      has_discount: hasDiscount,        // ✅
+      discount_percentage: discountPct, // ✅
     });
 
     res.status(201).json({
@@ -68,7 +76,7 @@ const getAllProducts = async (req, res) => {
     const { category_id, status = "approved", page = 1, limit = 20, search } = req.query;
 
     const where = {};
-    
+
     // Only show approved products for public
     if (!req.user || req.user.role !== "admin") {
       where.status = "approved";
@@ -233,6 +241,7 @@ const getSellerProducts = async (req, res) => {
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
+    // ✅ has_discount + discount_percentage added
     const {
       name,
       description,
@@ -242,6 +251,8 @@ const updateProduct = async (req, res) => {
       sku,
       existingImages,
       imagesToDelete,
+      has_discount,
+      discount_percentage,
     } = req.body;
 
     // Find product
@@ -323,6 +334,10 @@ const updateProduct = async (req, res) => {
       }
     }
 
+    // ✅ Coerce discount fields
+    const hasDiscount = has_discount === 'true' || has_discount === true;
+    const discountPct = hasDiscount ? (parseInt(discount_percentage) || 0) : 0;
+
     // Update product
     await product.update({
       name: name || product.name,
@@ -332,7 +347,9 @@ const updateProduct = async (req, res) => {
       category_id: category_id || product.category_id,
       sku: sku || product.sku,
       images: finalImages,
-      status: "pending", // Reset to pending after edit for admin review
+      status: "pending",
+      has_discount: hasDiscount,        // ✅
+      discount_percentage: discountPct, // ✅
     });
 
     res.status(200).json({
@@ -428,33 +445,33 @@ const getFeaturedProducts = async (req, res) => {
       where: {
         status: 'approved',
         is_featured: true,
-        stock_quantity: { [db.Sequelize.Op.gt]: 0 }
+        stock_quantity: { [db.Sequelize.Op.gt]: 0 },
       },
       include: [
         {
           model: db.Seller,
           as: 'seller',
-          attributes: ['seller_id', 'shop_name', 'city', 'shop_logo']
+          attributes: ['seller_id', 'shop_name', 'city', 'shop_logo'],
         },
         {
           model: db.Category,
           as: 'category',
-          attributes: ['category_id', 'name', 'icon']
-        }
+          attributes: ['category_id', 'name', 'icon'],
+        },
       ],
       limit: 8,
-      order: [['created_at', 'DESC']]
+      order: [['created_at', 'DESC']],
     });
 
     res.json({
       success: true,
-      data: products
+      data: products,
     });
   } catch (error) {
     console.error('Get featured products error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch featured products'
+      message: 'Failed to fetch featured products',
     });
   }
 };
@@ -469,57 +486,59 @@ const getTrendingProducts = async (req, res) => {
     const trendingProducts = await db.Product.findAll({
       where: {
         status: 'approved',
-        stock_quantity: { [db.Sequelize.Op.gt]: 0 }
+        stock_quantity: { [db.Sequelize.Op.gt]: 0 },
       },
       include: [
         {
           model: db.OrderItem,
           as: 'orderItems',
           attributes: [],
-          include: [{
-            model: db.Order,
-            as: 'order',
-            where: {
-              created_at: { [db.Sequelize.Op.gte]: thirtyDaysAgo }
+          include: [
+            {
+              model: db.Order,
+              as: 'order',
+              where: {
+                created_at: { [db.Sequelize.Op.gte]: thirtyDaysAgo },
+              },
+              attributes: [],
+              required: false,
             },
-            attributes: [],
-            required: false
-          }]
+          ],
         },
         {
           model: db.Seller,
           as: 'seller',
-          attributes: ['seller_id', 'shop_name', 'city', 'shop_logo']
+          attributes: ['seller_id', 'shop_name', 'city', 'shop_logo'],
         },
         {
           model: db.Category,
           as: 'category',
-          attributes: ['category_id', 'name', 'icon']
-        }
+          attributes: ['category_id', 'name', 'icon'],
+        },
       ],
       attributes: {
         include: [
           [
             db.Sequelize.fn('COUNT', db.Sequelize.col('orderItems.order_item_id')),
-            'order_count'
-          ]
-        ]
+            'order_count',
+          ],
+        ],
       },
       group: ['Product.product_id', 'seller.seller_id', 'category.category_id'],
       order: [[db.Sequelize.literal('order_count'), 'DESC']],
       limit: 8,
-      subQuery: false
+      subQuery: false,
     });
 
     res.json({
       success: true,
-      data: trendingProducts
+      data: trendingProducts,
     });
   } catch (error) {
     console.error('Get trending products error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch trending products'
+      message: 'Failed to fetch trending products',
     });
   }
 };
@@ -530,33 +549,33 @@ const getRandomProducts = async (req, res) => {
     const products = await db.Product.findAll({
       where: {
         status: 'approved',
-        stock_quantity: { [db.Sequelize.Op.gt]: 0 }
+        stock_quantity: { [db.Sequelize.Op.gt]: 0 },
       },
       include: [
         {
           model: db.Seller,
           as: 'seller',
-          attributes: ['seller_id', 'shop_name', 'city', 'shop_logo']
+          attributes: ['seller_id', 'shop_name', 'city', 'shop_logo'],
         },
         {
           model: db.Category,
           as: 'category',
-          attributes: ['category_id', 'name', 'icon']
-        }
+          attributes: ['category_id', 'name', 'icon'],
+        },
       ],
       order: db.Sequelize.literal('RANDOM()'),
-      limit: 8
+      limit: 8,
     });
 
     res.json({
       success: true,
-      data: products
+      data: products,
     });
   } catch (error) {
     console.error('Get random products error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch products'
+      message: 'Failed to fetch products',
     });
   }
 };
@@ -569,32 +588,34 @@ const getTopCategories = async (req, res) => {
         include: [
           [
             db.Sequelize.fn('COUNT', db.Sequelize.col('products.product_id')),
-            'product_count'
-          ]
-        ]
+            'product_count',
+          ],
+        ],
       },
-      include: [{
-        model: db.Product,
-        as: 'products',
-        attributes: [],
-        where: { status: 'approved' },
-        required: false
-      }],
+      include: [
+        {
+          model: db.Product,
+          as: 'products',
+          attributes: [],
+          where: { status: 'approved' },
+          required: false,
+        },
+      ],
       group: ['Category.category_id'],
       order: [[db.Sequelize.literal('product_count'), 'DESC']],
       limit: 8,
-      subQuery: false
+      subQuery: false,
     });
 
     res.json({
       success: true,
-      data: categories
+      data: categories,
     });
   } catch (error) {
     console.error('Get top categories error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch categories'
+      message: 'Failed to fetch categories',
     });
   }
 };
@@ -603,13 +624,13 @@ const getTopCategories = async (req, res) => {
 const toggleFeatured = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const product = await db.Product.findByPk(id);
-    
+
     if (!product) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found'
+        message: 'Product not found',
       });
     }
 
@@ -620,13 +641,105 @@ const toggleFeatured = async (req, res) => {
     res.json({
       success: true,
       message: `Product ${product.is_featured ? 'marked as' : 'removed from'} featured`,
-      data: product
+      data: product,
     });
   } catch (error) {
     console.error('Toggle featured error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update featured status'
+      message: 'Failed to update featured status',
+    });
+  }
+};
+
+// ==================== TRANSLATE PRODUCT DESCRIPTION ====================
+const translateProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { language } = req.body;
+
+    if (!language) {
+      return res.status(400).json({
+        success: false,
+        message: 'Language code is required',
+      });
+    }
+
+    // Validate requested language
+    if (!SUPPORTED_LANGUAGES[language]) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unsupported language code',
+      });
+    }
+
+    // Fetch product
+    const product = await db.Product.findByPk(id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found',
+      });
+    }
+
+    // If translation already exists, return cached version
+    if (product.translations && product.translations[language]) {
+      return res.json({
+        success: true,
+        data: {
+          language,
+          translated: product.translations[language],
+          cached: true,
+        },
+      });
+    }
+
+    // Translate description using Google Translate (recursive fix handles Hindi/Nepali)
+    const translatedDescription = await translateText(
+      product.description,
+      language,
+      'en' // source language is English
+    );
+
+    // Cache translation in DB
+    const updatedTranslations = {
+      ...product.translations,
+      [language]: translatedDescription,
+    };
+
+    await product.update({ translations: updatedTranslations });
+
+    return res.json({
+      success: true,
+      data: {
+        language,
+        translated: translatedDescription,
+        cached: false,
+      },
+    });
+  } catch (error) {
+    console.error('Translate product error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Translation failed',
+      error: error.message,
+    });
+  }
+};
+
+// ==================== GET SUPPORTED LANGUAGES ====================
+const getSupportedLanguages = async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: SUPPORTED_LANGUAGES,
+    });
+  } catch (error) {
+    console.error('Get languages error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch languages',
     });
   }
 };
@@ -644,4 +757,6 @@ module.exports = {
   getRandomProducts,
   getTopCategories,
   toggleFeatured,
+  translateProduct,
+  getSupportedLanguages,
 };

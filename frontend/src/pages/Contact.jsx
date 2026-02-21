@@ -3,47 +3,11 @@ import { contactAPI } from '../api/axios';
 import Icons from '../utils/icons';
 import '../styles/Contact.css';
 
-const faqs = [
-  {
-    question: "How do I place an order?",
-    answer: "Browse our products, click 'Add to Cart', then go to your cart and click 'Checkout'. Fill in your delivery details and choose your payment method. You'll receive an order confirmation via email."
-  },
-  {
-    question: "What payment methods do you accept?",
-    answer: "We accept Khalti, eSewa, and Cash on Delivery (COD) for orders within Nepal. Online payments are processed securely through our payment partners."
-  },
-  {
-    question: "How long does delivery take?",
-    answer: "Delivery typically takes 3–7 business days within Kathmandu Valley and 5–10 business days for other parts of Nepal. You'll receive tracking info once your order ships."
-  },
-  {
-    question: "Can I return or exchange a product?",
-    answer: "Yes! We offer a 7-day return/exchange policy for unused products in original packaging. Contact our support team within 7 days of receiving your order."
-  },
-  {
-    question: "How do I become a seller?",
-    answer: "Click 'Become a Seller' on our homepage, fill in your shop details, citizenship info, and bank account. Our admin team reviews applications within 2–3 business days."
-  },
-  {
-    question: "Are the products authentic?",
-    answer: "Yes! All products are 100% authentic, handmade by verified local artisans. Each seller goes through our verification process — we only approve genuine handicraft products."
-  },
-  {
-    question: "How do I track my order?",
-    answer: "Go to 'My Orders' in your account dashboard. You'll see real-time status: Pending → Processing → Shipped → Delivered, plus email notifications at each step."
-  },
-  {
-    question: "What if I receive a damaged product?",
-    answer: "Contact us immediately with photos of the damaged item. We'll arrange a replacement or full refund. For COD orders, please inspect the package before accepting delivery."
-  }
-];
-
 const Contact = () => {
   const [formData, setFormData] = useState({
     name: '', email: '', phone: '', subject: '', message: ''
   });
   const [submitting, setSubmitting] = useState(false);
-  const [openFaq, setOpenFaq]       = useState(null);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -65,19 +29,15 @@ const Contact = () => {
     }
   };
 
-  const toggleFaq = (i) => setOpenFaq(openFaq === i ? null : i);
-
   return (
     <div className="contact-page">
-
       <div className="container">
         <div className="contact-content">
 
-          {/* SPLIT CARD */}
           <div className="contact-main">
 
             {/* LEFT: dark info panel */}
-            <div className="form-section">
+            <div className="ct-info-panel">
               <div>
                 <h2>We'd love to hear from you.</h2>
                 <p>Reach out and we'll get back to you as soon as possible.</p>
@@ -105,16 +65,16 @@ const Contact = () => {
               </div>
             </div>
 
-            {/* RIGHT: form */}
-            <div className="faq-section">
+            {/* RIGHT: form panel */}
+            <div className="ct-form-panel">
               <h2>Send a Message</h2>
-              <p className="faq-subtitle">Fill in the form and we'll get back to you shortly.</p>
+              <p className="ct-form-subtitle">Fill in the form and we'll get back to you shortly.</p>
 
               <form onSubmit={handleSubmit} className="contact-form">
                 <div className="form-row">
                   <div className="form-group">
                     <label>Full Name *</label>
-                    <input type="text" name="name" value={formData.name} onChange={handleChange} required placeholder="Suhana Thapa" />
+                    <input type="text" name="name" value={formData.name} onChange={handleChange} required placeholder="Your Name" />
                   </div>
                   <div className="form-group">
                     <label>Email *</label>
@@ -148,29 +108,6 @@ const Contact = () => {
             </div>
 
           </div>
-
-          {/* FAQ BELOW */}
-          <div className="faq-standalone">
-            <div className="faq-standalone-header">
-              <h2>Frequently Asked <span>Questions</span></h2>
-              <p>Quick answers to common questions.</p>
-            </div>
-
-            <div className="faq-grid">
-              {faqs.map((faq, i) => (
-                <div key={i} className={`faq-accordion-item ${openFaq === i ? 'open' : ''}`}>
-                  <button className="faq-accordion-btn" onClick={() => toggleFaq(i)}>
-                    <span>{faq.question}</span>
-                    <span className="faq-toggle-icon">+</span>
-                  </button>
-                  <div className="faq-accordion-body">
-                    <p>{faq.answer}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
         </div>
       </div>
     </div>

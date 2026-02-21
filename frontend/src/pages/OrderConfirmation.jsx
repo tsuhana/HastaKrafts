@@ -38,12 +38,12 @@ const OrderConfirmation = () => {
     };
     return colors[status] || '#6B7280';
   };
-  
-  // order status timeline
+
+  // Order status timeline
   const getStatusSteps = () => {
     const allSteps = ['pending', 'processing', 'shipped', 'delivered'];
     const currentIndex = allSteps.indexOf(order?.order_status);
-    
+
     return allSteps.map((step, index) => ({
       label: step.charAt(0).toUpperCase() + step.slice(1),
       status: step,
@@ -85,7 +85,10 @@ const OrderConfirmation = () => {
             <h3>Order Status</h3>
             <div className="timeline-steps">
               {getStatusSteps().map((step, index) => (
-                <div key={step.status} className={`timeline-step ${step.completed ? 'completed' : ''} ${step.active ? 'active' : ''}`}>
+                <div
+                  key={step.status}
+                  className={`timeline-step ${step.completed ? 'completed' : ''} ${step.active ? 'active' : ''}`}
+                >
                   <div className="step-circle">
                     {step.completed ? '✓' : index + 1}
                   </div>
@@ -98,6 +101,23 @@ const OrderConfirmation = () => {
         )}
 
         <div className="order-details-card">
+
+          {/* POINTS EARNED NOTIFICATION */}
+          {order.points_earned > 0 && (
+            <div className="points-earned-card">
+              <div className="points-earned-icon">🎉</div>
+              <div className="points-earned-content">
+                <h3>Congratulations!</h3>
+                <p>You earned <strong>{order.points_earned} points</strong> from this order!</p>
+                {order.points_redeemed > 0 && (
+                  <p className="points-redeemed-text">
+                    (You redeemed {order.points_redeemed} points for free delivery)
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="order-header">
             <h2>Order Details</h2>
             <span className="order-number">#{order.order_number}</span>
@@ -106,11 +126,13 @@ const OrderConfirmation = () => {
           <div className="order-info-grid">
             <div className="info-item">
               <label>Order Date</label>
-              <p>{new Date(order.createdAt || order.created_at).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}</p>
+              <p>
+                {new Date(order.createdAt || order.created_at).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </p>
             </div>
 
             <div className="info-item">
@@ -141,22 +163,48 @@ const OrderConfirmation = () => {
           <div className="items-section">
             <h3>Order Items</h3>
             <div className="order-items-list">
-              {order.items && order.items.map((item) => (
-                <div key={item.order_item_id} className="order-item">
-                  <div className="item-image">
-                    {item.product_image ? (
-                      <img src={`http://localhost:5000${item.product_image}`} alt={item.product_name} />
-                    ) : (
-                      <div className="no-image">No Image</div>
-                    )}
+              {order.items && order.items.map((item) => {
+                //  Check if this item was discounted
+                const isDiscounted = item.discount_percentage > 0;
+                const originalTotal = item.original_price
+                  ? parseFloat(item.original_price) * item.quantity
+                  : null;
+                const paidTotal = parseFloat(item.subtotal);
+
+                return (
+                  <div key={item.order_item_id} className="order-item">
+                    <div className="item-image">
+                      {item.product_image ? (
+                        <img
+                          src={`http://localhost:5000${item.product_image}`}
+                          alt={item.product_name}
+                        />
+                      ) : (
+                        <div className="no-image">No Image</div>
+                      )}
+                    </div>
+                    <div className="item-details">
+                      <p className="item-name">{item.product_name}</p>
+                      <p className="item-qty">Quantity: {item.quantity}</p>
+                      {/*  Show discount badge if applicable */}
+                      {isDiscounted && (
+                        <span className="item-discount-badge">-{item.discount_percentage}% OFF</span>
+                      )}
+                    </div>
+                    <div className="item-price-wrap">
+                      {/*  Show strikethrough original price if discounted */}
+                      {isDiscounted && originalTotal && (
+                        <p className="item-original-price">
+                          Rs. {originalTotal.toLocaleString()}
+                        </p>
+                      )}
+                      <p className={`item-price ${isDiscounted ? 'discounted' : ''}`}>
+                        Rs. {paidTotal.toLocaleString()}
+                      </p>
+                    </div>
                   </div>
-                  <div className="item-details">
-                    <p className="item-name">{item.product_name}</p>
-                    <p className="item-qty">Quantity: {item.quantity}</p>
-                  </div>
-                  <p className="item-price">Rs. {parseFloat(item.subtotal).toLocaleString()}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -167,7 +215,11 @@ const OrderConfirmation = () => {
             </div>
             <div className="summary-row">
               <span>Delivery Fee</span>
-              <span>Rs. {parseFloat(order.delivery_fee).toLocaleString()}</span>
+              {parseFloat(order.delivery_fee) === 0 ? (
+                <span className="free-delivery-text">FREE 💎</span>
+              ) : (
+                <span>Rs. {parseFloat(order.delivery_fee).toLocaleString()}</span>
+              )}
             </div>
             <div className="summary-divider"></div>
             <div className="summary-total">

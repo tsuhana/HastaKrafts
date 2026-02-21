@@ -13,7 +13,9 @@ const AddProduct = () => {
     category_id: '',
     price: '',
     stock_quantity: '',
-    sku: ''
+    sku: '',
+    has_discount: false,
+    discount_percentage: 0,
   });
   const [images, setImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
@@ -35,11 +37,7 @@ const AddProduct = () => {
   };
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-    // Clear error for this field
+    setFormData({ ...formData, [e.target.name]: e.target.value });
     if (errors[e.target.name]) {
       setErrors({ ...errors, [e.target.name]: '' });
     }
@@ -47,26 +45,20 @@ const AddProduct = () => {
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
-    
-    // Validation
+
     if (files.length < 3) {
       setErrors({ ...errors, images: 'Please select at least 3 images' });
       return;
     }
-    
     if (files.length > 8) {
       setErrors({ ...errors, images: 'Maximum 8 images allowed' });
       return;
     }
-
-    // Check file sizes (max 5MB per image)
     const oversizedFiles = files.filter(file => file.size > 5 * 1024 * 1024);
     if (oversizedFiles.length > 0) {
       setErrors({ ...errors, images: 'Each image must be less than 5MB' });
       return;
     }
-
-    // Check file types
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     const invalidFiles = files.filter(file => !validTypes.includes(file.type));
     if (invalidFiles.length > 0) {
@@ -76,8 +68,6 @@ const AddProduct = () => {
 
     setImages(files);
     setErrors({ ...errors, images: '' });
-
-    // Create preview URLs
     const previews = files.map(file => URL.createObjectURL(file));
     setImagePreviews(previews);
   };
@@ -126,34 +116,31 @@ const AddProduct = () => {
       newErrors.images = 'Maximum 8 images allowed';
     }
 
+    if (formData.has_discount) {
+      if (!formData.discount_percentage || formData.discount_percentage < 1 || formData.discount_percentage > 99) {
+        newErrors.discount_percentage = 'Discount must be between 1% and 99%';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
+    if (!validateForm()) return;
     setLoading(true);
 
     try {
       const formDataToSend = new FormData();
-      
-      // Append text fields
       Object.keys(formData).forEach(key => {
         formDataToSend.append(key, formData[key]);
       });
-
-      // Append images
       images.forEach((image) => {
         formDataToSend.append('images', image);
       });
 
       const response = await productAPI.createProduct(formDataToSend);
-
       if (response.data.success) {
         alert('Product added successfully! It will be visible after admin approval.');
         navigate('/seller/dashboard');
@@ -179,11 +166,12 @@ const AddProduct = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="add-product-form">
+
           {/* Product Images */}
           <div className="form-section">
             <h3>Product Images *</h3>
             <p className="section-description">Upload 3-8 high-quality images of your product</p>
-            
+
             <div className="image-upload-section">
               <label htmlFor="images" className="image-upload-label">
                 <div className="upload-placeholder">
@@ -298,7 +286,7 @@ const AddProduct = () => {
                   onChange={handleChange}
                   placeholder="e.g., 10"
                   min="0"
-                  className={errors.stock ? 'error' : ''}
+                  className={errors.stock_quantity ? 'error' : ''}
                 />
                 {errors.stock_quantity && <p className="error-text">{errors.stock_quantity}</p>}
               </div>
@@ -314,6 +302,75 @@ const AddProduct = () => {
                 />
               </div>
             </div>
+          </div>
+
+          {/* Discount Section */}
+          <div className="form-section">
+            <h3>Discount (Optional)</h3>
+
+            <div className="discount-toggle">
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  name="has_discount"
+                  checked={formData.has_discount}
+                  onChange={(e) => {
+                    setFormData({
+                      ...formData,
+                      has_discount: e.target.checked,
+                      discount_percentage: e.target.checked ? formData.discount_percentage : 0,
+                    });
+                  }}
+                />
+                <span className="toggle-slider"></span>
+              </label>
+              <span className="toggle-label">Enable Discount</span>
+            </div>
+
+            {formData.has_discount && (
+              <div className="form-group discount-input-group">
+                <label>Discount Percentage (1-99%) *</label>
+                <div className="discount-input-wrapper">
+                  <input
+                    type="number"
+                    name="discount_percentage"
+                    value={formData.discount_percentage}
+                    onChange={handleChange}
+                    placeholder="10"
+                    min="1"
+                    max="99"
+                    className={errors.discount_percentage ? 'error' : ''}
+                  />
+                  <span className="discount-suffix">%</span>
+                </div>
+                {errors.discount_percentage && (
+                  <p className="error-text">{errors.discount_percentage}</p>
+                )}
+
+                {formData.price && formData.discount_percentage > 0 && (
+                  <div className="discount-preview">
+                    <p>
+                      Original Price:
+                      <span className="preview-original">
+                        Rs. {parseFloat(formData.price).toLocaleString()}
+                      </span>
+                    </p>
+                    <p>
+                      Discounted Price:
+                      <span className="preview-discounted">
+                        Rs. {Math.round(formData.price * (1 - formData.discount_percentage / 100)).toLocaleString()}
+                      </span>
+                    </p>
+                    <p>
+                      You save:
+                      <span className="preview-savings">
+                        Rs. {Math.round(formData.price * formData.discount_percentage / 100).toLocaleString()}
+                      </span>
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Submit Buttons */}

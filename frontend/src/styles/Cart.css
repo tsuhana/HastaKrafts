@@ -409,3 +409,85 @@
     font-size: 1.1rem;
   }
 }
+
+/* ADD THESE STYLES TO Cart.css */
+
+/* ==================== DISCOUNT STYLES IN CART ==================== */
+
+/* Discount badge on cart item image */
+.item-image {
+  position: relative;
+}
+
+.cart-discount-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+  color: white;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3);
+  z-index: 2;
+}
+
+/* Price section with discount */
+.item-price-section {
+  margin: 0.5rem 0;
+}
+
+.price-with-discount {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.original-price-cart {
+  text-decoration: line-through;
+  color: #999;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.discounted-price-cart {
+  color: #DC2626;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.item-price {
+  color: #2C1810;
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin: 0.5rem 0;
+}
+
+/* Item total (quantity × price) */
+.item-total {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #2C1810;
+  margin: 0.5rem 0;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .cart-discount-badge {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .original-price-cart {
+    font-size: 0.8rem;
+  }
+
+  .discounted-price-cart {
+    font-size: 1rem;
+  }
+
+  .item-total {
+    font-size: 1rem;
+  }
+}

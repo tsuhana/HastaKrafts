@@ -25,14 +25,14 @@ const AdminDashboard = () => {
   const [allProducts, setAllProducts] = useState([]);
   const [banners, setBanners] = useState([]);
   const [uploadingBanner, setUploadingBanner] = useState(false);
-  const [contactMessages, setContactMessages] = useState([]); 
+  const [contactMessages, setContactMessages] = useState([]);
 
   const API_URL = "http://localhost:5000";
 
   useEffect(() => {
     fetchDashboardData();
     fetchBanners();
-    fetchContactMessages(); //
+    fetchContactMessages();
     // eslint-disable-next-line
   }, []);
 
@@ -66,6 +66,16 @@ const AdminDashboard = () => {
     const a = parts[0]?.[0] || "";
     const b = parts.length > 1 ? parts[parts.length - 1]?.[0] : parts[0]?.[1] || "";
     return (a + b).toUpperCase() || "NA";
+  };
+
+  //  Helper: get discounted price for a product
+  const getDiscountedPrice = (product) => {
+    const hasDiscount = product.has_discount === true || product.has_discount === 'true';
+    const discountPct = parseInt(product.discount_percentage) || 0;
+    if (hasDiscount && discountPct > 0) {
+      return Math.round(parseFloat(product.price) * (1 - discountPct / 100));
+    }
+    return null;
   };
 
   const fetchDashboardData = async () => {
@@ -125,7 +135,6 @@ const AdminDashboard = () => {
     }
   };
 
-  
   const fetchContactMessages = async () => {
     try {
       const res = await adminAPI.getAllContactMessages();
@@ -172,7 +181,7 @@ const AdminDashboard = () => {
 
   const handleDeleteBanner = async (bannerId) => {
     if (!window.confirm('Delete this banner?')) return;
-    
+
     try {
       const res = await adminAPI.deleteBanner(bannerId);
       if (res.data.success) {
@@ -185,7 +194,6 @@ const AdminDashboard = () => {
     }
   };
 
-  
   const handleUpdateContactStatus = async (contactId, status) => {
     try {
       const res = await adminAPI.updateContactStatus(contactId, { status });
@@ -253,7 +261,7 @@ const AdminDashboard = () => {
       { key: "products", label: "Product Approvals", badge: pendingProducts.length },
       { key: "featured", label: "Featured Products", badge: 0 },
       { key: "banners", label: "Festival Banners", badge: 0 },
-      { key: "contacts", label: "Contact Messages", badge: 0 }, 
+      { key: "contacts", label: "Contact Messages", badge: 0 },
     ],
     [pendingSellers.length, pendingProducts.length]
   );
@@ -464,7 +472,7 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* ===================== PRODUCTS ===================== */}
+        {/* ===================== PRODUCTS (PENDING APPROVALS) ===================== */}
         {activeTab === "products" && (
           <div className="admin-content">
             <h1>Pending Product Approvals</h1>
@@ -483,6 +491,7 @@ const AdminDashboard = () => {
                       <th>Seller</th>
                       <th>Category</th>
                       <th>Price</th>
+                      <th>Discount</th>
                       <th>Stock</th>
                       <th>Submitted</th>
                       <th>Actions</th>
@@ -492,12 +501,23 @@ const AdminDashboard = () => {
                     {pendingProducts.map((product) => {
                       const created = product.created_at || product.createdAt;
                       const d = parseDateSafe(created);
+                      //  Discount info for admin pending table
+                      const hasDiscount = product.has_discount === true || product.has_discount === 'true';
+                      const discountPct = parseInt(product.discount_percentage) || 0;
+                      const originalPrice = parseFloat(product.price);
+                      const discountedPrice = getDiscountedPrice(product);
+                      const isDiscounted = hasDiscount && discountPct > 0;
+
                       return (
                         <tr key={product.product_id}>
                           <td>
                             <div className="product-image-cell">
                               {product.images && product.images.length > 0 ? (
-                                <img src={`${API_URL}${product.images[0]}`} alt={product.name} onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                                <img
+                                  src={`${API_URL}${product.images[0]}`}
+                                  alt={product.name}
+                                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                                />
                               ) : (
                                 <div className="no-image">No</div>
                               )}
@@ -506,13 +526,37 @@ const AdminDashboard = () => {
                           <td className="product-name">{product.name || "N/A"}</td>
                           <td>{product?.seller?.user?.full_name || "Unknown"}</td>
                           <td>{product?.category?.name || "N/A"}</td>
-                          <td className="product-price">Rs. {product.price ? parseFloat(product.price).toLocaleString() : "0"}</td>
+                          <td className="product-price">
+                            {/* Show strikethrough + discounted price in admin table */}
+                            {isDiscounted ? (
+                              <div className="admin-price-cell">
+                                <span className="admin-original-price">
+                                  Rs. {originalPrice.toLocaleString()}
+                                </span>
+                                <span className="admin-discounted-price">
+                                  Rs. {discountedPrice.toLocaleString()}
+                                </span>
+                              </div>
+                            ) : (
+                              `Rs. ${originalPrice.toLocaleString()}`
+                            )}
+                          </td>
+                          <td>
+                            {/*  Discount column */}
+                            {isDiscounted ? (
+                              <span className="admin-discount-badge">-{discountPct}% OFF</span>
+                            ) : (
+                              <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>None</span>
+                            )}
+                          </td>
                           <td>
                             <span className={product.stock_quantity > 10 ? "stock-good" : product.stock_quantity > 0 ? "stock-low" : "stock-out"}>
                               {product.stock_quantity || 0} units
                             </span>
                           </td>
-                          <td>{d ? d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "N/A"}</td>
+                          <td>
+                            {d ? d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "N/A"}
+                          </td>
                           <td className="actions-cell">
                             <button onClick={() => handleApproveProduct(product.product_id)} className="btn-approve">Approve</button>
                             <button onClick={() => handleRejectProduct(product.product_id)} className="btn-reject">Reject</button>
@@ -549,62 +593,92 @@ const AdminDashboard = () => {
                       <th>Seller</th>
                       <th>Category</th>
                       <th>Price</th>
+                      <th>Discount</th>
                       <th>Featured</th>
                       <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {allProducts.map((product) => (
-                      <tr key={product.product_id}>
-                        <td>
-                          <div className="product-image-cell">
-                            {product.images && product.images.length > 0 ? (
-                              <img 
-                                src={`${API_URL}${product.images[0]}`} 
-                                alt={product.name}
-                                onError={(e) => { e.currentTarget.style.display = "none"; }}
-                              />
+                    {allProducts.map((product) => {
+                      //  Discount info for featured table
+                      const hasDiscount = product.has_discount === true || product.has_discount === 'true';
+                      const discountPct = parseInt(product.discount_percentage) || 0;
+                      const originalPrice = parseFloat(product.price);
+                      const discountedPrice = getDiscountedPrice(product);
+                      const isDiscounted = hasDiscount && discountPct > 0;
+
+                      return (
+                        <tr key={product.product_id}>
+                          <td>
+                            <div className="product-image-cell">
+                              {product.images && product.images.length > 0 ? (
+                                <img
+                                  src={`${API_URL}${product.images[0]}`}
+                                  alt={product.name}
+                                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                                />
+                              ) : (
+                                <div className="no-image">No</div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="product-name">{product.name || "N/A"}</td>
+                          <td>{product?.seller?.shop_name || "Unknown"}</td>
+                          <td>{product?.category?.name || "N/A"}</td>
+                          <td className="product-price">
+                            {/*  Discount-aware price in featured table */}
+                            {isDiscounted ? (
+                              <div className="admin-price-cell">
+                                <span className="admin-original-price">
+                                  Rs. {originalPrice.toLocaleString()}
+                                </span>
+                                <span className="admin-discounted-price">
+                                  Rs. {discountedPrice.toLocaleString()}
+                                </span>
+                              </div>
                             ) : (
-                              <div className="no-image">No</div>
+                              `Rs. ${originalPrice.toLocaleString()}`
                             )}
-                          </div>
-                        </td>
-                        <td className="product-name">{product.name || "N/A"}</td>
-                        <td>{product?.seller?.shop_name || "Unknown"}</td>
-                        <td>{product?.category?.name || "N/A"}</td>
-                        <td className="product-price">
-                          Rs. {product.price ? parseFloat(product.price).toLocaleString() : "0"}
-                        </td>
-                        <td>
-                          {product.is_featured ? (
-                            <span style={{ 
-                              background: '#FEE2E2', 
-                              color: '#DC2626', 
-                              padding: '0.25rem 0.75rem', 
-                              borderRadius: '6px', 
-                              fontSize: '0.85rem', 
-                              fontWeight: '600',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.25rem'
-                            }}>
-                              ⭐ Featured
-                            </span>
-                          ) : (
-                            <span style={{ color: '#9CA3AF', fontSize: '0.85rem' }}>Not featured</span>
-                          )}
-                        </td>
-                        <td className="actions-cell">
-                          <button
-                            onClick={() => handleToggleFeatured(product.product_id)}
-                            className={product.is_featured ? "btn-reject" : "btn-approve"}
-                            style={{ width: '120px' }}
-                          >
-                            {product.is_featured ? 'Remove' : 'Make Featured'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td>
+                            {/*  Discount column */}
+                            {isDiscounted ? (
+                              <span className="admin-discount-badge">-{discountPct}% OFF</span>
+                            ) : (
+                              <span style={{ color: '#9ca3af', fontSize: '0.8rem' }}>None</span>
+                            )}
+                          </td>
+                          <td>
+                            {product.is_featured ? (
+                              <span style={{
+                                background: '#FEE2E2',
+                                color: '#DC2626',
+                                padding: '0.25rem 0.75rem',
+                                borderRadius: '6px',
+                                fontSize: '0.85rem',
+                                fontWeight: '600',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                              }}>
+                                ⭐ Featured
+                              </span>
+                            ) : (
+                              <span style={{ color: '#9CA3AF', fontSize: '0.85rem' }}>Not featured</span>
+                            )}
+                          </td>
+                          <td className="actions-cell">
+                            <button
+                              onClick={() => handleToggleFeatured(product.product_id)}
+                              className={product.is_featured ? "btn-reject" : "btn-approve"}
+                              style={{ width: '120px' }}
+                            >
+                              {product.is_featured ? 'Remove' : 'Make Featured'}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -626,21 +700,21 @@ const AdminDashboard = () => {
                 <div className="form-row">
                   <div className="form-group">
                     <label>Title *</label>
-                    <input 
-                      type="text" 
-                      name="title" 
-                      required 
+                    <input
+                      type="text"
+                      name="title"
+                      required
                       placeholder="e.g., Dashain Festival Sale"
                     />
                   </div>
-                  
+
                   <div className="form-group">
                     <label>Banner Image * (1920x600px recommended)</label>
-                    <input 
-                      type="file" 
-                      name="image" 
-                      accept="image/*" 
-                      required 
+                    <input
+                      type="file"
+                      name="image"
+                      accept="image/*"
+                      required
                     />
                   </div>
                 </div>
@@ -648,9 +722,9 @@ const AdminDashboard = () => {
                 <div className="form-row">
                   <div className="form-group">
                     <label>Link URL (optional)</label>
-                    <input 
-                      type="text" 
-                      name="link_url" 
+                    <input
+                      type="text"
+                      name="link_url"
                       placeholder="/products?category=1 or external URL"
                     />
                   </div>
@@ -668,15 +742,15 @@ const AdminDashboard = () => {
 
                 <div className="form-group">
                   <label>Description (optional)</label>
-                  <textarea 
-                    name="description" 
-                    rows="3" 
+                  <textarea
+                    name="description"
+                    rows="3"
                     placeholder="Brief description..."
                   />
                 </div>
 
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="btn-approve"
                   disabled={uploadingBanner}
                 >
@@ -687,7 +761,7 @@ const AdminDashboard = () => {
 
             <div className="banners-list-section">
               <h3>Existing Banners ({banners.length})</h3>
-              
+
               {banners.length === 0 ? (
                 <div className="empty-state">
                   <p>No banners uploaded yet</p>
@@ -697,8 +771,8 @@ const AdminDashboard = () => {
                   {banners.map((banner) => (
                     <div key={banner.banner_id} className="banner-card">
                       <div className="banner-image-preview">
-                        <img 
-                          src={`${API_URL}${banner.image}`} 
+                        <img
+                          src={`${API_URL}${banner.image}`}
                           alt={banner.title}
                         />
                         {!banner.is_active && (
@@ -707,7 +781,7 @@ const AdminDashboard = () => {
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="banner-info">
                         <h4>{banner.title}</h4>
                         {banner.description && (
@@ -718,7 +792,7 @@ const AdminDashboard = () => {
                             🔗 {banner.link_type}: {banner.link_url}
                           </p>
                         )}
-                        
+
                         <div className="banner-actions">
                           <button
                             onClick={() => handleToggleBanner(banner.banner_id)}

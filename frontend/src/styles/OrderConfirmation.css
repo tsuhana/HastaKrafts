@@ -467,3 +467,98 @@
   }
 }
 
+/* ==================== POINTS EARNED CARD ==================== */
+.points-earned-card {
+  background: linear-gradient(135deg, #ecdfad 0%, #89d390 100%);
+  border: 3px solid #925d03;
+  border-radius: 16px;
+  padding: 2rem;
+  margin: 2rem 0;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  animation: slideIn 0.6s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.points-earned-icon {
+  font-size: 3rem;
+  animation: bounce 1s ease infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.points-earned-content h3 {
+  color: #2C1810;
+  margin: 0 0 0.5rem 0;
+  font-size: 1.3rem;
+}
+
+.points-earned-content p {
+  color: #92400E;
+  margin: 0.25rem 0;
+  font-size: 1rem;
+}
+
+.points-earned-content strong {
+  color: #D97706;
+  font-size: 1.2rem;
+}
+
+.points-redeemed-text {
+  font-size: 0.9rem;
+  color: #059669;
+  margin-top: 0.5rem;
+}
+
+/* Price column wrapper for order items */
+.item-price-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 90px;
+}
+
+/* Strikethrough original price */
+.item-original-price {
+  font-size: 0.78rem;
+  color: #9ca3af;
+  text-decoration: line-through;
+  margin: 0;
+}
+
+.item-price.discounted {
+  color: #c0392b;
+  font-weight: 600;
+  margin: 0;
+}
+
+.item-discount-badge {
+  display: inline-block;
+  background: #fef2f2;
+  color: #c0392b;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-top: 3px;
+}
+
+.free-delivery-text {
+  color: #10b981;
+  font-weight: 600;
+}

@@ -13,7 +13,8 @@ const getCart = async (req, res) => {
             {
               model: db.Product,
               as: "product",
-              attributes: ["product_id", "name", "price", "images", "stock_quantity"],
+              //  has_discount and discount_percentage included
+              attributes: ["product_id", "name", "price", "images", "stock_quantity", "has_discount", "discount_percentage"],
               include: [
                 {
                   model: db.Seller,
@@ -27,7 +28,6 @@ const getCart = async (req, res) => {
       ],
     });
 
-    // If cart doesn't exist, create one
     if (!cart) {
       cart = await db.Cart.create({
         user_id: req.user.user_id,
@@ -35,12 +35,17 @@ const getCart = async (req, res) => {
       cart.items = [];
     }
 
-    // Calculate totals
+    // ✅ Subtotal uses discounted prices
     let subtotal = 0;
     if (cart.items) {
       cart.items.forEach((item) => {
         if (item.product) {
-          subtotal += item.product.price * item.quantity;
+          const hasDiscount = item.product.has_discount === true || item.product.has_discount === 'true';
+          const discountPct = parseInt(item.product.discount_percentage) || 0;
+          const actualPrice = hasDiscount && discountPct > 0
+            ? Math.round(item.product.price * (1 - discountPct / 100))
+            : parseFloat(item.product.price);
+          subtotal += actualPrice * item.quantity;
         }
       });
     }
@@ -50,7 +55,7 @@ const getCart = async (req, res) => {
       data: {
         cart,
         subtotal,
-        total: subtotal, // Add shipping/taxes here later
+        total: subtotal,
       },
     });
   } catch (error) {
@@ -81,7 +86,6 @@ const addToCart = async (req, res) => {
       });
     }
 
-    // Check if product exists and has stock
     const product = await db.Product.findByPk(product_id);
     if (!product) {
       return res.status(404).json({
@@ -97,7 +101,6 @@ const addToCart = async (req, res) => {
       });
     }
 
-    // Get or create cart
     let cart = await db.Cart.findOne({
       where: { user_id: req.user.user_id },
     });
@@ -108,7 +111,6 @@ const addToCart = async (req, res) => {
       });
     }
 
-    // Check if item already in cart
     let cartItem = await db.CartItem.findOne({
       where: {
         cart_id: cart.cart_id,
@@ -117,7 +119,6 @@ const addToCart = async (req, res) => {
     });
 
     if (cartItem) {
-      // Update quantity
       const newQuantity = cartItem.quantity + quantity;
 
       if (newQuantity > product.stock_quantity) {
@@ -130,7 +131,6 @@ const addToCart = async (req, res) => {
       cartItem.quantity = newQuantity;
       await cartItem.save();
     } else {
-      // Add new item
       cartItem = await db.CartItem.create({
         cart_id: cart.cart_id,
         product_id: product_id,
@@ -138,7 +138,6 @@ const addToCart = async (req, res) => {
       });
     }
 
-    // Get updated cart with items
     const updatedCart = await db.Cart.findOne({
       where: { user_id: req.user.user_id },
       include: [
@@ -149,7 +148,8 @@ const addToCart = async (req, res) => {
             {
               model: db.Product,
               as: "product",
-              attributes: ["product_id", "name", "price", "images", "stock_quantity"],
+              // ✅ has_discount + discount_percentage added
+              attributes: ["product_id", "name", "price", "images", "stock_quantity", "has_discount", "discount_percentage"],
             },
           ],
         },

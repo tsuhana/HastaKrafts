@@ -1,7 +1,6 @@
 .product-detail-page {
   min-height: 100vh;
-  background: #fdf2f0;   /* ← yo rakhnuhos jastai cha, pinky cream */
-  padding: 2rem 0;
+  background: #fdf2f0;  
 }
 
 .product-detail-container {
@@ -287,9 +286,6 @@
   gap: 1rem;
 }
 
-/* ── Reviews section wrapper inside the cream page ── */
-/* This gives the white Reviews card a clean shadow so it
-   sits nicely above the #fdf2f0 pinky cream background    */
 .product-detail-container > .rvWrap {
   margin-top: 2rem;
   background: #ffffff !important;
@@ -306,4 +302,179 @@
   .product-title { font-size: 1.5rem; }
   .amount { font-size: 2rem; }
   .product-actions { grid-template-columns: 1fr; }
+}
+
+/* ==================== LANGUAGE SELECTOR ==================== */
+.language-selector-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: #FFF8F0;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  border: 2px solid #E8E5E1;
+}
+
+.language-label {
+  font-weight: 600;
+  color: #2C1810;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.language-dropdown {
+  padding: 0.75rem 1rem;
+  border: 2px solid #C17D4A;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  background: #FFFFFF;
+  color: #2C1810;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 200px;
+}
+
+.language-dropdown:hover:not(:disabled) {
+  border-color: #A0623A;
+  box-shadow: 0 2px 8px rgba(193, 125, 74, 0.2);
+}
+
+.language-dropdown:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.language-dropdown:focus {
+  outline: none;
+  border-color: #A0623A;
+  box-shadow: 0 0 0 3px rgba(193, 125, 74, 0.1);
+}
+
+.translating-indicator {
+  color: #C17D4A;
+  font-size: 0.9rem;
+  font-weight: 500;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.translating-box {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  background: #FFF8F0;
+  border-radius: 8px;
+  border: 2px dashed #C17D4A;
+}
+
+.spinner-small {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #E8E5E1;
+  border-top-color: #C17D4A;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.translating-box p {
+  margin: 0;
+  color: #5D4E37;
+  font-weight: 500;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .language-selector-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .language-dropdown {
+    width: 100%;
+  }
+}
+
+.price-with-discount {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.discount-badge-large {
+  background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+  color: #fff;
+  padding: 0.4rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  display: inline-block;
+  width: fit-content;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
+  animation: pd-pulse 2s ease-in-out infinite;
+  letter-spacing: 0.03em;
+}
+
+@keyframes pd-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35); }
+  50%       { transform: scale(1.04); box-shadow: 0 6px 18px rgba(220, 38, 38, 0.5); }
+}
+
+.price-display {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.original-price-large {
+  text-decoration: line-through;
+  color: #aaa;
+  font-size: 1.1rem;
+  font-weight: 400;
+}
+
+.discounted-price-large {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.discounted-price-large .currency {
+  font-size: 1.4rem;
+  color: #DC2626;
+  font-weight: 600;
+}
+
+.discounted-price-large .amount {
+  font-size: 2.4rem;
+  color: #DC2626;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.savings-amount {
+  color: #059669;
+  font-weight: 600;
+  font-size: 0.9rem;
+  background: #D1FAE5;
+  border: 1px solid #6EE7B7;
+  padding: 0.35rem 0.85rem;
+  border-radius: 6px;
+  display: inline-block;
+  width: fit-content;
+  margin-top: 0.25rem;
 }

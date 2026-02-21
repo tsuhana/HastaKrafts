@@ -78,6 +78,38 @@ const Product = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+  
+    // discount related
+    has_discount: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    discount_percentage: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      validate: {
+        min: 0,
+        max: 100
+      },
+      comment: "Discount percentage (0-100)"
+    },
+    
+    // MULTI-LANGUAGE TRANSLATIONS
+    translations: {
+      type: DataTypes.JSONB,
+      defaultValue: {
+        en: null, // English (original)
+        ne: null, // Nepali
+        es: null, // Spanish
+        hi: null, // Hindi
+        zh: null, // Chinese
+        fr: null, // French
+        ja: null, // Japanese
+        de: null, // German
+        ko: null, // Korean
+        ar: null, // Arabic
+      }
+    },
   },
   {
     tableName: "products",

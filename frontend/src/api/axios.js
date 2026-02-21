@@ -45,13 +45,15 @@ export const productAPI = {
   getSellerProducts: () => API.get('/products/seller/my-products'),
   updateProduct: (id, formData) => API.put(`/products/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   deleteProduct: (id) => API.delete(`/products/${id}`),
-  
+  translateProduct: (id, data) => API.post(`/products/${id}/translate`, data),
+  getSupportedLanguages: () => API.get('/products/languages/supported'),
+
   // HOMEPAGE ENDPOINTS
   getFeaturedProducts: () => API.get('/products/featured'),
   getTrendingProducts: () => API.get('/products/trending'),
   getRandomProducts: () => API.get('/products/random'),
   getTopCategories: () => API.get('/products/categories/top'),
-  
+
   // BANNERS
   getActiveBanners: () => API.get('/banners/active'),
 };
@@ -128,7 +130,7 @@ export const messageAPI = {
   getUnreadCount: () => API.get('/messages/unread-count'),
 };
 
-// ==================== WISHLIST API ====================
+// WISHLIST
 export const wishlistAPI = {
   getWishlist: () => API.get('/wishlist'),
   addToWishlist: (data) => API.post('/wishlist/add', data),
@@ -137,23 +139,37 @@ export const wishlistAPI = {
   clearWishlist: () => API.delete('/wishlist/clear'),
 };
 
-// ==================== REVIEW API ====================
+// REVIEWS
 export const reviewAPI = {
   getProductReviews: (product_id) => API.get(`/reviews/product/${product_id}`),
-  createReview: (formData) => API.post('/reviews', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  }),
+  createReview: (formData) => API.post('/reviews', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   getMyReviews: () => API.get('/reviews/my-reviews'),
   updateReview: (review_id, data) => API.put(`/reviews/${review_id}`, data),
   deleteReview: (review_id) => API.delete(`/reviews/${review_id}`),
 };
 
-// ==================== CONTACT API ====================
+// CONTACT
 export const contactAPI = {
   submitMessage: (data) => API.post('/contact/submit', data),
   getAllMessages: (params) => API.get('/contact', { params }),
   updateMessage: (id, data) => API.put(`/contact/${id}`, data),
   deleteMessage: (id) => API.delete(`/contact/${id}`),
+};
+
+// POINTS
+export const pointsAPI = {
+  getBalance: () => API.get('/points/balance'),
+  getHistory: () => API.get('/points/history'),
+};
+
+//BLOG STORIES
+export const storyAPI = {
+  getAllStories: (params) => API.get('/stories', { params }),
+  getStoryById: (id) => API.get(`/stories/${id}`),
+  createStory: (formData) => API.post('/stories', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  getMyStories: () => API.get('/stories/seller/my-stories'),
+  updateStory: (id, data) => API.put(`/stories/${id}`, data),
+  deleteStory: (id) => API.delete(`/stories/${id}`),
 };
 
 export default API;

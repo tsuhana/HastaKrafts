@@ -5,6 +5,11 @@ import Icons from '../utils/icons';
 import BannerCarousel from '../components/BannerCarousel';
 import '../styles/Home.css';
 
+const calculateDiscountedPrice = (price, hasDiscount, discountPercentage) => {
+  if (!hasDiscount || !discountPercentage) return null;
+  return Math.round(price * (1 - discountPercentage / 100));
+};
+
 const Home = () => {
   const navigate = useNavigate();
   const [featuredProducts, setFeaturedProducts] = useState([]);
@@ -21,15 +26,13 @@ const Home = () => {
 
   useEffect(() => {
     fetchHomeData();
-    if (isLoggedIn && isBuyer) {
-      fetchWishlist();
-    }
+    if (isLoggedIn && isBuyer) fetchWishlist();
   }, []);
 
   const fetchHomeData = async () => {
     try {
       setLoading(true);
-      
+
       const [featured, trending, categories] = await Promise.all([
         productAPI.getFeaturedProducts().catch(() => ({ data: { data: [] } })),
         productAPI.getTrendingProducts().catch(() => ({ data: { data: [] } })),
@@ -40,13 +43,11 @@ const Home = () => {
       setTrendingProducts(trending.data.data || []);
       setTopCategories(categories.data.data.slice(0, 8) || []);
 
-      // Fallback to random if no featured
       if (featured.data.data.length === 0) {
         const random = await productAPI.getRandomProducts();
         setFeaturedProducts(random.data.data || []);
       }
-      
-      // Fallback for trending too
+
       if (trending.data.data.length === 0) {
         const random = await productAPI.getRandomProducts();
         setTrendingProducts(random.data.data || []);
@@ -69,35 +70,19 @@ const Home = () => {
   };
 
   const handleAddToCart = async (product) => {
-    if (!isLoggedIn) {
-      alert('Please login to add items to cart');
-      navigate('/login');
-      return;
-    }
+    if (!isLoggedIn) { alert('Please login to add items to cart'); navigate('/login'); return; }
+    if (!isBuyer) { alert('Only buyers can add items to cart'); return; }
+    if (product.stock_quantity <= 0) { alert('Product is out of stock'); return; }
 
-    if (!isBuyer) {
-      alert('Only buyers can add items to cart');
-      return;
-    }
-
-    if (product.stock_quantity <= 0) {
-      alert('Product is out of stock');
-      return;
-    }
-
-    setAddingToCart({ ...addingToCart, [product.product_id]: true });
+    setAddingToCart(prev => ({ ...prev, [product.product_id]: true }));
     try {
-      await cartAPI.addToCart({
-        product_id: product.product_id,
-        quantity: 1
-      });
+      await cartAPI.addToCart({ product_id: product.product_id, quantity: 1 });
       alert('Added to cart!');
       window.dispatchEvent(new Event('cartUpdated'));
     } catch (err) {
-      console.error('Add to cart error:', err);
       alert(err.response?.data?.message || 'Failed to add to cart');
     } finally {
-      setAddingToCart({ ...addingToCart, [product.product_id]: false });
+      setAddingToCart(prev => ({ ...prev, [product.product_id]: false }));
     }
   };
 
@@ -105,38 +90,30 @@ const Home = () => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (!isLoggedIn) {
-      alert('Please login to use wishlist');
-      navigate('/login');
-      return;
-    }
-
-    if (!isBuyer) {
-      alert('Only buyers can use wishlist');
-      return;
-    }
+    if (!isLoggedIn) { alert('Please login to use wishlist'); navigate('/login'); return; }
+    if (!isBuyer) { alert('Only buyers can use wishlist'); return; }
 
     try {
       if (wishlistItems.has(productId)) {
         await wishlistAPI.removeFromWishlist(productId);
-        setWishlistItems(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(productId);
-          return newSet;
-        });
+        setWishlistItems(prev => { const s = new Set(prev); s.delete(productId); return s; });
       } else {
         await wishlistAPI.addToWishlist({ product_id: productId });
         setWishlistItems(prev => new Set(prev).add(productId));
       }
     } catch (err) {
-      console.error('Wishlist toggle error:', err);
       alert(err.response?.data?.message || 'Failed to update wishlist');
     }
   };
 
   const ProductCard = ({ product }) => {
     const inWishlist = wishlistItems.has(product.product_id);
-    
+    const discountedPrice = calculateDiscountedPrice(
+      product.price,
+      product.has_discount,
+      product.discount_percentage
+    );
+
     return (
       <div className="home-product-card">
         <Link to={`/products/${product.product_id}`} className="card-link">
@@ -144,11 +121,16 @@ const Home = () => {
             {product.images && product.images.length > 0 ? (
               <img src={`${API_URL}${product.images[0]}`} alt={product.name} />
             ) : (
-              <div className="no-image">
-                <Icons.Package size={48} />
-              </div>
+              <div className="no-image"><Icons.Package size={48} /></div>
             )}
-            
+
+            {/* Discount badge on image */}
+            {product.has_discount && product.discount_percentage > 0 && (
+              <span className="home-discount-badge">
+                -{product.discount_percentage}%
+              </span>
+            )}
+
             {isLoggedIn && isBuyer && (
               <button
                 className={`wishlist-btn-home ${inWishlist ? 'active' : ''}`}
@@ -170,13 +152,26 @@ const Home = () => {
             )}
             <div className="card-footer">
               <div className="card-price">
-                <span className="currency">Rs.</span>
-                <span className="amount">{parseFloat(product.price).toLocaleString()}</span>
+                {discountedPrice ? (
+                  <>
+                    <span className="home-original-price">
+                      Rs. {parseFloat(product.price).toLocaleString()}
+                    </span>
+                    <span className="home-discounted-price">
+                      Rs. {discountedPrice.toLocaleString()}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="currency">Rs.</span>
+                    <span className="amount">{parseFloat(product.price).toLocaleString()}</span>
+                  </>
+                )}
               </div>
             </div>
           </div>
         </Link>
-        
+
         {isLoggedIn && isBuyer && (
           <button
             className="btn-add-cart"
@@ -186,10 +181,7 @@ const Home = () => {
             {addingToCart[product.product_id] ? (
               'Adding...'
             ) : (
-              <>
-                <Icons.Cart size={16} />
-                <span>Add to Cart</span>
-              </>
+              <><Icons.Cart size={16} /><span>Add to Cart</span></>
             )}
           </button>
         )}
@@ -206,12 +198,10 @@ const Home = () => {
           <p className="hero-subtitle">Supporting local artisans, preserving traditional crafts</p>
           <div className="hero-buttons">
             <Link to="/products" className="btn-hero-primary">
-              <Icons.Package size={20} />
-              <span>Shop Now</span>
+              <Icons.Package size={20} /><span>Shop Now</span>
             </Link>
             <Link to="/register-seller" className="btn-hero-secondary">
-              <Icons.Shop size={20} />
-              <span>Become a Seller</span>
+              <Icons.Shop size={20} /><span>Become a Seller</span>
             </Link>
           </div>
         </div>
@@ -222,16 +212,13 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Banner Carousel - Festival/Sale Banners */}
       <BannerCarousel />
 
       {/* Categories Section */}
       <section className="categories-section">
         <div className="section-header">
           <h2>Shop by Category</h2>
-          <Link to="/products" className="view-all">
-            View All <Icons.ChevronRight size={18} />
-          </Link>
+          <Link to="/products" className="view-all">View All <Icons.ChevronRight size={18} /></Link>
         </div>
         <div className="categories-grid">
           {topCategories.slice(0, 8).map((category) => (
@@ -242,9 +229,7 @@ const Home = () => {
             >
               <div className="category-icon">{category.icon}</div>
               <h3 className="category-name">{category.name}</h3>
-              <p className="category-count">
-                {category.product_count || 0} products
-              </p>
+              <p className="category-count">{category.product_count || 0} products</p>
             </Link>
           ))}
         </div>
@@ -255,20 +240,13 @@ const Home = () => {
         <section className="products-section featured-section">
           <div className="section-header">
             <div>
-              <h2>
-                <Icons.TrendingUp size={28} style={{ color: '#DC2626' }} />
-                Featured Products
-              </h2>
+              <h2><Icons.TrendingUp size={28} style={{ color: '#DC2626' }} /> Featured Products</h2>
               <p>Handpicked by our team</p>
             </div>
-            <Link to="/products" className="view-all">
-              View All <Icons.ChevronRight size={18} />
-            </Link>
+            <Link to="/products" className="view-all">View All <Icons.ChevronRight size={18} /></Link>
           </div>
           <div className="products-grid">
-            {featuredProducts.map(product => (
-              <ProductCard key={product.product_id} product={product} />
-            ))}
+            {featuredProducts.map(product => <ProductCard key={product.product_id} product={product} />)}
           </div>
         </section>
       )}
@@ -278,20 +256,13 @@ const Home = () => {
         <section className="products-section trending-section">
           <div className="section-header">
             <div>
-              <h2>
-                <Icons.TrendingUp size={28} style={{ color: '#F59E0B' }} />
-                Trending Now
-              </h2>
+              <h2><Icons.TrendingUp size={28} style={{ color: '#F59E0B' }} /> Trending Now</h2>
               <p>Most popular this month</p>
             </div>
-            <Link to="/products" className="view-all">
-              View All <Icons.ChevronRight size={18} />
-            </Link>
+            <Link to="/products" className="view-all">View All <Icons.ChevronRight size={18} /></Link>
           </div>
           <div className="products-grid">
-            {trendingProducts.map(product => (
-              <ProductCard key={product.product_id} product={product} />
-            ))}
+            {trendingProducts.map(product => <ProductCard key={product.product_id} product={product} />)}
           </div>
         </section>
       )}

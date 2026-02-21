@@ -20,6 +20,8 @@ const reviewRoutes = require("./routes/review.routes");
 const wishlistRoutes = require("./routes/wishlist.routes");
 const bannerRoutes = require("./routes/banner.routes");
 const contactRoutes = require("./routes/contact.routes");
+const pointsRoutes = require("./routes/points.routes");
+const storyRoutes = require("./routes/story.routes");
 
 const app = express();
 const server = http.createServer(app);
@@ -67,7 +69,8 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use('/api/banners', bannerRoutes);
 app.use('/api/contact', contactRoutes);
-
+app.use('/api/points', pointsRoutes);
+app.use('/api/stories', storyRoutes);
 // ══════════════════════════════════════════════════════════════
 // SOCKET.IO — Online tracking + messaging + auctions
 // onlineUsers: Map<userId, Set<socketId>>

@@ -1,3 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+
+
 .admin-dashboard-container {
   display: flex;
   min-height: calc(100vh - 80px);
@@ -117,10 +120,6 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
-
-/* ============================================
-   OVERVIEW TAB - NEW STYLES
-   ============================================ */
 
 .overview-top {
   display: flex;
@@ -363,10 +362,6 @@
   font-weight: 600;
 }
 
-/* ============================================
-   SELLERS TAB STYLES (UNCHANGED)
-   ============================================ */
-
 .verification-list {
   display: flex;
   flex-direction: column;
@@ -469,10 +464,6 @@
   gap: 0.75rem;
   min-width: 120px;
 }
-
-/* ============================================
-   PRODUCTS TAB STYLES (UNCHANGED)
-   ============================================ */
 
 .products-table-container {
   background: #FFFFFF;
@@ -856,7 +847,7 @@
   }
 }
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+
 
 
 /* ───── PAGE HEADER ───── */
@@ -1135,4 +1126,35 @@
     gap: 0.35rem;
   }
 
+}
+
+.admin-price-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-original-price {
+  font-size: 0.78rem;
+  color: #9ca3af;
+  text-decoration: line-through;
+}
+
+/* Discounted price in admin table */
+.admin-discounted-price {
+  font-size: 0.9rem;
+  color: #c0392b;
+  font-weight: 600;
+}
+
+/* Discount % badge in admin Discount column */
+.admin-discount-badge {
+  display: inline-block;
+  background: #fef2f2;
+  color: #c0392b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
 }

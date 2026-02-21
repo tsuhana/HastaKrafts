@@ -4,13 +4,18 @@ import Icons from '../utils/icons';
 import { wishlistAPI } from '../api/axios';
 import '../styles/ProductCard.css';
 
+const calculateDiscountedPrice = (price, hasDiscount, discountPercentage) => {
+  if (!hasDiscount || !discountPercentage) return price;
+  return Math.round(price * (1 - discountPercentage / 100));
+};
+
 const ProductCard = ({ product, showWishlist = true }) => {
   const navigate = useNavigate();
   const API_URL = 'http://localhost:5000';
-  
+
   const [inWishlist, setInWishlist] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
-  
+
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
   const isLoggedIn = !!localStorage.getItem('token');
   const isBuyer = currentUser?.role === 'buyer';
@@ -61,19 +66,19 @@ const ProductCard = ({ product, showWishlist = true }) => {
       setWishlistLoading(false);
     }
   };
-  
+
   const getStatusBadge = () => {
     if (!product.status) return null;
-    
+
     const badges = {
       pending: { class: 'badge-pending', text: 'Pending', icon: Icons.Clock },
       approved: { class: 'badge-approved', text: 'Live', icon: Icons.CheckCircle },
       rejected: { class: 'badge-rejected', text: 'Rejected', icon: Icons.CloseCircle },
     };
-    
+
     const badge = badges[product.status];
     if (!badge) return null;
-    
+
     const BadgeIcon = badge.icon;
     return (
       <span className={`status-badge ${badge.class}`}>
@@ -88,8 +93,8 @@ const ProductCard = ({ product, showWishlist = true }) => {
       <Link to={`/products/${product.product_id}`} className="product-card-link">
         <div className="product-image-container">
           {product.images && product.images.length > 0 ? (
-            <img 
-              src={`${API_URL}${product.images[0]}`} 
+            <img
+              src={`${API_URL}${product.images[0]}`}
               alt={product.name}
               className="product-image"
             />
@@ -99,9 +104,9 @@ const ProductCard = ({ product, showWishlist = true }) => {
               <span>No Image</span>
             </div>
           )}
-          
+
           {getStatusBadge()}
-          
+
           {product.is_featured && (
             <span className="featured-badge">
               <Icons.TrendingUp size={12} />
@@ -109,9 +114,16 @@ const ProductCard = ({ product, showWishlist = true }) => {
             </span>
           )}
 
-          {/* Wishlist Heart Button - Only show for buyers */}
+          {/* Discount badge on image */}
+          {product.has_discount && product.discount_percentage > 0 && (
+            <span className="discount-badge">
+              -{product.discount_percentage}%
+            </span>
+          )}
+
+          {/* Wishlist Heart Button */}
           {isLoggedIn && isBuyer && showWishlist && (
-            <button 
+            <button
               className={`wishlist-btn ${inWishlist ? 'active' : ''}`}
               onClick={toggleWishlist}
               disabled={wishlistLoading}
@@ -130,7 +142,7 @@ const ProductCard = ({ product, showWishlist = true }) => {
 
         <div className="product-info">
           <h3 className="product-name">{product.name}</h3>
-          
+
           {product.seller && (
             <p className="product-seller">
               <Icons.Shop size={16} />
@@ -147,10 +159,23 @@ const ProductCard = ({ product, showWishlist = true }) => {
 
           <div className="product-footer">
             <div className="product-price">
-              <span className="currency">Rs.</span>
-              <span className="amount">{parseFloat(product.price).toLocaleString()}</span>
+              {product.has_discount && product.discount_percentage > 0 ? (
+                <>
+                  <span className="original-price">
+                    Rs. {parseFloat(product.price).toLocaleString()}
+                  </span>
+                  <span className="discounted-price">
+                    Rs. {calculateDiscountedPrice(product.price, product.has_discount, product.discount_percentage).toLocaleString()}
+                  </span>
+                </>
+              ) : (
+                <span className="price">
+                  <span className="currency">Rs.</span>
+                  <span className="amount">{parseFloat(product.price).toLocaleString()}</span>
+                </span>
+              )}
             </div>
-            
+
             {product.stock_quantity !== undefined && (
               <div className={`stock-status ${product.stock_quantity > 0 ? 'in-stock' : 'out-of-stock'}`}>
                 {product.stock_quantity > 0 ? (

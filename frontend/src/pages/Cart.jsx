@@ -3,11 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { cartAPI } from '../api/axios';
 import '../styles/Cart.css';
 
+// ✅ Helper function for discount calculation
+const calculateDiscountedPrice = (price, hasDiscount, discountPercentage) => {
+  if (!hasDiscount || !discountPercentage) return price;
+  return Math.round(price * (1 - discountPercentage / 100));
+};
+
 const Cart = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState(null);
-  const [subtotal, setSubtotal] = useState(0);
   const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
@@ -20,7 +25,6 @@ const Cart = () => {
       const res = await cartAPI.getCart();
       if (res.data.success) {
         setCart(res.data.data.cart);
-        setSubtotal(res.data.data.subtotal);
       }
     } catch (err) {
       console.error('Error fetching cart:', err);
@@ -71,6 +75,16 @@ const Cart = () => {
     return `http://localhost:5000${images[0]}`;
   };
 
+  // ✅ Calculate subtotal with discounts
+  const subtotal = cart?.items.reduce((sum, item) => {
+    const price = calculateDiscountedPrice(
+      item.product.price,
+      item.product.has_discount,
+      item.product.discount_percentage
+    );
+    return sum + (price * item.quantity);
+  }, 0) || 0;
+
   const deliveryFee = 150;
   const total = subtotal + deliveryFee;
 
@@ -108,59 +122,96 @@ const Cart = () => {
             </div>
 
             <div className="cart-items-list">
-              {cart.items.map((item) => (
-                <div key={item.cart_item_id} className="cart-item">
-                  <div className="item-image">
-                    {getImageUrl(item.product.images) ? (
-                      <img src={getImageUrl(item.product.images)} alt={item.product.name} />
-                    ) : (
-                      <div className="no-image">📦</div>
-                    )}
-                    <div className="item-category">
-                      {item.product.seller?.shop_name || 'Product'}
-                    </div>
-                  </div>
+              {cart.items.map((item) => {
+                const discountedPrice = calculateDiscountedPrice(
+                  item.product.price,
+                  item.product.has_discount,
+                  item.product.discount_percentage
+                );
+                const hasDiscount = item.product.has_discount && item.product.discount_percentage > 0;
 
-                  <div className="item-details">
-                    <h3 className="item-name">{item.product.name}</h3>
-                    <p className="item-seller">By {item.product.seller?.shop_name} ✓</p>
-                    <p className="item-price">Rs. {item.product.price.toLocaleString()}</p>
-                  </div>
-
-                  <div className="item-actions">
-                    <div className="quantity-controls">
-                      <button
-                        onClick={() => updateQuantity(item.cart_item_id, item.quantity - 1)}
-                        disabled={updating || item.quantity <= 1}
-                        className="qty-btn"
-                      >
-                        −
-                      </button>
-                      <input
-                        type="number"
-                        value={item.quantity}
-                        readOnly
-                        className="qty-input"
-                      />
-                      <button
-                        onClick={() => updateQuantity(item.cart_item_id, item.quantity + 1)}
-                        disabled={updating || item.quantity >= item.product.stock_quantity}
-                        className="qty-btn"
-                      >
-                        +
-                      </button>
+                return (
+                  <div key={item.cart_item_id} className="cart-item">
+                    <div className="item-image">
+                      {getImageUrl(item.product.images) ? (
+                        <img src={getImageUrl(item.product.images)} alt={item.product.name} />
+                      ) : (
+                        <div className="no-image">📦</div>
+                      )}
+                      <div className="item-category">
+                        {item.product.seller?.shop_name || 'Product'}
+                      </div>
+                      {/* ✅ Discount badge on image */}
+                      {hasDiscount && (
+                        <div className="cart-discount-badge">
+                          -{item.product.discount_percentage}%
+                        </div>
+                      )}
                     </div>
 
-                    <button
-                      onClick={() => removeItem(item.cart_item_id)}
-                      disabled={updating}
-                      className="btn-remove"
-                    >
-                      Remove
-                    </button>
+                    <div className="item-details">
+                      <h3 className="item-name">{item.product.name}</h3>
+                      <p className="item-seller">By {item.product.seller?.shop_name} ✓</p>
+                      
+                      {/* ✅ Price with discount */}
+                      <div className="item-price-section">
+                        {hasDiscount ? (
+                          <div className="price-with-discount">
+                            <span className="original-price-cart">
+                              Rs. {parseFloat(item.product.price).toLocaleString()}
+                            </span>
+                            <span className="discounted-price-cart">
+                              Rs. {discountedPrice.toLocaleString()}
+                            </span>
+                          </div>
+                        ) : (
+                          <p className="item-price">
+                            Rs. {item.product.price.toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="item-actions">
+                      <div className="quantity-controls">
+                        <button
+                          onClick={() => updateQuantity(item.cart_item_id, item.quantity - 1)}
+                          disabled={updating || item.quantity <= 1}
+                          className="qty-btn"
+                        >
+                          −
+                        </button>
+                        <input
+                          type="number"
+                          value={item.quantity}
+                          readOnly
+                          className="qty-input"
+                        />
+                        <button
+                          onClick={() => updateQuantity(item.cart_item_id, item.quantity + 1)}
+                          disabled={updating || item.quantity >= item.product.stock_quantity}
+                          className="qty-btn"
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      {/* ✅ Item total with discount */}
+                      <div className="item-total">
+                        Rs. {(discountedPrice * item.quantity).toLocaleString()}
+                      </div>
+
+                      <button
+                        onClick={() => removeItem(item.cart_item_id)}
+                        disabled={updating}
+                        className="btn-remove"
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -179,7 +230,6 @@ const Cart = () => {
                 <span>Rs. {deliveryFee}</span>
               </div>
 
-              
               <div className="summary-divider"></div>
 
               <div className="summary-total">

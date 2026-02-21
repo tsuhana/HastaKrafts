@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { cartAPI, orderAPI, userAPI } from '../api/axios';
+import { cartAPI, orderAPI, userAPI, pointsAPI } from '../api/axios';
 import '../styles/Checkout.css';
 
 const Checkout = () => {
@@ -10,6 +10,8 @@ const Checkout = () => {
   const [subtotal, setSubtotal] = useState(0);
   const [user, setUser] = useState(null);
   const [placing, setPlacing] = useState(false);
+  const [userPoints, setUserPoints] = useState(0);
+  const [redeemPoints, setRedeemPoints] = useState(false);
 
   const [shippingInfo, setShippingInfo] = useState({
     delivery_name: '',
@@ -25,7 +27,7 @@ const Checkout = () => {
   const [paymentMethod, setPaymentMethod] = useState('khalti');
   const [errors, setErrors] = useState({});
 
-  const deliveryFee = 150;
+  const BASE_DELIVERY_FEE = 150;
 
   useEffect(() => {
     fetchData();
@@ -34,15 +36,15 @@ const Checkout = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      
+
       // Fetch cart
       const cartRes = await cartAPI.getCart();
       if (cartRes.data.success) {
         setCart(cartRes.data.data.cart);
-        setSubtotal(cartRes.data.data.subtotal);
+        setSubtotal(cartRes.data.data.subtotal); // ✅ already discounted from backend
       }
 
-      // Fetch user profile for pre-filling
+      // Fetch user profile
       const userRes = await userAPI.getProfile();
       if (userRes.data.success) {
         const userData = userRes.data.data;
@@ -57,6 +59,12 @@ const Checkout = () => {
           delivery_postal_code: userData.postal_code || '',
           delivery_landmark: userData.landmark || '',
         });
+      }
+
+      // Fetch user points
+      const pointsRes = await pointsAPI.getBalance();
+      if (pointsRes.data.success) {
+        setUserPoints(pointsRes.data.data.total_points || 0);
       }
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -118,17 +126,19 @@ const Checkout = () => {
       const orderData = {
         ...shippingInfo,
         payment_method: paymentMethod,
+        redeem_points: redeemPoints,
       };
 
       const res = await orderAPI.createOrder(orderData);
 
       if (res.data.success) {
-        // If Khalti, redirect to payment
+        // Trigger points update in navbar
+        window.dispatchEvent(new Event('pointsUpdated'));
+
         if (paymentMethod === 'khalti' && res.data.data.payment_url) {
           window.location.href = res.data.data.payment_url;
         } else {
-          // If COD, go to success page
-          alert('✅ Order placed successfully!');
+          alert('Order placed successfully!');
           navigate(`/order-confirmation/${res.data.data.order_id}`);
         }
       }
@@ -143,6 +153,16 @@ const Checkout = () => {
   const getImageUrl = (images) => {
     if (!images || images.length === 0) return null;
     return `http://localhost:5000${images[0]}`;
+  };
+
+  // ✅ Helper: get discounted price for a product
+  const getDiscountedPrice = (product) => {
+    const hasDiscount = product.has_discount === true || product.has_discount === 'true';
+    const discountPct = parseInt(product.discount_percentage) || 0;
+    if (hasDiscount && discountPct > 0) {
+      return Math.round(parseFloat(product.price) * (1 - discountPct / 100));
+    }
+    return parseFloat(product.price);
   };
 
   if (loading) {
@@ -165,7 +185,10 @@ const Checkout = () => {
     );
   }
 
+  // Calculate delivery fee based on points redemption
+  const deliveryFee = redeemPoints ? 0 : BASE_DELIVERY_FEE;
   const total = subtotal + deliveryFee;
+  const pointsToEarn = Math.floor(subtotal / 100);
 
   return (
     <div className="checkout-page">
@@ -173,12 +196,12 @@ const Checkout = () => {
         <h1 className="checkout-title">Checkout</h1>
 
         <div className="checkout-content">
-          {/* Left Side - Shipping & Payment */}
           <div className="checkout-left">
+
             {/* Shipping Information */}
             <div className="checkout-section">
               <h2>Shipping Information</h2>
-              
+
               <div className="form-row">
                 <div className="form-field">
                   <label>Full Name *</label>
@@ -325,30 +348,50 @@ const Checkout = () => {
             </div>
           </div>
 
-          {/* Right Side - Order Summary */}
           <div className="checkout-right">
             <div className="order-summary">
               <h2>Order Summary</h2>
 
               <div className="summary-items">
-                {cart.items.map((item) => (
-                  <div key={item.cart_item_id} className="summary-item">
-                    <div className="summary-item-image">
-                      {getImageUrl(item.product.images) ? (
-                        <img src={getImageUrl(item.product.images)} alt={item.product.name} />
-                      ) : (
-                        <div className="no-image">📦</div>
-                      )}
+                {cart.items.map((item) => {
+                  // ✅ Calculate discounted price per item for display
+                  const hasDiscount = item.product.has_discount === true || item.product.has_discount === 'true';
+                  const discountPct = parseInt(item.product.discount_percentage) || 0;
+                  const originalPrice = parseFloat(item.product.price);
+                  const discountedPrice = getDiscountedPrice(item.product);
+                  const isDiscounted = hasDiscount && discountPct > 0;
+
+                  return (
+                    <div key={item.cart_item_id} className="summary-item">
+                      <div className="summary-item-image">
+                        {getImageUrl(item.product.images) ? (
+                          <img src={getImageUrl(item.product.images)} alt={item.product.name} />
+                        ) : (
+                          <div className="no-image">📦</div>
+                        )}
+                      </div>
+                      <div className="summary-item-details">
+                        <p className="summary-item-name">{item.product.name}</p>
+                        <p className="summary-item-qty">Qty: {item.quantity}</p>
+                        {/* ✅ Show discount badge if discounted */}
+                        {isDiscounted && (
+                          <span className="summary-discount-badge">-{discountPct}% OFF</span>
+                        )}
+                      </div>
+                      <div className="summary-item-price-wrap">
+                        {/* ✅ Show strikethrough original price if discounted */}
+                        {isDiscounted && (
+                          <p className="summary-item-original-price">
+                            Rs. {(originalPrice * item.quantity).toLocaleString()}
+                          </p>
+                        )}
+                        <p className={`summary-item-price ${isDiscounted ? 'discounted' : ''}`}>
+                          Rs. {(discountedPrice * item.quantity).toLocaleString()}
+                        </p>
+                      </div>
                     </div>
-                    <div className="summary-item-details">
-                      <p className="summary-item-name">{item.product.name}</p>
-                      <p className="summary-item-qty">Qty: {item.quantity}</p>
-                    </div>
-                    <p className="summary-item-price">
-                      Rs. {(item.product.price * item.quantity).toLocaleString()}
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="summary-divider"></div>
@@ -358,9 +401,38 @@ const Checkout = () => {
                 <span>Rs. {subtotal.toLocaleString()}</span>
               </div>
 
+              {/* POINTS REDEMPTION OPTION */}
+              {userPoints >= 150 && (
+                <div className="points-redemption-section">
+                  <label className="points-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={redeemPoints}
+                      onChange={(e) => setRedeemPoints(e.target.checked)}
+                    />
+                    <div className="points-checkbox-content">
+                      <span className="points-icon">💎</span>
+                      <div>
+                        <strong>Use 150 points for FREE delivery</strong>
+                        <p>You have {userPoints} points</p>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              )}
+
               <div className="summary-row">
                 <span>Delivery</span>
-                <span>Rs. {deliveryFee}</span>
+                <span className={redeemPoints ? 'free-delivery' : ''}>
+                  {redeemPoints ? (
+                    <>
+                      <span className="original-delivery">Rs. {BASE_DELIVERY_FEE}</span>
+                      <span className="free-text">FREE 💎</span>
+                    </>
+                  ) : (
+                    `Rs. ${deliveryFee}`
+                  )}
+                </span>
               </div>
 
               <div className="summary-divider"></div>
@@ -368,6 +440,12 @@ const Checkout = () => {
               <div className="summary-total">
                 <span>Total</span>
                 <span>Rs. {total.toLocaleString()}</span>
+              </div>
+
+              {/* POINTS TO EARN */}
+              <div className="points-earn-info">
+                <span className="points-earn-icon">🎁</span>
+                <span>You'll earn {pointsToEarn} points from this order!</span>
               </div>
 
               <button

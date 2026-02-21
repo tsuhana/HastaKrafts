@@ -17,6 +17,11 @@ const ProductDetail = () => {
   const [addingToCart, setAddingToCart] = useState(false);
   const [reviewStats, setReviewStats] = useState({ totalReviews: 0, averageRating: 0 });
 
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [translatedDescription, setTranslatedDescription] = useState('');
+  const [translating, setTranslating] = useState(false);
+  const [supportedLanguages, setSupportedLanguages] = useState({});
+
   const API_URL = "http://localhost:5000";
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const isLoggedIn = !!localStorage.getItem("token");
@@ -24,13 +29,17 @@ const ProductDetail = () => {
   const isAdmin = currentUser?.role === "admin";
   const canBuy = isLoggedIn && !isSeller && !isAdmin;
 
-  useEffect(() => { fetchProduct(); }, [id]);
+  useEffect(() => {
+    fetchProduct();
+    fetchSupportedLanguages();
+  }, [id]);
 
   const fetchProduct = async () => {
     try {
       setLoading(true);
       const res = await productAPI.getProductById(id);
       setProduct(res.data.data);
+      setTranslatedDescription(res.data.data.description);
       setError("");
     } catch (err) {
       console.error("Fetch product error:", err);
@@ -40,7 +49,39 @@ const ProductDetail = () => {
     }
   };
 
-  // Called by Reviews component whenever reviews are loaded/refreshed
+  const fetchSupportedLanguages = async () => {
+    try {
+      const res = await productAPI.getSupportedLanguages();
+      setSupportedLanguages(res.data.data || {});
+    } catch (err) {
+      console.error('Fetch languages error:', err);
+    }
+  };
+
+  const handleLanguageChange = async (langCode) => {
+    if (langCode === 'en') {
+      setSelectedLanguage('en');
+      setTranslatedDescription(product.description);
+      return;
+    }
+
+    setSelectedLanguage(langCode);
+    setTranslating(true);
+
+    try {
+      const res = await productAPI.translateProduct(product.product_id, { language: langCode });
+      if (res.data.success) {
+        setTranslatedDescription(res.data.data.translated);
+      }
+    } catch (err) {
+      console.error('Translation error:', err);
+      alert('Translation failed. Showing original text.');
+      setTranslatedDescription(product.description);
+    } finally {
+      setTranslating(false);
+    }
+  };
+
   const handleStatsChange = (stats) => {
     setReviewStats({
       totalReviews: stats.totalReviews || 0,
@@ -114,6 +155,14 @@ const ProductDetail = () => {
     );
   }
 
+  const discountedPrice = product.has_discount && product.discount_percentage > 0
+    ? Math.round(product.price * (1 - product.discount_percentage / 100))
+    : null;
+
+  const savings = discountedPrice
+    ? Math.round(product.price * product.discount_percentage / 100)
+    : null;
+
   return (
     <div className="product-detail-page">
       <div className="product-detail-container">
@@ -166,7 +215,7 @@ const ProductDetail = () => {
               </div>
             )}
 
-            {/* RATING — live-updated via handleStatsChange */}
+            {/* RATING */}
             <div className="product-rating">
               {renderStars(reviewStats.averageRating)}
               <span className="rating-text">
@@ -175,21 +224,69 @@ const ProductDetail = () => {
               </span>
             </div>
 
+            {/* PRICE SECTION */}
             <div className="product-price-section">
-              <div className="price">
-                <span className="currency">Rs.</span>
-                <span className="amount">{parseFloat(product.price).toLocaleString()}</span>
-              </div>
+              {discountedPrice ? (
+                <div className="price-with-discount">
+                  <div className="discount-badge-large">
+                    -{product.discount_percentage}% OFF
+                  </div>
+                  <div className="price-display">
+                    <span className="original-price-large">
+                      Rs. {parseFloat(product.price).toLocaleString()}
+                    </span>
+                    <div className="discounted-price-large">
+                      <span className="currency">Rs.</span>
+                      <span className="amount">{discountedPrice.toLocaleString()}</span>
+                    </div>
+                    <div className="savings-amount">
+                      You save Rs. {savings.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="price">
+                  <span className="currency">Rs.</span>
+                  <span className="amount">{parseFloat(product.price).toLocaleString()}</span>
+                </div>
+              )}
+
               <div className={`stock ${product.stock_quantity > 0 ? "in-stock" : "out-of-stock"}`}>
                 {product.stock_quantity > 0
-                  ? <><span className="stock-dot"/>{product.stock_quantity} in stock</>
+                  ? <><span className="stock-dot" />{product.stock_quantity} in stock</>
                   : "Out of Stock"}
               </div>
             </div>
 
+            {/* LANGUAGE SELECTOR */}
+            <div className="language-selector-section">
+              <label className="language-label">Language:</label>
+              <select
+                value={selectedLanguage}
+                onChange={(e) => handleLanguageChange(e.target.value)}
+                className="language-dropdown"
+                disabled={translating}
+              >
+                {Object.entries(supportedLanguages).map(([code, { name, flag }]) => (
+                  <option key={code} value={code}>
+                    {flag} {name}
+                  </option>
+                ))}
+              </select>
+              {translating && <span className="translating-indicator">⏳ Translating...</span>}
+            </div>
+
+            {/* TRANSLATED DESCRIPTION */}
             <div className="product-description">
               <h3>Product Description</h3>
-              <p>{product.description}</p>
+              {translating ? (
+                <div className="translating-box">
+                  <div className="spinner-small"></div>
+                  <p>Translating to {supportedLanguages[selectedLanguage]?.name}...</p>
+                </div>
+              ) : (
+                <p>{translatedDescription}</p>
+              )}
             </div>
 
             <div className="product-details">
@@ -223,7 +320,7 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {/* REVIEWS — */}
+        {/* REVIEWS */}
         <Reviews
           productId={product.product_id}
           currentUser={currentUser}

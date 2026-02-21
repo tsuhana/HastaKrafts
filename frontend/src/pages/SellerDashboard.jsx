@@ -26,22 +26,22 @@ const SellerDashboard = () => {
   const fetchSellerData = async () => {
     try {
       setLoading(true);
-      
+
       // Fetch products
       const productRes = await productAPI.getSellerProducts();
       if (productRes.data.success) {
         const data = productRes.data.data;
         setProducts(data.products || []);
-        
-        const approved = data.products.filter(p => p.status === 'approved').length;
-        
-        setStats(prev => ({
+
+        const approved = data.products.filter((p) => p.status === 'approved').length;
+
+        setStats((prev) => ({
           ...prev,
           total: data.products?.length || 0,
           activeProducts: approved,
-          pending: data.products.filter(p => p.status === 'pending').length,
+          pending: data.products.filter((p) => p.status === 'pending').length,
           approved,
-          rejected: data.products.filter(p => p.status === 'rejected').length,
+          rejected: data.products.filter((p) => p.status === 'rejected').length,
         }));
       }
 
@@ -50,8 +50,8 @@ const SellerDashboard = () => {
       if (orderRes.data.success) {
         const orderData = orderRes.data.data;
         setOrders(orderData.orders || []);
-        
-        setStats(prev => ({
+
+        setStats((prev) => ({
           ...prev,
           totalSales: orderData.stats.total_sales || 0,
           ordersThisMonth: orderData.stats.total_orders || 0,
@@ -89,6 +89,16 @@ const SellerDashboard = () => {
     }
   };
 
+  // Helper: calculate discounted price
+  const getDiscountedPrice = (product) => {
+    const hasDiscount = product.has_discount === true || product.has_discount === 'true';
+    const discountPct = parseInt(product.discount_percentage) || 0;
+    if (hasDiscount && discountPct > 0) {
+      return Math.round(parseFloat(product.price) * (1 - discountPct / 100));
+    }
+    return null; // null means no discount
+  };
+
   if (loading) {
     return (
       <div className="dashboard-loading">
@@ -100,17 +110,18 @@ const SellerDashboard = () => {
 
   return (
     <div className="artisan-dashboard">
-     <div className="dashboard-header-new">
-  <h1>Artisan Dashboard</h1>
-      <div style={{ display: 'flex', gap: '1rem' }}>
-        <Link to="/seller/add-product" className="btn-add-product">
-         + Add Product
-        </Link>
-        <Link to="/seller/create-auction" className="btn-add-product">
-         + Create Auction
-        </Link>
+      <div className="dashboard-header-new">
+        <h1>Artisan Dashboard</h1>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <Link to="/seller/add-product" className="btn-add-product">
+            + Add Product
+          </Link>
+          <Link to="/seller/create-auction" className="btn-add-product">
+            + Create Auction
+          </Link>
         </div>
-    </div>    
+      </div>
+
       <div className="stats-cards-modern">
         <div className="stat-card-modern stat-sales">
           <div className="stat-label">Total Sales</div>
@@ -121,7 +132,9 @@ const SellerDashboard = () => {
         <div className="stat-card-modern stat-orders">
           <div className="stat-label">Total Orders</div>
           <div className="stat-value-large">{stats.ordersThisMonth}</div>
-          <div className="stat-meta">{orders.filter(o => o.order.order_status === 'pending').length} pending</div>
+          <div className="stat-meta">
+            {orders.filter((o) => o.order.order_status === 'pending').length} pending
+          </div>
         </div>
 
         <div className="stat-card-modern stat-products">
@@ -153,7 +166,8 @@ const SellerDashboard = () => {
                 <div className="order-info">
                   <div className="order-id">#{orderItem.order.order_number}</div>
                   <div className="order-product">
-                    {orderItem.product_name} • Customer: {orderItem.order.user.full_name} • Rs. {parseFloat(orderItem.subtotal).toLocaleString()}
+                    {orderItem.product_name} • Customer: {orderItem.order.user.full_name} • Rs.{' '}
+                    {parseFloat(orderItem.subtotal).toLocaleString()}
                   </div>
                 </div>
                 <select
@@ -190,33 +204,62 @@ const SellerDashboard = () => {
           </div>
         ) : (
           <div className="products-grid-modern">
-            {products.slice(0, 6).map((product) => (
-              <div key={product.product_id} className="product-card-modern">
-                <div className="product-image-modern">
-                  {product.images && product.images.length > 0 ? (
-                    <img src={`${API_URL}${product.images[0]}`} alt={product.name} />
-                  ) : (
-                    <div className="no-image-modern">No Image</div>
-                  )}
-                  <span className={`product-status-badge status-${product.status}`}>
-                    {product.status}
-                  </span>
+            {products.slice(0, 6).map((product) => {
+              //  Discount logic per product card
+              const hasDiscount = product.has_discount === true || product.has_discount === 'true';
+              const discountPct = parseInt(product.discount_percentage) || 0;
+              const originalPrice = parseFloat(product.price);
+              const discountedPrice = getDiscountedPrice(product);
+              const isDiscounted = hasDiscount && discountPct > 0;
+
+              return (
+                <div key={product.product_id} className="product-card-modern">
+                  <div className="product-image-modern">
+                    {product.images && product.images.length > 0 ? (
+                      <img src={`${API_URL}${product.images[0]}`} alt={product.name} />
+                    ) : (
+                      <div className="no-image-modern">No Image</div>
+                    )}
+                    <span className={`product-status-badge status-${product.status}`}>
+                      {product.status}
+                    </span>
+                    {/*  Discount badge on image */}
+                    {isDiscounted && (
+                      <span className="seller-discount-badge">-{discountPct}%</span>
+                    )}
+                  </div>
+                  <div className="product-details-modern">
+                    <h4>{product.name}</h4>
+                    <div className="product-price-wrap">
+                      {/*  Show strikethrough original + discounted price */}
+                      {isDiscounted ? (
+                        <>
+                          <p className="product-original-price">
+                            Rs. {originalPrice.toLocaleString()}
+                          </p>
+                          <p className="product-price-modern discounted">
+                            Rs. {discountedPrice.toLocaleString()}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="product-price-modern">
+                          Rs. {originalPrice.toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                    <p className="product-stock-modern">{product.stock_quantity} in stock</p>
+                  </div>
+                  <div className="product-actions-modern">
+                    <Link to={`/seller/edit-product/${product.product_id}`} className="btn-icon">
+                      Edit
+                    </Link>
+                    <button onClick={() => handleDelete(product.product_id)} className="btn-icon">
+                      Delete
+                    </button>
+                  </div>
                 </div>
-                <div className="product-details-modern">
-                  <h4>{product.name}</h4>
-                  <p className="product-price-modern">Rs. {parseFloat(product.price).toLocaleString()}</p>
-                  <p className="product-stock-modern">{product.stock_quantity} in stock</p>
-                </div>
-                <div className="product-actions-modern">
-                  <Link to={`/seller/edit-product/${product.product_id}`} className="btn-icon">
-                    Edit
-                  </Link>
-                  <button onClick={() => handleDelete(product.product_id)} className="btn-icon">
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

@@ -77,6 +77,17 @@ const Order = sequelize.define(
       allowNull: false,
     },
     
+    points_redeemed: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      comment: "Points used for free delivery",
+    },
+    points_earned: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      comment: "Points earned from this order",
+    },
+    
     // Status
     order_status: {
       type: DataTypes.STRING(50),

@@ -440,3 +440,65 @@
   background: #FEE2E2;
   color: #991B1B;
 }
+
+.seller-discount-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: #c0392b;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  z-index: 2;
+}
+
+.product-image-modern {
+  position: relative;
+}
+
+.product-price-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-bottom: 4px;
+}
+
+/* Strikethrough original price in seller card */
+.product-original-price {
+  font-size: 0.78rem;
+  color: #9ca3af;
+  text-decoration: line-through;
+  margin: 0;
+}
+
+.product-price-modern.discounted {
+  color: #c0392b;
+  font-weight: 600;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

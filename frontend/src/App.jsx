@@ -18,6 +18,13 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import VerifyOTP from "./pages/VerifyOTP";
 import Contact from "./pages/Contact";
+
+// BLOG STORIES
+import Blog from "./pages/Blog";
+import BlogDetail from "./pages/BlogDetail";
+import CreateBlog from "./pages/CreateBlog";
+import EditBlog from "./pages/EditBlog";
+
 // ==================== USER PAGES ====================
 import UserProfile from "./pages/UserProfile";
 import Cart from "./pages/Cart";
@@ -57,10 +64,13 @@ function App() {
             <Route path="/products/:id" element={<ProductDetail />} />
             <Route path="/contact" element={<Contact />} />
 
-            {/* Auctions listing is public, but bidding restricted in AuctionDetail */}
             <Route path="/auctions" element={<Auctions />} />
             <Route path="/auctions/:id" element={<AuctionDetail />} />
-            
+
+            {/* Blog — public read, seller-only write/edit */}
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:id" element={<BlogDetail />} />
+
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/register-seller" element={<RegisterSeller />} />
@@ -81,7 +91,6 @@ function App() {
             />
 
             {/* ==================== BUYER-ONLY ROUTES ==================== */}
-            {/* Cart */}
             <Route
               path="/cart"
               element={
@@ -91,7 +100,6 @@ function App() {
               }
             />
 
-            {/* Wishlist - Buyers only */}
             <Route
               path="/wishlist"
               element={
@@ -101,7 +109,6 @@ function App() {
               }
             />
 
-            {/* Checkout */}
             <Route
               path="/checkout"
               element={
@@ -111,7 +118,6 @@ function App() {
               }
             />
 
-            {/* Order confirmation */}
             <Route
               path="/order-confirmation/:id"
               element={
@@ -168,6 +174,25 @@ function App() {
               }
             />
 
+            <Route
+              path="/seller/create-blog"
+              element={
+                <ProtectedRoute allowedRoles={["seller"]}>
+                  <CreateBlog />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ✅ NEW: Edit blog route */}
+            <Route
+              path="/seller/edit-blog/:id"
+              element={
+                <ProtectedRoute allowedRoles={["seller"]}>
+                  <EditBlog />
+                </ProtectedRoute>
+              }
+            />
+
             {/* ==================== ADMIN PROTECTED ROUTES ==================== */}
             <Route
               path="/admin/dashboard"
@@ -188,9 +213,6 @@ function App() {
               }
             />
 
-            
-            
-            
             <Route
               path="*"
               element={

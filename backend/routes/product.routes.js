@@ -12,6 +12,10 @@ router.get('/trending', productController.getTrendingProducts);
 router.get('/random', productController.getRandomProducts);
 router.get('/categories/top', productController.getTopCategories);
 
+
+// Translation routes
+router.post('/:id/translate', productController.translateProduct);
+router.get('/languages/supported', productController.getSupportedLanguages);
 // General public routes
 router.get("/", productController.getAllProducts);
 router.get("/categories", productController.getAllCategories);
