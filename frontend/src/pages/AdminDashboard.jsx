@@ -257,6 +257,14 @@ const AdminDashboard = () => {
     } catch { alert("Failed to update status"); }
   };
 
+  const handleDeleteContact = async (contactId) => {
+    if (!window.confirm("Delete this message permanently?")) return;
+    try {
+      const res = await adminAPI.deleteContactMessage(contactId);
+      if (res.data.success) { alert("Message deleted"); fetchContactMessages(); }
+    } catch { alert("Failed to delete message"); }
+  };
+
   const handleApproveSeller = async (sellerId) => {
     if (!window.confirm("Approve this seller?")) return;
     try {
@@ -804,7 +812,7 @@ const AdminDashboard = () => {
             </div>
 
             <div className="filter-bar">
-              {["all", "pending", "resolved", "unresolved"].map((f) => (
+              {["all", "pending", "in_progress", "resolved"].map((f) => (
                 <button
                   key={f}
                   className={`filter-chip ${msgFilter === f ? "active" : ""}`}
@@ -812,7 +820,7 @@ const AdminDashboard = () => {
                 >
                   {f === "all"
                     ? `All (${contactMessages.length})`
-                    : `${f.charAt(0).toUpperCase() + f.slice(1)} (${contactMessages.filter((m) => m.status === f).length})`
+                    : `${f === "in_progress" ? "In Progress" : f.charAt(0).toUpperCase() + f.slice(1)} (${contactMessages.filter((m) => m.status === f).length})`
                   }
                 </button>
               ))}
@@ -820,7 +828,7 @@ const AdminDashboard = () => {
 
             {filteredMsgs.length === 0 ? (
               <div className="no-messages">
-                No {msgFilter !== "all" ? msgFilter : ""} messages found.
+                No {msgFilter !== "all" ? msgFilter.replace("_", " ") : ""} messages found.
               </div>
             ) : (
               <div className="msg-list">
@@ -835,7 +843,9 @@ const AdminDashboard = () => {
                           {contact.phone && <div className="msg-phone">{contact.phone}</div>}
                         </div>
                         <div className="msg-meta">
-                          <span className={`status-pill s-${contact.status}`}>{contact.status}</span>
+                          <span className={`status-pill s-${contact.status}`}>
+                            {contact.status === "in_progress" ? "In Progress" : contact.status}
+                          </span>
                           {created && (
                             <span className="msg-date">{created.toLocaleDateString()}</span>
                           )}
@@ -850,7 +860,15 @@ const AdminDashboard = () => {
                       </div>
 
                       <div className="msg-actions">
-                        {(contact.status === "pending" || contact.status === "unresolved") && (
+                        {contact.status === "pending" && (
+                          <button
+                            className="btn-inprogress"
+                            onClick={() => handleContactStatus(contact.contact_id, "in_progress")}
+                          >
+                            Mark In Progress
+                          </button>
+                        )}
+                        {(contact.status === "pending" || contact.status === "in_progress") && (
                           <button
                             className="btn-resolve"
                             onClick={() => handleContactStatus(contact.contact_id, "resolved")}
@@ -858,15 +876,20 @@ const AdminDashboard = () => {
                             Mark Resolved
                           </button>
                         )}
-                        {(contact.status === "pending" || contact.status === "resolved") && (
+                        {contact.status === "resolved" && (
                           <button
-                            className="btn-unresolve"
-                            onClick={() => handleContactStatus(contact.contact_id, "unresolved")}
+                            className="btn-reopen"
+                            onClick={() => handleContactStatus(contact.contact_id, "pending")}
                           >
-                            Mark Unresolved
+                            Reopen
                           </button>
                         )}
-                        <button className="btn-delete">Delete</button>
+                        <button
+                          className="btn-delete"
+                          onClick={() => handleDeleteContact(contact.contact_id)}
+                        >
+                          Delete
+                        </button>
                       </div>
                     </div>
                   );

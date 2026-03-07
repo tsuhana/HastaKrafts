@@ -30,7 +30,7 @@ const Contact = sequelize.define(
       allowNull: false,
     },
     status: {
-      type: DataTypes.ENUM('pending', 'replied', 'resolved'),
+      type: DataTypes.ENUM('pending', 'in_progress', 'resolved'),
       defaultValue: 'pending',
     },
     admin_reply: {
