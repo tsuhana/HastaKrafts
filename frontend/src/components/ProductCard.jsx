@@ -67,26 +67,7 @@ const ProductCard = ({ product, showWishlist = true }) => {
     }
   };
 
-  const getStatusBadge = () => {
-    if (!product.status) return null;
-
-    const badges = {
-      pending: { class: 'badge-pending', text: 'Pending', icon: Icons.Clock },
-      approved: { class: 'badge-approved', text: 'Live', icon: Icons.CheckCircle },
-      rejected: { class: 'badge-rejected', text: 'Rejected', icon: Icons.CloseCircle },
-    };
-
-    const badge = badges[product.status];
-    if (!badge) return null;
-
-    const BadgeIcon = badge.icon;
-    return (
-      <span className={`status-badge ${badge.class}`}>
-        <BadgeIcon size={12} />
-        {badge.text}
-      </span>
-    );
-  };
+  // ✅ REMOVED: getStatusBadge() — no more "Live" badge shown to buyers
 
   return (
     <div className="product-card">
@@ -105,19 +86,17 @@ const ProductCard = ({ product, showWishlist = true }) => {
             </div>
           )}
 
-          {getStatusBadge()}
-
-          {product.is_featured && (
-            <span className="featured-badge">
-              <Icons.TrendingUp size={12} />
-              Featured
-            </span>
-          )}
-
-          {/* Discount badge on image */}
+          {/* ✅ Discount badge — top LEFT */}
           {product.has_discount && product.discount_percentage > 0 && (
             <span className="discount-badge">
               -{product.discount_percentage}%
+            </span>
+          )}
+
+          {/* ✅ Featured badge — top RIGHT, now dark red and visible */}
+          {product.is_featured && (
+            <span className="featured-badge">
+              Featured
             </span>
           )}
 

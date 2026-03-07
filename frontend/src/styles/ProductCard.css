@@ -12,7 +12,7 @@
 
 .product-card:hover {
   box-shadow: var(--shadow-lg);
-  transform: translateY(-8px);
+  transform: translateY(-6px);
 }
 
 .product-card-link {
@@ -27,7 +27,7 @@
 .product-image-container {
   position: relative;
   width: 100%;
-  padding-top: 100%; /* 1:1 Aspect Ratio */
+  padding-top: 100%;
   background: var(--background-secondary);
   overflow: hidden;
 }
@@ -43,7 +43,7 @@
 }
 
 .product-card:hover .product-image {
-  transform: scale(1.1);
+  transform: scale(1.07);
 }
 
 .product-image-placeholder {
@@ -63,44 +63,39 @@
 }
 
 /* ==================== BADGES ==================== */
-.status-badge,
-.featured-badge {
+
+/* Discount badge — top LEFT, bold red */
+.product-card .discount-badge {
   position: absolute;
-  top: 10px;
-  padding: 0.25rem 0.75rem;
-  border-radius: var(--radius-sm);
+  top: 0.6rem;
+  left: 0.6rem;
+  background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+  color: #fff;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
   font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.4);
   z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
 }
 
-.status-badge {
-  right: 10px;
-}
-
-.badge-pending {
-  background: var(--status-pending);
-  color: var(--white);
-}
-
-.badge-approved {
-  background: var(--status-approved);
-  color: var(--white);
-}
-
-.badge-rejected {
-  background: var(--status-rejected);
-  color: var(--white);
-}
-
-.featured-badge {
-  left: 10px;
-  background: var(--nepal-red);
-  color: var(--white);
+/* Featured badge — top RIGHT, terracotta/gold so it's always visible */
+.product-card .featured-badge {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  background: linear-gradient(135deg, #92400e 0%, #b45309 100%);
+  color: #fef3c7;
+  padding: 0.28rem 0.7rem;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 2px 8px rgba(146, 64, 14, 0.45);
+  z-index: 2;
+  border: 1px solid rgba(254, 243, 199, 0.3);
 }
 
 /* ==================== WISHLIST BUTTON ==================== */
@@ -166,7 +161,7 @@
 }
 
 .product-name {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 600;
   color: var(--text-color);
   margin: 0;
@@ -213,6 +208,22 @@
   font-size: 1.4rem;
 }
 
+.original-price {
+  text-decoration: line-through;
+  color: #aaa;
+  font-size: 0.8rem;
+  font-weight: 400;
+  display: block;
+  line-height: 1.2;
+}
+
+.discounted-price {
+  color: #DC2626;
+  font-weight: 700;
+  font-size: 1.05rem;
+  display: block;
+}
+
 .stock-status {
   font-size: 0.75rem;
   font-weight: 600;
@@ -242,11 +253,11 @@
   .product-info {
     padding: 1rem;
   }
-  
+
   .product-name {
     font-size: 1rem;
   }
-  
+
   .amount {
     font-size: 1.2rem;
   }
@@ -255,35 +266,4 @@
     width: 36px;
     height: 36px;
   }
-}
-
-.product-card .discount-badge {
-  position: absolute;
-  top: 0.6rem;
-  left: 0.6rem;
-  background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
-  color: #fff;
-  padding: 0.22rem 0.55rem;
-  border-radius: 6px;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.35);
-  z-index: 2;
-}
-
-.product-card .original-price {
-  text-decoration: line-through;
-  color: #aaa;
-  font-size: 0.8rem;
-  font-weight: 400;
-  display: block;
-  line-height: 1.2;
-}
-
-.product-card .discounted-price {
-  color: #DC2626;
-  font-weight: 700;
-  font-size: 1.05rem;
-  display: block;
 }
