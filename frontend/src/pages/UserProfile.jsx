@@ -11,7 +11,7 @@ const UserProfile = () => {
   const [user, setUser] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -38,7 +38,7 @@ const UserProfile = () => {
     'Koshi',
     'Madhesh',
     'Karnali',
-    'Sudurpashchim'
+    'Sudurpashchim',
   ];
 
   useEffect(() => {
@@ -49,7 +49,7 @@ const UserProfile = () => {
     try {
       setLoading(true);
       const res = await userAPI.getProfile();
-      
+
       if (res.data.success) {
         const userData = res.data.data;
         setUser(userData);
@@ -635,6 +635,12 @@ const OrderHistory = () => {
     return colors[status] || '#6B7280';
   };
 
+  // ✅ Khalti = always paid upfront. COD = paid only when delivered.
+  const getPaymentLabel = (payment_status, payment_method) => {
+    if (payment_method === 'khalti') return 'Paid (Khalti)';
+    return payment_status === 'paid' ? 'Paid (COD)' : 'Unpaid (COD)';
+  };
+
   if (loading) {
     return <div className="loading">Loading orders...</div>;
   }
@@ -667,23 +673,26 @@ const OrderHistory = () => {
               </p>
             </div>
             <div className="order-status-badges">
-              <span 
-                className="status-badge" 
-                style={{ 
+              {/* ✅ Order status — capitalized */}
+              <span
+                className="status-badge"
+                style={{
                   background: `${getStatusColor(order.order_status)}20`,
                   color: getStatusColor(order.order_status),
                 }}
               >
-                {order.order_status}
+                {order.order_status?.charAt(0).toUpperCase() + order.order_status?.slice(1)}
               </span>
-              <span 
+
+              {/* ✅ Payment badge — "Paid (Khalti)" / "Paid (COD)" / "Unpaid" */}
+              <span
                 className="payment-badge"
-                style={{ 
+                style={{
                   background: order.payment_status === 'paid' ? '#10B98120' : '#F59E0B20',
                   color: order.payment_status === 'paid' ? '#10B981' : '#F59E0B',
                 }}
               >
-                {order.payment_status}
+                {getPaymentLabel(order.payment_status, order.payment_method)}
               </span>
             </div>
           </div>
@@ -691,9 +700,9 @@ const OrderHistory = () => {
           <div className="order-items">
             {order.items && order.items.slice(0, 3).map((item) => (
               <div key={item.order_item_id} className="order-item-preview">
-                <img 
-                  src={item.product_image ? `http://localhost:5000${item.product_image}` : '/placeholder.png'} 
-                  alt={item.product_name} 
+                <img
+                  src={item.product_image ? `http://localhost:5000${item.product_image}` : '/placeholder.png'}
+                  alt={item.product_name}
                 />
                 <div>
                   <p className="item-name">{item.product_name}</p>
@@ -711,7 +720,7 @@ const OrderHistory = () => {
               <span>Total:</span>
               <span className="amount">Rs. {parseFloat(order.total).toLocaleString()}</span>
             </div>
-            <button 
+            <button
               onClick={() => window.location.href = `/order-confirmation/${order.order_id}`}
               className="btn-view-order"
             >
