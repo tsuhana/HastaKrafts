@@ -1,10 +1,10 @@
-/* Artisan Dashboard*/
+/* Artisan Dashboard */
 .artisan-dashboard {
   padding: 2rem;
-  max-width: 1400px; 
+  max-width: 1400px;
   margin: 0 auto;
   min-height: calc(100vh - 200px);
-  background: #FFFFFF; 
+  background: #FFFFFF;
 }
 
 /* Header */
@@ -25,7 +25,7 @@
 /* Modern Stats Cards - 4 in ONE ROW */
 .stats-cards-modern {
   display: grid;
-  grid-template-columns: repeat(4, 1fr); /*  FORCED 4 columns */
+  grid-template-columns: repeat(4, 1fr);
   gap: 1.5rem;
   margin-bottom: 2.5rem;
 }
@@ -37,7 +37,7 @@
   transition: transform 0.3s ease;
   position: relative;
   overflow: hidden;
-  min-height: 150px; /* ADDED consistent height */
+  min-height: 150px;
 }
 
 .stat-card-modern:hover {
@@ -84,16 +84,15 @@
   opacity: 0.85;
 }
 
-/* Responsive - Stack on smaller screens */
 @media (max-width: 1200px) {
   .stats-cards-modern {
-    grid-template-columns: repeat(2, 1fr); /* 2 columns on tablets */
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 768px) {
   .stats-cards-modern {
-    grid-template-columns: 1fr; /* 1 column on mobile */
+    grid-template-columns: 1fr;
   }
 }
 
@@ -220,7 +219,6 @@
   color: #065F46;
 }
 
-/* Products Grid Modern */
 .products-grid-modern {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -234,6 +232,9 @@
   overflow: hidden;
   transition: all 0.3s ease;
   position: relative;
+  /* FIX: flex column so actions can be pushed to bottom */
+  display: flex;
+  flex-direction: column;
 }
 
 .product-card-modern:hover {
@@ -246,6 +247,7 @@
   height: 200px;
   position: relative;
   background: #F5E6D3;
+  flex-shrink: 0;
 }
 
 .product-image-modern img {
@@ -291,6 +293,8 @@
 
 .product-details-modern {
   padding: 1rem;
+  /* FIX: flex-grow so it fills space, pushing actions down */
+  flex-grow: 1;
 }
 
 .product-details-modern h4 {
@@ -319,9 +323,10 @@
 .product-actions-modern {
   display: flex;
   gap: 0.5rem;
-  padding: 0 1rem 1rem 1rem;
+  padding: 0.75rem 1rem;
   border-top: 1px solid #E8E5E1;
-  padding-top: 1rem;
+  /* FIX: margin-top: auto forces buttons to always stay at bottom */
+  margin-top: auto;
 }
 
 .btn-icon {
@@ -330,18 +335,21 @@
   background: #F5F5F5;
   border: none;
   border-radius: 6px;
-  font-size: 1.2rem;
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   text-decoration: none;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #ab8455;
 }
 
 .btn-icon:hover {
   background: #C17D4A;
-  transform: scale(1.05);
+  color: #FFFFFF;
+  transform: scale(1.03);
 }
 
 /* Empty State Modern */
@@ -406,6 +414,7 @@
   }
 }
 
+/* Order Status Select */
 .order-status-select {
   padding: 0.5rem 1rem;
   border-radius: 20px;
@@ -441,6 +450,7 @@
   color: #991B1B;
 }
 
+/* Discount badge */
 .seller-discount-badge {
   position: absolute;
   top: 8px;
@@ -454,10 +464,7 @@
   z-index: 2;
 }
 
-.product-image-modern {
-  position: relative;
-}
-
+/* Price wrap */
 .product-price-wrap {
   display: flex;
   flex-direction: column;
@@ -465,7 +472,6 @@
   margin-bottom: 4px;
 }
 
-/* Strikethrough original price in seller card */
 .product-original-price {
   font-size: 0.78rem;
   color: #9ca3af;
@@ -477,28 +483,3 @@
   color: #c0392b;
   font-weight: 600;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { productAPI } from '../api/axios';
+import { useToast } from '../context/ToastContext';
 import '../styles/AddProduct.css';
 
 const AddProduct = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState({
@@ -142,15 +144,15 @@ const AddProduct = () => {
 
       const response = await productAPI.createProduct(formDataToSend);
       if (response.data.success) {
-        alert('Product added successfully! It will be visible after admin approval.');
+        toast.success('Product added successfully! It will be visible after admin approval.');
         navigate('/seller/dashboard');
       }
     } catch (err) {
       console.error('Error adding product:', err);
       if (err.response?.data?.message) {
-        alert('Error: ' + err.response.data.message);
+        toast.error('Error: ' + err.response.data.message);
       } else {
-        alert('Failed to add product. Please try again.');
+        toast.error('Failed to add product. Please try again.');
       }
     } finally {
       setLoading(false);

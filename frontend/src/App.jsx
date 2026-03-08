@@ -1,6 +1,8 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 
+import { ToastProvider } from "./context/ToastContext";
+
 import NavBar from "./components/NavBar";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -47,6 +49,7 @@ import EditProduct from "./pages/EditProduct";
 import AdminDashboard from "./pages/AdminDashboard";
 
 import "./styles/variables.css";
+import "./styles/Toast.css";
 import "./App.css";
 
 const NO_FOOTER_PATHS = ["/admin", "/seller/dashboard"];
@@ -71,7 +74,6 @@ const AppContent = () => {
           <Route path="/auctions" element={<Auctions />} />
           <Route path="/auctions/:id" element={<AuctionDetail />} />
 
-          {/* Blog — public read, seller-only write/edit */}
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:id" element={<BlogDetail />} />
 
@@ -85,145 +87,31 @@ const AppContent = () => {
           <Route path="/payment/khalti/callback" element={<KhaltiCallback />} />
 
           {/* ==================== USER PROFILE (ALL ROLES) ==================== */}
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <UserProfile />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
 
           {/* ==================== BUYER-ONLY ROUTES ==================== */}
-          <Route
-            path="/cart"
-            element={
-              <ProtectedRoute allowedRoles={["buyer"]}>
-                <Cart />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/wishlist"
-            element={
-              <ProtectedRoute allowedRoles={["buyer"]}>
-                <Wishlist />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/checkout"
-            element={
-              <ProtectedRoute allowedRoles={["buyer"]}>
-                <Checkout />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/order-confirmation/:id"
-            element={
-              <ProtectedRoute allowedRoles={["buyer"]}>
-                <OrderConfirmation />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/cart"     element={<ProtectedRoute allowedRoles={["buyer"]}><Cart /></ProtectedRoute>} />
+          <Route path="/wishlist" element={<ProtectedRoute allowedRoles={["buyer"]}><Wishlist /></ProtectedRoute>} />
+          <Route path="/checkout" element={<ProtectedRoute allowedRoles={["buyer"]}><Checkout /></ProtectedRoute>} />
+          <Route path="/order-confirmation/:id" element={<ProtectedRoute allowedRoles={["buyer"]}><OrderConfirmation /></ProtectedRoute>} />
 
           {/* ==================== MESSAGES / CHAT ==================== */}
-          <Route
-            path="/messages"
-            element={
-              <ProtectedRoute>
-                <Chat />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/messages" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
 
-          {/* ==================== SELLER PROTECTED ROUTES ==================== */}
-          <Route
-            path="/seller/dashboard"
-            element={
-              <ProtectedRoute allowedRoles={["seller"]}>
-                <SellerDashboard />
-              </ProtectedRoute>
-            }
-          />
+          {/* ==================== SELLER ROUTES ==================== */}
+          <Route path="/seller/dashboard"        element={<ProtectedRoute allowedRoles={["seller"]}><SellerDashboard /></ProtectedRoute>} />
+          <Route path="/seller/add-product"      element={<ProtectedRoute allowedRoles={["seller"]}><AddProduct /></ProtectedRoute>} />
+          <Route path="/seller/edit-product/:id" element={<ProtectedRoute allowedRoles={["seller"]}><EditProduct /></ProtectedRoute>} />
+          <Route path="/seller/create-auction"   element={<ProtectedRoute allowedRoles={["seller"]}><CreateAuction /></ProtectedRoute>} />
+          <Route path="/seller/create-blog"      element={<ProtectedRoute allowedRoles={["seller"]}><CreateBlog /></ProtectedRoute>} />
+          <Route path="/seller/edit-blog/:id"    element={<ProtectedRoute allowedRoles={["seller"]}><EditBlog /></ProtectedRoute>} />
 
-          <Route
-            path="/seller/add-product"
-            element={
-              <ProtectedRoute allowedRoles={["seller"]}>
-                <AddProduct />
-              </ProtectedRoute>
-            }
-          />
+          {/* ==================== ADMIN ROUTES ==================== */}
+          <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
 
-          <Route
-            path="/seller/edit-product/:id"
-            element={
-              <ProtectedRoute allowedRoles={["seller"]}>
-                <EditProduct />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/seller/create-auction"
-            element={
-              <ProtectedRoute allowedRoles={["seller"]}>
-                <CreateAuction />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/seller/create-blog"
-            element={
-              <ProtectedRoute allowedRoles={["seller"]}>
-                <CreateBlog />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/seller/edit-blog/:id"
-            element={
-              <ProtectedRoute allowedRoles={["seller"]}>
-                <EditBlog />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* ==================== ADMIN PROTECTED ROUTES ==================== */}
-          <Route
-            path="/admin/dashboard"
-            element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* ==================== FALLBACK ROUTES ==================== */}
-          <Route
-            path="/about"
-            element={
-              <div style={{ padding: "4rem 2rem", textAlign: "center" }}>
-                About - Coming Soon
-              </div>
-            }
-          />
-
-          <Route
-            path="*"
-            element={
-              <div style={{ padding: "4rem 2rem", textAlign: "center" }}>
-                404 - Page Not Found
-              </div>
-            }
-          />
+          {/* ==================== FALLBACKS ==================== */}
+          <Route path="/about" element={<div style={{ padding: "4rem 2rem", textAlign: "center" }}>About - Coming Soon</div>} />
+          <Route path="*"      element={<div style={{ padding: "4rem 2rem", textAlign: "center" }}>404 - Page Not Found</div>} />
 
         </Routes>
       </main>
@@ -236,7 +124,9 @@ const AppContent = () => {
 function App() {
   return (
     <Router>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </Router>
   );
 }

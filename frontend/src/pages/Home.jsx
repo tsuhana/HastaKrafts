@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { productAPI, cartAPI, wishlistAPI } from '../api/axios';
+import toast from 'react-hot-toast'; // ✅ ADDED
 import Icons from '../utils/icons';
 import BannerCarousel from '../components/BannerCarousel';
 import '../styles/Home.css';
@@ -70,17 +71,27 @@ const Home = () => {
   };
 
   const handleAddToCart = async (product) => {
-    if (!isLoggedIn) { alert('Please login to add items to cart'); navigate('/login'); return; }
-    if (!isBuyer) { alert('Only buyers can add items to cart'); return; }
-    if (product.stock_quantity <= 0) { alert('Product is out of stock'); return; }
+    if (!isLoggedIn) { 
+      toast.error('Please login to add items to cart'); // ✅ REPLACED
+      navigate('/login'); 
+      return; 
+    }
+    if (!isBuyer) { 
+      toast.error('Only buyers can add items to cart'); // ✅ REPLACED
+      return; 
+    }
+    if (product.stock_quantity <= 0) { 
+      toast.error('Product is out of stock'); // ✅ REPLACED
+      return; 
+    }
 
     setAddingToCart(prev => ({ ...prev, [product.product_id]: true }));
     try {
       await cartAPI.addToCart({ product_id: product.product_id, quantity: 1 });
-      alert('Added to cart!');
+      toast.success('Added to cart!'); // ✅ REPLACED
       window.dispatchEvent(new Event('cartUpdated'));
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to add to cart');
+      toast.error(err.response?.data?.message || 'Failed to add to cart'); // ✅ REPLACED
     } finally {
       setAddingToCart(prev => ({ ...prev, [product.product_id]: false }));
     }
@@ -90,8 +101,15 @@ const Home = () => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (!isLoggedIn) { alert('Please login to use wishlist'); navigate('/login'); return; }
-    if (!isBuyer) { alert('Only buyers can use wishlist'); return; }
+    if (!isLoggedIn) { 
+      toast.error('Please login to use wishlist'); // ✅ REPLACED
+      navigate('/login'); 
+      return; 
+    }
+    if (!isBuyer) { 
+      toast.error('Only buyers can use wishlist'); // ✅ REPLACED
+      return; 
+    }
 
     try {
       if (wishlistItems.has(productId)) {
@@ -102,7 +120,7 @@ const Home = () => {
         setWishlistItems(prev => new Set(prev).add(productId));
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update wishlist');
+      toast.error(err.response?.data?.message || 'Failed to update wishlist'); // ✅ REPLACED
     }
   };
 
@@ -124,7 +142,6 @@ const Home = () => {
               <div className="no-image"><Icons.Package size={48} /></div>
             )}
 
-            {/* Discount badge on image */}
             {product.has_discount && product.discount_percentage > 0 && (
               <span className="home-discount-badge">
                 -{product.discount_percentage}%

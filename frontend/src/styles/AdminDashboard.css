@@ -55,9 +55,6 @@
   padding: 0;
 }
 
-/* ─────────────────────────────────────────
-   LAYOUT
-───────────────────────────────────────── */
 .admin-dashboard-container {
   display: flex;
   min-height: calc(100vh - 80px);
@@ -73,9 +70,6 @@
   min-height: calc(100vh - 80px);
 }
 
-/* ─────────────────────────────────────────
-   SIDEBAR
-───────────────────────────────────────── */
 .admin-sidebar {
   width: var(--sw);
   background: var(--sidebar-bg);

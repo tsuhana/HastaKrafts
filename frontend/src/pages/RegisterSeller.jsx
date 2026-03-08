@@ -85,7 +85,7 @@ const RegisterSeller = () => {
 
         {/* Progress Steps */}
         <div className="progress-steps">
-          <div className="progress-bar">
+          <div className="progress-bar" data-step={step}>
             <div className={`step ${step >= 1 ? 'active' : ''}`}>
               <div className="step-number">1</div>
               <span className="step-label">Personal Info</span>
