@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { adminAPI, productAPI } from "../api/axios";
+import { useToast } from "../context/ToastContext";
 import "../styles/AdminDashboard.css";
 
 /* ── SVG icons ── */
@@ -95,6 +96,7 @@ const ProductImg = ({ src, alt }) => {
    MAIN COMPONENT
 ════════════════════════════════════════ */
 const AdminDashboard = () => {
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
   const [msgFilter, setMsgFilter] = useState("all");
@@ -224,12 +226,12 @@ const AdminDashboard = () => {
     try {
       const res = await adminAPI.createBanner(new FormData(e.target));
       if (res.data.success) {
-        alert("Banner uploaded successfully!");
+        toast.success("Banner uploaded successfully!");
         fetchBanners();
         e.target.reset();
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to upload banner");
+      toast.error(err.response?.data?.message || "Failed to upload banner");
     } finally {
       setUploadingBanner(false);
     }
@@ -238,39 +240,39 @@ const AdminDashboard = () => {
   const handleToggleBanner = async (bannerId) => {
     try {
       const res = await adminAPI.toggleBannerStatus(bannerId);
-      if (res.data.success) { alert(res.data.message); fetchBanners(); }
-    } catch { alert("Failed to toggle banner status"); }
+      if (res.data.success) { toast.info(res.data.message); fetchBanners(); }
+    } catch { toast.error("Failed to toggle banner status"); }
   };
 
   const handleDeleteBanner = async (bannerId) => {
     if (!window.confirm("Delete this banner?")) return;
     try {
       const res = await adminAPI.deleteBanner(bannerId);
-      if (res.data.success) { alert("Banner deleted"); fetchBanners(); }
-    } catch { alert("Failed to delete banner"); }
+      if (res.data.success) { toast.success("Banner deleted"); fetchBanners(); }
+    } catch { toast.error("Failed to delete banner"); }
   };
 
   const handleContactStatus = async (contactId, status) => {
     try {
       const res = await adminAPI.updateContactStatus(contactId, { status });
-      if (res.data.success) { alert("Status updated"); fetchContactMessages(); }
-    } catch { alert("Failed to update status"); }
+      if (res.data.success) { toast.success("Status updated"); fetchContactMessages(); }
+    } catch { toast.error("Failed to update status"); }
   };
 
   const handleDeleteContact = async (contactId) => {
     if (!window.confirm("Delete this message permanently?")) return;
     try {
       const res = await adminAPI.deleteContactMessage(contactId);
-      if (res.data.success) { alert("Message deleted"); fetchContactMessages(); }
-    } catch { alert("Failed to delete message"); }
+      if (res.data.success) { toast.success("Message deleted"); fetchContactMessages(); }
+    } catch { toast.error("Failed to delete message"); }
   };
 
   const handleApproveSeller = async (sellerId) => {
     if (!window.confirm("Approve this seller?")) return;
     try {
       const res = await adminAPI.approveSeller(sellerId);
-      if (res.data.success) { alert("Seller approved"); fetchDashboardData(); }
-    } catch { alert("Failed to approve seller"); }
+      if (res.data.success) { toast.success("Seller approved"); fetchDashboardData(); }
+    } catch { toast.error("Failed to approve seller"); }
   };
 
   const handleRejectSeller = async (sellerId) => {
@@ -278,16 +280,16 @@ const AdminDashboard = () => {
     if (!reason) return;
     try {
       const res = await adminAPI.rejectSeller(sellerId, { rejection_reason: reason });
-      if (res.data.success) { alert("Seller rejected"); fetchDashboardData(); }
-    } catch { alert("Failed to reject seller"); }
+      if (res.data.success) { toast.success("Seller rejected"); fetchDashboardData(); }
+    } catch { toast.error("Failed to reject seller"); }
   };
 
   const handleApproveProduct = async (productId) => {
     if (!window.confirm("Approve this product?")) return;
     try {
       const res = await adminAPI.approveProduct(productId);
-      if (res.data.success) { alert("Product approved"); fetchDashboardData(); }
-    } catch { alert("Failed to approve product"); }
+      if (res.data.success) { toast.success("Product approved"); fetchDashboardData(); }
+    } catch { toast.error("Failed to approve product"); }
   };
 
   const handleRejectProduct = async (productId) => {
@@ -295,16 +297,16 @@ const AdminDashboard = () => {
     if (!reason) return;
     try {
       const res = await adminAPI.rejectProduct(productId, { rejection_reason: reason });
-      if (res.data.success) { alert("Product rejected"); fetchDashboardData(); }
-    } catch { alert("Failed to reject product"); }
+      if (res.data.success) { toast.success("Product rejected"); fetchDashboardData(); }
+    } catch { toast.error("Failed to reject product"); }
   };
 
   const handleToggleFeatured = async (productId) => {
     try {
       const res = await adminAPI.toggleFeatured(productId);
-      if (res.data.success) { alert(res.data.message); fetchDashboardData(); }
+      if (res.data.success) { toast.info(res.data.message); fetchDashboardData(); }
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to update featured status");
+      toast.error(err.response?.data?.message || "Failed to update featured status");
     }
   };
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { storyAPI } from '../api/axios';
+import { useToast } from '../context/ToastContext';
 import '../styles/Blog.css';
 
 const CATEGORIES = [
@@ -34,6 +35,7 @@ const SellerAvatar = ({ seller, className = 'blog-avatar', initClass = 'blog-ava
 };
 
 const Blog = () => {
+  const toast = useToast();
   const [stories, setStories]               = useState([]);
   const [loading, setLoading]               = useState(true);
   const [activeCategory, setActiveCategory] = useState('all');
@@ -66,7 +68,7 @@ const Blog = () => {
       setStories((prev) => prev.filter((s) => s.story_id !== storyId));
     } catch (err) {
       console.error('Delete error:', err);
-      alert('Failed to delete story.');
+      toast.error('Failed to delete story.');
     } finally {
       setDeletingId(null);
     }

@@ -52,7 +52,7 @@ const getPendingSellers = async (req, res) => {
       include: [
         {
           model: db.User,
-          as: "user", // ✅ LOWERCASE - matches model definition
+          as: "user", //  LOWERCASE - matches model definition
           attributes: ["user_id", "full_name", "email", "phone"],
         },
       ],
