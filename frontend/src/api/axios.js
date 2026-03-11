@@ -61,6 +61,7 @@ export const productAPI = {
 // ADMIN
 export const adminAPI = {
   getDashboardStats: () => API.get('/admin/stats'),
+  getAnalytics: () => API.get('/admin/analytics'),          // ← THIS WAS MISSING
   getPendingSellers: () => API.get('/admin/sellers/pending'),
   getAllSellers: () => API.get('/admin/sellers'),
   approveSeller: (id) => API.post(`/admin/sellers/${id}/approve`),
