@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { storyAPI } from '../api/axios';
+import { useToast } from '../context/ToastContext';
 import '../styles/BlogDetail.css';
 
 const CATEGORY_LABELS = {
@@ -32,6 +33,7 @@ const SellerAvatar = ({ seller, className = 'bd-avatar', initClass = 'bd-avatar-
 const BlogDetail = () => {
   const { id }                  = useParams();
   const navigate                = useNavigate();
+  const toast                   = useToast();
   const [story, setStory]       = useState(null);
   const [loading, setLoading]   = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -60,7 +62,7 @@ const BlogDetail = () => {
       navigate('/blog');
     } catch (err) {
       console.error('Delete error:', err);
-      alert('Failed to delete story.');
+      toast.error('Failed to delete story.');
     } finally {
       setDeleting(false);
     }

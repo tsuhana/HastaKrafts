@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { contactAPI } from '../api/axios';
 import Icons from '../utils/icons';
+import { useToast } from '../context/ToastContext';
 import '../styles/Contact.css';
 
 const Contact = () => {
+  const toast = useToast();
   const [formData, setFormData] = useState({
     name: '', email: '', phone: '', subject: '', message: ''
   });
@@ -19,11 +21,11 @@ const Contact = () => {
     try {
       const res = await contactAPI.submitMessage(formData);
       if (res.data.success) {
-        alert(res.data.message);
+        toast.success(res.data.message);
         setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to send message. Please try again.');
+      toast.error(err.response?.data?.message || 'Failed to send message. Please try again.');
     } finally {
       setSubmitting(false);
     }

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cartAPI } from '../api/axios';
+import { useToast } from '../context/ToastContext';
+import ConfirmModal from '../components/ConfirmModal';
 import '../styles/Cart.css';
 
-// ✅ Helper function for discount calculation
+//  Helper function for discount calculation
 const calculateDiscountedPrice = (price, hasDiscount, discountPercentage) => {
   if (!hasDiscount || !discountPercentage) return price;
   return Math.round(price * (1 - discountPercentage / 100));
@@ -11,9 +13,13 @@ const calculateDiscountedPrice = (price, hasDiscount, discountPercentage) => {
 
 const Cart = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState(null);
   const [updating, setUpdating] = useState(false);
+
+  // ── Modal state ──
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, cartItemId: null });
 
   useEffect(() => {
     fetchCart();
@@ -47,14 +53,19 @@ const Cart = () => {
       }
     } catch (err) {
       console.error('Error updating quantity:', err);
-      alert(err.response?.data?.message || 'Failed to update quantity');
+      toast.error(err.response?.data?.message || 'Failed to update quantity');
     } finally {
       setUpdating(false);
     }
   };
 
-  const removeItem = async (cartItemId) => {
-    if (!window.confirm('Remove this item from cart?')) return;
+  const removeItem = (cartItemId) => {
+    setConfirmModal({ isOpen: true, cartItemId });
+  };
+
+  const handleConfirmRemove = async () => {
+    const { cartItemId } = confirmModal;
+    setConfirmModal({ isOpen: false, cartItemId: null });
 
     setUpdating(true);
     try {
@@ -64,7 +75,7 @@ const Cart = () => {
       }
     } catch (err) {
       console.error('Error removing item:', err);
-      alert('Failed to remove item');
+      toast.error('Failed to remove item');
     } finally {
       setUpdating(false);
     }
@@ -75,7 +86,7 @@ const Cart = () => {
     return `http://localhost:5000${images[0]}`;
   };
 
-  // ✅ Calculate subtotal with discounts
+  // Calculate subtotal with discounts
   const subtotal = cart?.items.reduce((sum, item) => {
     const price = calculateDiscountedPrice(
       item.product.price,
@@ -112,6 +123,19 @@ const Cart = () => {
 
   return (
     <div className="cart-page">
+
+      {/* ── Remove Item Confirm Modal ── */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title="Remove this item?"
+        message="This item will be removed from your cart."
+        confirmText="Remove"
+        cancelText="Cancel"
+        confirmVariant="danger"
+        onConfirm={handleConfirmRemove}
+        onCancel={() => setConfirmModal({ isOpen: false, cartItemId: null })}
+      />
+
       <div className="cart-container">
         <div className="cart-content">
           {/* Cart Items */}
@@ -141,7 +165,7 @@ const Cart = () => {
                       <div className="item-category">
                         {item.product.seller?.shop_name || 'Product'}
                       </div>
-                      {/* ✅ Discount badge on image */}
+                      {/*  Discount badge on image */}
                       {hasDiscount && (
                         <div className="cart-discount-badge">
                           -{item.product.discount_percentage}%
@@ -153,7 +177,7 @@ const Cart = () => {
                       <h3 className="item-name">{item.product.name}</h3>
                       <p className="item-seller">By {item.product.seller?.shop_name} ✓</p>
                       
-                      {/* ✅ Price with discount */}
+                      {/* Price with discount */}
                       <div className="item-price-section">
                         {hasDiscount ? (
                           <div className="price-with-discount">
@@ -196,7 +220,7 @@ const Cart = () => {
                         </button>
                       </div>
 
-                      {/* ✅ Item total with discount */}
+                      {/*  Item total with discount */}
                       <div className="item-total">
                         Rs. {(discountedPrice * item.quantity).toLocaleString()}
                       </div>

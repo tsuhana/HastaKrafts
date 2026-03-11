@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { storyAPI } from '../api/axios';
 import { useToast } from '../context/ToastContext';
+import ConfirmModal from '../components/ConfirmModal';
 import '../styles/Blog.css';
 
 const CATEGORIES = [
@@ -40,6 +41,7 @@ const Blog = () => {
   const [loading, setLoading]               = useState(true);
   const [activeCategory, setActiveCategory] = useState('all');
   const [deletingId, setDeletingId]         = useState(null);
+  const [confirmModal, setConfirmModal]     = useState({ isOpen: false, storyId: null });
 
   const user = JSON.parse(localStorage.getItem('user') || 'null');
 
@@ -58,10 +60,15 @@ const Blog = () => {
     }
   };
 
-  const handleDelete = async (e, storyId) => {
+  const handleDeleteClick = (e, storyId) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!window.confirm('Delete this story permanently?')) return;
+    setConfirmModal({ isOpen: true, storyId });
+  };
+
+  const handleDeleteConfirm = async () => {
+    const storyId = confirmModal.storyId;
+    setConfirmModal({ isOpen: false, storyId: null });
     try {
       setDeletingId(storyId);
       await storyAPI.deleteStory(storyId);
@@ -72,6 +79,10 @@ const Blog = () => {
     } finally {
       setDeletingId(null);
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setConfirmModal({ isOpen: false, storyId: null });
   };
 
   const isAuthor = (story) =>
@@ -87,6 +98,17 @@ const Blog = () => {
 
   return (
     <div className="blog-page">
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title="Delete this story?"
+        message="This action cannot be undone. The story will be permanently removed."
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmVariant="danger"
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+      />
 
       <header className="blog-header">
         <p className="blog-eyebrow">Artisan Stories from Nepal</p>
@@ -139,7 +161,7 @@ const Blog = () => {
                       {isAuthor(story) && (
                         <div className="blog-actions">
                           <Link to={`/seller/edit-blog/${story.story_id}`} className="blog-action-btn edit" onClick={(e) => e.stopPropagation()}>Edit</Link>
-                          <button className="blog-action-btn delete" onClick={(e) => handleDelete(e, story.story_id)} disabled={deletingId === story.story_id}>
+                          <button className="blog-action-btn delete" onClick={(e) => handleDeleteClick(e, story.story_id)} disabled={deletingId === story.story_id}>
                             {deletingId === story.story_id ? '…' : 'Delete'}
                           </button>
                         </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { adminAPI, productAPI } from "../api/axios";
 import { useToast } from "../context/ToastContext";
+import ConfirmModal from "../components/ConfirmModal";
 import "../styles/AdminDashboard.css";
 
 /* ── SVG icons ── */
@@ -92,6 +93,66 @@ const ProductImg = ({ src, alt }) => {
   return <div className="td-img-placeholder">No img</div>;
 };
 
+/* ── RejectModal — replaces window.prompt for rejection reason ── */
+const RejectModal = ({ isOpen, title, onConfirm, onCancel }) => {
+  const [reason, setReason] = useState("");
+
+  // Reset reason each time modal opens
+  useEffect(() => {
+    if (isOpen) setReason("");
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="cm-overlay" onClick={onCancel}>
+      <div className="cm-box" onClick={(e) => e.stopPropagation()}>
+        <div className="cm-icon-wrap cm-icon-warning">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        </div>
+        <h3 className="cm-title">{title || "Rejection Reason"}</h3>
+        <p className="cm-message">Please provide a reason. This will be shared with the applicant.</p>
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Enter rejection reason..."
+          rows={3}
+          style={{
+            width: "100%",
+            padding: "0.6rem 0.75rem",
+            borderRadius: "10px",
+            border: "1.5px solid #e5e7eb",
+            fontSize: "0.875rem",
+            resize: "vertical",
+            marginBottom: "1.2rem",
+            fontFamily: "inherit",
+            outline: "none",
+            boxSizing: "border-box",
+          }}
+          onFocus={(e) => (e.target.style.borderColor = "#f59e0b")}
+          onBlur={(e) => (e.target.style.borderColor = "#e5e7eb")}
+          autoFocus
+        />
+        <div className="cm-actions">
+          <button className="cm-btn cm-cancel" onClick={onCancel}>Cancel</button>
+          <button
+            className="cm-btn cm-confirm cm-warning"
+            onClick={() => { if (reason.trim()) onConfirm(reason.trim()); }}
+            disabled={!reason.trim()}
+            style={{ opacity: reason.trim() ? 1 : 0.5, cursor: reason.trim() ? "pointer" : "not-allowed" }}
+          >
+            Reject
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /* ════════════════════════════════════════
    MAIN COMPONENT
 ════════════════════════════════════════ */
@@ -120,6 +181,10 @@ const AdminDashboard = () => {
   const [allProducts, setAllProducts] = useState([]);
   const [banners, setBanners] = useState([]);
   const [contactMessages, setContactMessages] = useState([]);
+
+  // ── Modal state ──
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: null, id: null });
+  const [rejectModal, setRejectModal]   = useState({ isOpen: false, type: null, id: null });
 
   const API_URL = "http://localhost:5000";
 
@@ -244,12 +309,8 @@ const AdminDashboard = () => {
     } catch { toast.error("Failed to toggle banner status"); }
   };
 
-  const handleDeleteBanner = async (bannerId) => {
-    if (!window.confirm("Delete this banner?")) return;
-    try {
-      const res = await adminAPI.deleteBanner(bannerId);
-      if (res.data.success) { toast.success("Banner deleted"); fetchBanners(); }
-    } catch { toast.error("Failed to delete banner"); }
+  const handleDeleteBanner = (bannerId) => {
+    setConfirmModal({ isOpen: true, type: "deleteBanner", id: bannerId });
   };
 
   const handleContactStatus = async (contactId, status) => {
@@ -259,46 +320,24 @@ const AdminDashboard = () => {
     } catch { toast.error("Failed to update status"); }
   };
 
-  const handleDeleteContact = async (contactId) => {
-    if (!window.confirm("Delete this message permanently?")) return;
-    try {
-      const res = await adminAPI.deleteContactMessage(contactId);
-      if (res.data.success) { toast.success("Message deleted"); fetchContactMessages(); }
-    } catch { toast.error("Failed to delete message"); }
+  const handleDeleteContact = (contactId) => {
+    setConfirmModal({ isOpen: true, type: "deleteContact", id: contactId });
   };
 
-  const handleApproveSeller = async (sellerId) => {
-    if (!window.confirm("Approve this seller?")) return;
-    try {
-      const res = await adminAPI.approveSeller(sellerId);
-      if (res.data.success) { toast.success("Seller approved"); fetchDashboardData(); }
-    } catch { toast.error("Failed to approve seller"); }
+  const handleApproveSeller = (sellerId) => {
+    setConfirmModal({ isOpen: true, type: "approveSeller", id: sellerId });
   };
 
-  const handleRejectSeller = async (sellerId) => {
-    const reason = window.prompt("Enter rejection reason:");
-    if (!reason) return;
-    try {
-      const res = await adminAPI.rejectSeller(sellerId, { rejection_reason: reason });
-      if (res.data.success) { toast.success("Seller rejected"); fetchDashboardData(); }
-    } catch { toast.error("Failed to reject seller"); }
+  const handleRejectSeller = (sellerId) => {
+    setRejectModal({ isOpen: true, type: "rejectSeller", id: sellerId });
   };
 
-  const handleApproveProduct = async (productId) => {
-    if (!window.confirm("Approve this product?")) return;
-    try {
-      const res = await adminAPI.approveProduct(productId);
-      if (res.data.success) { toast.success("Product approved"); fetchDashboardData(); }
-    } catch { toast.error("Failed to approve product"); }
+  const handleApproveProduct = (productId) => {
+    setConfirmModal({ isOpen: true, type: "approveProduct", id: productId });
   };
 
-  const handleRejectProduct = async (productId) => {
-    const reason = window.prompt("Enter rejection reason:");
-    if (!reason) return;
-    try {
-      const res = await adminAPI.rejectProduct(productId, { rejection_reason: reason });
-      if (res.data.success) { toast.success("Product rejected"); fetchDashboardData(); }
-    } catch { toast.error("Failed to reject product"); }
+  const handleRejectProduct = (productId) => {
+    setRejectModal({ isOpen: true, type: "rejectProduct", id: productId });
   };
 
   const handleToggleFeatured = async (productId) => {
@@ -308,6 +347,67 @@ const AdminDashboard = () => {
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to update featured status");
     }
+  };
+
+  /* ── confirm modal handler ── */
+  const handleConfirmAction = async () => {
+    const { type, id } = confirmModal;
+    setConfirmModal({ isOpen: false, type: null, id: null });
+
+    try {
+      if (type === "deleteBanner") {
+        const res = await adminAPI.deleteBanner(id);
+        if (res.data.success) { toast.success("Banner deleted"); fetchBanners(); }
+      } else if (type === "deleteContact") {
+        const res = await adminAPI.deleteContactMessage(id);
+        if (res.data.success) { toast.success("Message deleted"); fetchContactMessages(); }
+      } else if (type === "approveSeller") {
+        const res = await adminAPI.approveSeller(id);
+        if (res.data.success) { toast.success("Seller approved"); fetchDashboardData(); }
+      } else if (type === "approveProduct") {
+        const res = await adminAPI.approveProduct(id);
+        if (res.data.success) { toast.success("Product approved"); fetchDashboardData(); }
+      }
+    } catch {
+      const labels = {
+        deleteBanner:   "Failed to delete banner",
+        deleteContact:  "Failed to delete message",
+        approveSeller:  "Failed to approve seller",
+        approveProduct: "Failed to approve product",
+      };
+      toast.error(labels[type] || "Action failed");
+    }
+  };
+
+  /* ── reject modal handler ── */
+  const handleRejectAction = async (reason) => {
+    const { type, id } = rejectModal;
+    setRejectModal({ isOpen: false, type: null, id: null });
+
+    try {
+      if (type === "rejectSeller") {
+        const res = await adminAPI.rejectSeller(id, { rejection_reason: reason });
+        if (res.data.success) { toast.success("Seller rejected"); fetchDashboardData(); }
+      } else if (type === "rejectProduct") {
+        const res = await adminAPI.rejectProduct(id, { rejection_reason: reason });
+        if (res.data.success) { toast.success("Product rejected"); fetchDashboardData(); }
+      }
+    } catch {
+      toast.error("Failed to reject");
+    }
+  };
+
+  /* ── confirm modal config per type ── */
+  const confirmConfig = {
+    deleteBanner:   { title: "Delete this banner?",   message: "This action cannot be undone.",                          confirmText: "Delete",  confirmVariant: "danger"  },
+    deleteContact:  { title: "Delete this message?",  message: "The message will be permanently removed.",               confirmText: "Delete",  confirmVariant: "danger"  },
+    approveSeller:  { title: "Approve this seller?",  message: "They will be able to list products on the marketplace.", confirmText: "Approve", confirmVariant: "warning" },
+    approveProduct: { title: "Approve this product?", message: "It will be visible to buyers on the marketplace.",       confirmText: "Approve", confirmVariant: "warning" },
+  };
+
+  const rejectConfig = {
+    rejectSeller:  { title: "Reject this seller?"  },
+    rejectProduct: { title: "Reject this product?" },
   };
 
   /* ── nav config ── */
@@ -338,11 +438,32 @@ const AdminDashboard = () => {
     ? contactMessages
     : contactMessages.filter((m) => m.status === msgFilter);
 
+  const activeCfg    = confirmConfig[confirmModal.type] || {};
+  const activeRejCfg = rejectConfig[rejectModal.type]   || {};
+
   /* ════════════════════════════════════════
      RENDER
   ════════════════════════════════════════ */
   return (
     <div className="admin-dashboard-container">
+
+      {/* ── Modals ── */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={activeCfg.title}
+        message={activeCfg.message}
+        confirmText={activeCfg.confirmText}
+        cancelText="Cancel"
+        confirmVariant={activeCfg.confirmVariant}
+        onConfirm={handleConfirmAction}
+        onCancel={() => setConfirmModal({ isOpen: false, type: null, id: null })}
+      />
+      <RejectModal
+        isOpen={rejectModal.isOpen}
+        title={activeRejCfg.title}
+        onConfirm={handleRejectAction}
+        onCancel={() => setRejectModal({ isOpen: false, type: null, id: null })}
+      />
 
       {/* ─── SIDEBAR ─── */}
       <aside className="admin-sidebar">

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import { messageAPI } from "../api/axios";
+import { useToast } from "../context/ToastContext";
 import "../styles/Chat.css";
 
 import dayjs from "dayjs";
@@ -50,6 +51,7 @@ const formatDateLabel = (raw) => {
 
 const Chat = () => {
   const [searchParams] = useSearchParams();
+  const toast = useToast();
   const [conversations, setConversations] = useState([]);
   const [messages, setMessages] = useState([]);
   const [activePartner, setActivePartner] = useState(null);
@@ -122,7 +124,7 @@ const Chat = () => {
     });
 
     socket.on("auction_won", (data) => {
-      alert(`🎉 You won "${data.auction_title}"! Check your messages.`);
+      toast.success(`🎉 You won "${data.auction_title}"! Check your messages.`);
       fetchConversations();
     });
 
