@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { productAPI, cartAPI } from "../api/axios";
+import { useToast } from "../context/ToastContext";
 import Reviews from "../components/Reviews";
 import Icons from "../utils/icons";
 import "../styles/ProductDetail.css";
@@ -8,6 +9,7 @@ import "../styles/ProductDetail.css";
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -64,18 +66,14 @@ const ProductDetail = () => {
       setTranslatedDescription(product.description);
       return;
     }
-
     setSelectedLanguage(langCode);
     setTranslating(true);
-
     try {
       const res = await productAPI.translateProduct(product.product_id, { language: langCode });
-      if (res.data.success) {
-        setTranslatedDescription(res.data.data.translated);
-      }
+      if (res.data.success) setTranslatedDescription(res.data.data.translated);
     } catch (err) {
       console.error('Translation error:', err);
-      alert('Translation failed. Showing original text.');
+      toast.warning('Translation failed. Showing original text.');
       setTranslatedDescription(product.description);
     } finally {
       setTranslating(false);
@@ -98,29 +96,29 @@ const ProductDetail = () => {
   };
 
   const handleAddToCart = async () => {
-    if (!isLoggedIn) { alert("Please login to add items to cart"); navigate("/login"); return; }
-    if (!canBuy) { alert(isAdmin ? "Admins cannot purchase items" : "Sellers cannot purchase items"); return; }
-    if (quantity > product.stock_quantity) { alert(`Only ${product.stock_quantity} items available`); return; }
+    if (!isLoggedIn) { toast.error("Please login to add items to cart"); navigate("/login"); return; }
+    if (!canBuy) { toast.error(isAdmin ? "Admins cannot purchase items" : "Sellers cannot purchase items"); return; }
+    if (quantity > product.stock_quantity) { toast.warning(`Only ${product.stock_quantity} items available`); return; }
 
     setAddingToCart(true);
     try {
       const res = await cartAPI.addToCart({ product_id: product.product_id, quantity });
       if (res.data.success) {
-        alert("Item added to cart!");
+        toast.success("Item added to cart!");
         window.dispatchEvent(new Event("cartUpdated"));
         setQuantity(1);
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to add item to cart");
+      toast.error(err.response?.data?.message || "Failed to add item to cart");
     } finally {
       setAddingToCart(false);
     }
   };
 
   const handleChatWithArtisan = () => {
-    if (!isLoggedIn) { alert("Please login to chat with the artisan"); navigate("/login"); return; }
-    if (!canBuy) { alert(isAdmin ? "Admins cannot message sellers" : "Sellers cannot message other sellers"); return; }
-    if (!product?.seller?.user_id) { alert("Seller information not available"); return; }
+    if (!isLoggedIn) { toast.error("Please login to chat with the artisan"); navigate("/login"); return; }
+    if (!canBuy) { toast.error(isAdmin ? "Admins cannot message sellers" : "Sellers cannot message other sellers"); return; }
+    if (!product?.seller?.user_id) { toast.error("Seller information not available"); return; }
     navigate(`/messages?partner=${product.seller.user_id}`);
   };
 
@@ -215,7 +213,6 @@ const ProductDetail = () => {
               </div>
             )}
 
-            {/* RATING */}
             <div className="product-rating">
               {renderStars(reviewStats.averageRating)}
               <span className="rating-text">
@@ -224,7 +221,6 @@ const ProductDetail = () => {
               </span>
             </div>
 
-            {/* PRICE SECTION */}
             <div className="product-price-section">
               {discountedPrice ? (
                 <div className="price-with-discount">
@@ -258,7 +254,6 @@ const ProductDetail = () => {
               </div>
             </div>
 
-            {/* LANGUAGE SELECTOR */}
             <div className="language-selector-section">
               <label className="language-label">Language:</label>
               <select
@@ -276,7 +271,6 @@ const ProductDetail = () => {
               {translating && <span className="translating-indicator">⏳ Translating...</span>}
             </div>
 
-            {/* TRANSLATED DESCRIPTION */}
             <div className="product-description">
               <h3>Product Description</h3>
               {translating ? (
@@ -320,7 +314,6 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {/* REVIEWS */}
         <Reviews
           productId={product.product_id}
           currentUser={currentUser}

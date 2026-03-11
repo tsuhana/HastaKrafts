@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import API from '../api/axios';
+import { useToast } from '../context/ToastContext';
 import '../styles/VerifyOTP.css';
 
 const VerifyOTP = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const toast = useToast();
   const email = location.state?.email || '';
-  
+
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,7 +23,7 @@ const VerifyOTP = () => {
 
   const handleChange = (index, value) => {
     if (value.length > 1) return;
-    
+
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
@@ -42,11 +44,11 @@ const VerifyOTP = () => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').slice(0, 6);
     const newOtp = pastedData.split('').slice(0, 6);
-    
+
     while (newOtp.length < 6) {
       newOtp.push('');
     }
-    
+
     setOtp(newOtp);
     setError('');
   };
@@ -54,7 +56,7 @@ const VerifyOTP = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const otpString = otp.join('');
-    
+
     if (otpString.length !== 6) {
       setError('Please enter all 6 digits');
       return;
@@ -68,13 +70,13 @@ const VerifyOTP = () => {
         email,
         otp: otpString
       });
-      
+
       if (response.data.success) {
-        navigate('/reset-password', { 
-          state: { 
+        navigate('/reset-password', {
+          state: {
             resetToken: response.data.data.resetToken,
-            email 
-          } 
+            email
+          }
         });
       }
     } catch (err) {
@@ -93,7 +95,7 @@ const VerifyOTP = () => {
 
     try {
       await API.post('/auth/forgot-password', { email });
-      alert('New OTP sent to your email!');
+      toast.success('New OTP sent to your email!');
       setOtp(['', '', '', '', '', '']);
       document.getElementById('otp-0')?.focus();
     } catch (err) {
@@ -107,7 +109,7 @@ const VerifyOTP = () => {
   return (
     <div className="verify-otp-page">
       <div className="verify-otp-container">
-        
+
         <div className="verify-otp-header">
           <h1 className="verify-logo">हस्त KRAFTS</h1>
           <p className="verify-subtitle">Verify OTP</p>
@@ -146,17 +148,19 @@ const VerifyOTP = () => {
             <button
               type="submit"
               disabled={loading || otp.join('').length !== 6}
-              className="submit-btn">
+              className="submit-btn"
+            >
               {loading ? 'Verifying...' : 'Verify OTP'}
             </button>
           </form>
 
           <div className="resend-section">
             <p>Did not receive the code?</p>
-            <button 
-              onClick={handleResend} 
+            <button
+              onClick={handleResend}
               disabled={resending || loading}
-              className="resend-btn">
+              className="resend-btn"
+            >
               {resending ? 'Sending...' : 'Resend OTP'}
             </button>
           </div>

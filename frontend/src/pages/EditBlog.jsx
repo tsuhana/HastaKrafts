@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { storyAPI } from '../api/axios';
+import { useToast } from '../context/ToastContext';
 import '../styles/CreateBlog.css';
 
 const CATEGORIES = [
@@ -15,6 +16,7 @@ const CATEGORIES = [
 const EditBlog = () => {
   const { id }      = useParams();
   const navigate    = useNavigate();
+  const toast       = useToast();
   const [loading, setLoading]       = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
@@ -39,7 +41,7 @@ const EditBlog = () => {
       });
     } catch (err) {
       console.error('Failed to load story:', err);
-      alert('Could not load story.');
+      toast.error('Could not load story.');
       navigate('/blog');
     } finally {
       setLoading(false);
@@ -76,7 +78,7 @@ const EditBlog = () => {
       navigate(`/blog/${id}`);
     } catch (err) {
       console.error('Update error:', err);
-      alert(err.response?.data?.message || 'Failed to update story');
+      toast.error(err.response?.data?.message || 'Failed to update story');
     } finally {
       setSubmitting(false);
     }

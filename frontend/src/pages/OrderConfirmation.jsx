@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { orderAPI } from '../api/axios';
+import { useToast } from '../context/ToastContext';
 import '../styles/OrderConfirmation.css';
 
 const OrderConfirmation = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [order, setOrder] = useState(null);
 
@@ -22,7 +24,7 @@ const OrderConfirmation = () => {
       }
     } catch (err) {
       console.error('Error fetching order:', err);
-      alert('Failed to load order details');
+      toast.error('Failed to load order details');
     } finally {
       setLoading(false);
     }
@@ -39,11 +41,9 @@ const OrderConfirmation = () => {
     return colors[status] || '#6B7280';
   };
 
-  // Order status timeline
   const getStatusSteps = () => {
     const allSteps = ['pending', 'processing', 'shipped', 'delivered'];
     const currentIndex = allSteps.indexOf(order?.order_status);
-
     return allSteps.map((step, index) => ({
       label: step.charAt(0).toUpperCase() + step.slice(1),
       status: step,
@@ -79,7 +79,6 @@ const OrderConfirmation = () => {
         <h1>Order Placed Successfully!</h1>
         <p className="thank-you">Thank you for your order</p>
 
-        {/* Order Status Tracking Timeline */}
         {order.order_status !== 'cancelled' && (
           <div className="order-status-timeline">
             <h3>Order Status</h3>
@@ -102,7 +101,6 @@ const OrderConfirmation = () => {
 
         <div className="order-details-card">
 
-          {/* POINTS EARNED NOTIFICATION */}
           {order.points_earned > 0 && (
             <div className="points-earned-card">
               <div className="points-earned-icon">🎉</div>
@@ -128,20 +126,16 @@ const OrderConfirmation = () => {
               <label>Order Date</label>
               <p>
                 {new Date(order.createdAt || order.created_at).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
+                  year: 'numeric', month: 'long', day: 'numeric',
                 })}
               </p>
             </div>
-
             <div className="info-item">
               <label>Payment Method</label>
               <p className="payment-badge">
                 {order.payment_method === 'khalti' ? 'Khalti' : 'Cash on Delivery'}
               </p>
             </div>
-
             <div className="info-item">
               <label>Total Amount</label>
               <p className="total-amount">Rs. {parseFloat(order.total).toLocaleString()}</p>
@@ -164,7 +158,6 @@ const OrderConfirmation = () => {
             <h3>Order Items</h3>
             <div className="order-items-list">
               {order.items && order.items.map((item) => {
-                //  Check if this item was discounted
                 const isDiscounted = item.discount_percentage > 0;
                 const originalTotal = item.original_price
                   ? parseFloat(item.original_price) * item.quantity
@@ -186,17 +179,13 @@ const OrderConfirmation = () => {
                     <div className="item-details">
                       <p className="item-name">{item.product_name}</p>
                       <p className="item-qty">Quantity: {item.quantity}</p>
-                      {/*  Show discount badge if applicable */}
                       {isDiscounted && (
                         <span className="item-discount-badge">-{item.discount_percentage}% OFF</span>
                       )}
                     </div>
                     <div className="item-price-wrap">
-                      {/*  Show strikethrough original price if discounted */}
                       {isDiscounted && originalTotal && (
-                        <p className="item-original-price">
-                          Rs. {originalTotal.toLocaleString()}
-                        </p>
+                        <p className="item-original-price">Rs. {originalTotal.toLocaleString()}</p>
                       )}
                       <p className={`item-price ${isDiscounted ? 'discounted' : ''}`}>
                         Rs. {paidTotal.toLocaleString()}

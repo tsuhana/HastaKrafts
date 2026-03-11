@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auctionAPI } from '../api/axios';
+import { useToast } from '../context/ToastContext';
 import '../styles/CreateAuction.css';
 
 const CreateAuction = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -32,7 +34,7 @@ const CreateAuction = () => {
     const files = Array.from(e.target.files);
     
     if (files.length > 5) {
-      alert('Maximum 5 images allowed');
+      toast.warning('Maximum 5 images allowed');
       return;
     }
 
@@ -119,12 +121,12 @@ const CreateAuction = () => {
       const res = await auctionAPI.createAuction(data);
 
       if (res.data.success) {
-        alert('Auction created successfully!');
+        toast.success('Auction created successfully!');
         navigate('/seller/dashboard');
       }
     } catch (err) {
       console.error('Create auction error:', err);
-      alert(err.response?.data?.message || 'Failed to create auction');
+      toast.error(err.response?.data?.message || 'Failed to create auction');
     } finally {
       setLoading(false);
     }

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userAPI, orderAPI } from '../api/axios';
+import { useToast } from '../context/ToastContext';
 import '../styles/UserProfile.css';
 
 const UserProfile = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -32,13 +34,8 @@ const UserProfile = () => {
   const [errors, setErrors] = useState({});
 
   const provinces = [
-    'Bagmati',
-    'Gandaki',
-    'Lumbini',
-    'Koshi',
-    'Madhesh',
-    'Karnali',
-    'Sudurpashchim',
+    'Bagmati', 'Gandaki', 'Lumbini', 'Koshi',
+    'Madhesh', 'Karnali', 'Sudurpashchim',
   ];
 
   useEffect(() => {
@@ -66,7 +63,7 @@ const UserProfile = () => {
       }
     } catch (err) {
       console.error('Error fetching profile:', err);
-      alert('Failed to load profile. Please login again.');
+      toast.error('Failed to load profile. Please login again.');
       if (err.response?.status === 401) {
         navigate('/login');
       }
@@ -76,20 +73,14 @@ const UserProfile = () => {
   };
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
     if (errors[e.target.name]) {
       setErrors({ ...errors, [e.target.name]: '' });
     }
   };
 
   const handlePasswordChange = (e) => {
-    setPasswordData({
-      ...passwordData,
-      [e.target.name]: e.target.value,
-    });
+    setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
     if (errors[e.target.name]) {
       setErrors({ ...errors, [e.target.name]: '' });
     }
@@ -101,12 +92,12 @@ const UserProfile = () => {
 
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
-      alert('Please upload a valid image (JPG, PNG, WEBP)');
+      toast.error('Please upload a valid image (JPG, PNG, WEBP)');
       return;
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      alert('Image size must be less than 2MB');
+      toast.error('Image size must be less than 2MB');
       return;
     }
 
@@ -119,12 +110,12 @@ const UserProfile = () => {
       const res = await userAPI.uploadAvatar(formData);
 
       if (res.data.success) {
-        alert('Profile picture updated successfully!');
+        toast.success('Profile picture updated successfully!');
         fetchUserProfile();
       }
     } catch (err) {
       console.error('Error uploading image:', err);
-      alert(err.response?.data?.message || 'Failed to upload image');
+      toast.error(err.response?.data?.message || 'Failed to upload image');
     } finally {
       setUploadingImage(false);
     }
@@ -175,23 +166,21 @@ const UserProfile = () => {
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
 
-    if (!validateProfileForm()) {
-      return;
-    }
+    if (!validateProfileForm()) return;
 
     setSaving(true);
 
     try {
       const res = await userAPI.updateProfile(formData);
       if (res.data.success) {
-        alert('Profile updated successfully!');
+        toast.success('Profile updated successfully!');
         setUser(res.data.data);
         setIsEditing(false);
         fetchUserProfile();
       }
     } catch (err) {
       console.error('Error updating profile:', err);
-      alert(err.response?.data?.message || 'Failed to update profile');
+      toast.error(err.response?.data?.message || 'Failed to update profile');
     } finally {
       setSaving(false);
     }
@@ -200,9 +189,7 @@ const UserProfile = () => {
   const handleChangePassword = async (e) => {
     e.preventDefault();
 
-    if (!validatePasswordForm()) {
-      return;
-    }
+    if (!validatePasswordForm()) return;
 
     setSaving(true);
 
@@ -213,17 +200,13 @@ const UserProfile = () => {
       });
 
       if (res.data.success) {
-        alert('Password changed successfully!');
-        setPasswordData({
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: '',
-        });
+        toast.success('Password changed successfully!');
+        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
         setActiveTab('profile');
       }
     } catch (err) {
       console.error('Error changing password:', err);
-      alert(err.response?.data?.message || 'Failed to change password');
+      toast.error(err.response?.data?.message || 'Failed to change password');
     } finally {
       setSaving(false);
     }
@@ -236,9 +219,7 @@ const UserProfile = () => {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return 'N/A';
       return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
+        year: 'numeric', month: 'long', day: 'numeric',
       });
     } catch {
       return 'N/A';
@@ -302,8 +283,8 @@ const UserProfile = () => {
                 <span className={`role-badge role-${user.role}`}>
                   {user.role === 'seller' ? 'Seller' : user.role === 'admin' ? 'Admin' : 'Buyer'}
                 </span>
+                {/* ✅ FIXED: Check both createdAt (Sequelize camelCase) and created_at */}
                 <span className="member-badge">
-                  {/* ✅ FIXED: Check both createdAt (Sequelize camelCase) and created_at */}
                   Member since {formatDate(user.createdAt || user.created_at)}
                 </span>
               </div>
@@ -419,40 +400,17 @@ const UserProfile = () => {
                     <div className="form-grid">
                       <div className="form-field">
                         <label>Full Name *</label>
-                        <input
-                          type="text"
-                          name="full_name"
-                          value={formData.full_name}
-                          onChange={handleChange}
-                          placeholder="Your full name"
-                          className={errors.full_name ? 'error' : ''}
-                        />
+                        <input type="text" name="full_name" value={formData.full_name} onChange={handleChange} placeholder="Your full name" className={errors.full_name ? 'error' : ''} />
                         {errors.full_name && <span className="error-msg">{errors.full_name}</span>}
                       </div>
-
                       <div className="form-field">
                         <label>Email *</label>
-                        <input
-                          type="email"
-                          name="email"
-                          value={formData.email}
-                          onChange={handleChange}
-                          placeholder="your@email.com"
-                          className={errors.email ? 'error' : ''}
-                        />
+                        <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="your@email.com" className={errors.email ? 'error' : ''} />
                         {errors.email && <span className="error-msg">{errors.email}</span>}
                       </div>
-
                       <div className="form-field">
                         <label>Phone Number {user.role === 'buyer' ? '*' : ''}</label>
-                        <input
-                          type="tel"
-                          name="phone"
-                          value={formData.phone}
-                          onChange={handleChange}
-                          placeholder="9812345678"
-                          className={errors.phone ? 'error' : ''}
-                        />
+                        <input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="9812345678" className={errors.phone ? 'error' : ''} />
                         {errors.phone && <span className="error-msg">{errors.phone}</span>}
                       </div>
                     </div>
@@ -464,66 +422,30 @@ const UserProfile = () => {
                       <div className="form-grid">
                         <div className="form-field full-width">
                           <label>Street Address</label>
-                          <input
-                            type="text"
-                            name="address"
-                            value={formData.address}
-                            onChange={handleChange}
-                            placeholder="House/Building, Street, Area"
-                            className={errors.address ? 'error' : ''}
-                          />
+                          <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="House/Building, Street, Area" className={errors.address ? 'error' : ''} />
                           {errors.address && <span className="error-msg">{errors.address}</span>}
                         </div>
-
                         <div className="form-field">
                           <label>City</label>
-                          <input
-                            type="text"
-                            name="city"
-                            value={formData.city}
-                            onChange={handleChange}
-                            placeholder="Kathmandu, Pokhara, etc."
-                            className={errors.city ? 'error' : ''}
-                          />
+                          <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="Kathmandu, Pokhara, etc." className={errors.city ? 'error' : ''} />
                           {errors.city && <span className="error-msg">{errors.city}</span>}
                         </div>
-
                         <div className="form-field">
                           <label>Province</label>
-                          <select
-                            name="state"
-                            value={formData.state}
-                            onChange={handleChange}
-                          >
+                          <select name="state" value={formData.state} onChange={handleChange}>
                             <option value="">Select Province</option>
                             {provinces.map((province) => (
-                              <option key={province} value={province}>
-                                {province}
-                              </option>
+                              <option key={province} value={province}>{province}</option>
                             ))}
                           </select>
                         </div>
-
                         <div className="form-field">
                           <label>Postal Code</label>
-                          <input
-                            type="text"
-                            name="postal_code"
-                            value={formData.postal_code}
-                            onChange={handleChange}
-                            placeholder="44600"
-                          />
+                          <input type="text" name="postal_code" value={formData.postal_code} onChange={handleChange} placeholder="44600" />
                         </div>
-
                         <div className="form-field full-width">
                           <label>Landmark</label>
-                          <input
-                            type="text"
-                            name="landmark"
-                            value={formData.landmark}
-                            onChange={handleChange}
-                            placeholder="Near XYZ Temple, Opposite ABC Store"
-                          />
+                          <input type="text" name="landmark" value={formData.landmark} onChange={handleChange} placeholder="Near XYZ Temple, Opposite ABC Store" />
                           <small>Help delivery person find you easily</small>
                         </div>
                       </div>
@@ -544,46 +466,19 @@ const UserProfile = () => {
               <form onSubmit={handleChangePassword} className="password-form">
                 <div className="form-field">
                   <label>Current Password *</label>
-                  <input
-                    type="password"
-                    name="currentPassword"
-                    value={passwordData.currentPassword}
-                    onChange={handlePasswordChange}
-                    className={errors.currentPassword ? 'error' : ''}
-                  />
-                  {errors.currentPassword && (
-                    <span className="error-msg">{errors.currentPassword}</span>
-                  )}
+                  <input type="password" name="currentPassword" value={passwordData.currentPassword} onChange={handlePasswordChange} className={errors.currentPassword ? 'error' : ''} />
+                  {errors.currentPassword && <span className="error-msg">{errors.currentPassword}</span>}
                 </div>
-
                 <div className="form-field">
                   <label>New Password *</label>
-                  <input
-                    type="password"
-                    name="newPassword"
-                    value={passwordData.newPassword}
-                    onChange={handlePasswordChange}
-                    className={errors.newPassword ? 'error' : ''}
-                  />
-                  {errors.newPassword && (
-                    <span className="error-msg">{errors.newPassword}</span>
-                  )}
+                  <input type="password" name="newPassword" value={passwordData.newPassword} onChange={handlePasswordChange} className={errors.newPassword ? 'error' : ''} />
+                  {errors.newPassword && <span className="error-msg">{errors.newPassword}</span>}
                 </div>
-
                 <div className="form-field">
                   <label>Confirm New Password *</label>
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    value={passwordData.confirmPassword}
-                    onChange={handlePasswordChange}
-                    className={errors.confirmPassword ? 'error' : ''}
-                  />
-                  {errors.confirmPassword && (
-                    <span className="error-msg">{errors.confirmPassword}</span>
-                  )}
+                  <input type="password" name="confirmPassword" value={passwordData.confirmPassword} onChange={handlePasswordChange} className={errors.confirmPassword ? 'error' : ''} />
+                  {errors.confirmPassword && <span className="error-msg">{errors.confirmPassword}</span>}
                 </div>
-
                 <button type="submit" disabled={saving} className="btn-save">
                   {saving ? 'Changing...' : 'Change Password'}
                 </button>
@@ -666,14 +561,11 @@ const OrderHistory = () => {
               {/* Check both createdAt and created_at */}
               <p className="order-date">
                 {new Date(order.createdAt || order.created_at).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
+                  year: 'numeric', month: 'long', day: 'numeric',
                 })}
               </p>
             </div>
             <div className="order-status-badges">
-              {/* ✅ Order status — capitalized */}
               <span
                 className="status-badge"
                 style={{
@@ -683,8 +575,6 @@ const OrderHistory = () => {
               >
                 {order.order_status?.charAt(0).toUpperCase() + order.order_status?.slice(1)}
               </span>
-
-              {/* ✅ Payment badge — "Paid (Khalti)" / "Paid (COD)" / "Unpaid" */}
               <span
                 className="payment-badge"
                 style={{

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { productAPI } from '../api/axios';
+import { useToast } from '../context/ToastContext';
 import '../styles/EditProduct.css';
 
 const EditProduct = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -16,8 +18,8 @@ const EditProduct = () => {
     price: '',
     stock_quantity: '',
     sku: '',
-    has_discount: false,       
-    discount_percentage: '',  
+    has_discount: false,
+    discount_percentage: '',
   });
   const [existingImages, setExistingImages] = useState([]);
   const [newImages, setNewImages] = useState([]);
@@ -45,14 +47,14 @@ const EditProduct = () => {
           price: product.price,
           stock_quantity: product.stock_quantity,
           sku: product.sku || '',
-          has_discount: product.has_discount || false,                          // ✅ NEW
-          discount_percentage: product.discount_percentage > 0 ? product.discount_percentage : '', // ✅ NEW
+          has_discount: product.has_discount || false,
+          discount_percentage: product.discount_percentage > 0 ? product.discount_percentage : '',
         });
         setExistingImages(product.images || []);
       }
     } catch (err) {
       console.error('Error fetching product:', err);
-      alert('Failed to load product data');
+      toast.error('Failed to load product data');
       navigate('/seller/dashboard');
     } finally {
       setLoading(false);
@@ -111,7 +113,6 @@ const EditProduct = () => {
     if (!formData.price || parseFloat(formData.price) <= 0) newErrors.price = 'Valid price is required';
     if (!formData.stock_quantity || parseInt(formData.stock_quantity) < 0) newErrors.stock_quantity = 'Valid stock quantity is required';
 
-    //  Validate discount
     if (formData.has_discount) {
       const pct = parseInt(formData.discount_percentage);
       if (!pct || pct < 1 || pct > 99) newErrors.discount_percentage = 'Discount must be between 1% and 99%';
@@ -138,14 +139,12 @@ const EditProduct = () => {
     try {
       const formDataToSend = new FormData();
 
-      // Append all text fields except has_discount (handle separately)
       Object.keys(formData).forEach(key => {
         if (key !== 'has_discount' && key !== 'discount_percentage') {
           formDataToSend.append(key, formData[key]);
         }
       });
 
-      //  Append discount fields
       formDataToSend.append('has_discount', formData.has_discount);
       formDataToSend.append('discount_percentage', formData.has_discount ? (parseInt(formData.discount_percentage) || 0) : 0);
 
@@ -155,12 +154,12 @@ const EditProduct = () => {
 
       const response = await productAPI.updateProduct(id, formDataToSend);
       if (response.data.success) {
-        alert('Product updated successfully! It will be reviewed by admin.');
+        toast.success('Product updated successfully! It will be reviewed by admin.');
         navigate('/seller/dashboard');
       }
     } catch (err) {
       console.error('Error updating product:', err);
-      alert(err.response?.data?.message ? 'Error: ' + err.response.data.message : 'Failed to update product. Please try again.');
+      toast.error(err.response?.data?.message ? 'Error: ' + err.response.data.message : 'Failed to update product. Please try again.');
     } finally {
       setSubmitting(false);
     }

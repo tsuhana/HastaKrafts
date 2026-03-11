@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { storyAPI } from '../api/axios';
+import { useToast } from '../context/ToastContext';
 import '../styles/CreateBlog.css';
 
 const CATEGORIES = [
@@ -14,6 +15,7 @@ const CATEGORIES = [
 
 const CreateBlog = () => {
   const navigate        = useNavigate();
+  const toast           = useToast();
   const [submitting, setSubmitting]     = useState(false);
   const [previewing, setPreviewing]     = useState(false);
   const [images, setImages]             = useState([]);
@@ -36,7 +38,10 @@ const CreateBlog = () => {
 
   const handleImages = (e) => {
     const files = Array.from(e.target.files);
-    if (files.length > 5) { alert('Maximum 5 images allowed.'); return; }
+    if (files.length > 5) {
+      toast.warning('Maximum 5 images allowed.');
+      return;
+    }
     setImages(files);
     setImagePreviews(files.map((f) => URL.createObjectURL(f)));
   };
@@ -74,7 +79,7 @@ const CreateBlog = () => {
       }
     } catch (err) {
       console.error('Create blog error:', err);
-      alert(err.response?.data?.message || 'Failed to publish story');
+      toast.error(err.response?.data?.message || 'Failed to publish story');
     } finally {
       setSubmitting(false);
     }
