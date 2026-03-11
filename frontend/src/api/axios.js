@@ -162,7 +162,7 @@ export const pointsAPI = {
   getHistory: () => API.get('/points/history'),
 };
 
-//BLOG STORIES
+// BLOG STORIES
 export const storyAPI = {
   getAllStories: (params) => API.get('/stories', { params }),
   getStoryById: (id) => API.get(`/stories/${id}`),

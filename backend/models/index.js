@@ -41,7 +41,7 @@ db.Banner = Banner;
 db.Contact = Contact;
 db.UserPoints = UserPoints;
 db.PointTransaction = PointTransaction;
-db.Story = Story; // ✅ NEW
+db.Story = Story; // 
 
 // ==================== EXISTING RELATIONSHIPS (unchanged) ====================
 

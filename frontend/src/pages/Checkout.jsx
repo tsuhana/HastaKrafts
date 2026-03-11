@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cartAPI, orderAPI, userAPI, pointsAPI } from '../api/axios';
+import { useToast } from '../context/ToastContext';
 import '../styles/Checkout.css';
 
 const Checkout = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState(null);
   const [subtotal, setSubtotal] = useState(0);
@@ -68,7 +70,7 @@ const Checkout = () => {
       }
     } catch (err) {
       console.error('Error fetching data:', err);
-      alert('Failed to load checkout data');
+      toast.error('Failed to load checkout data');
     } finally {
       setLoading(false);
     }
@@ -111,12 +113,12 @@ const Checkout = () => {
 
   const handlePlaceOrder = async () => {
     if (!validateForm()) {
-      alert('Please fill in all required fields');
+      toast.warning('Please fill in all required fields');
       return;
     }
 
     if (!cart || !cart.items || cart.items.length === 0) {
-      alert('Your cart is empty');
+      toast.error('Your cart is empty');
       return;
     }
 
@@ -138,13 +140,13 @@ const Checkout = () => {
         if (paymentMethod === 'khalti' && res.data.data.payment_url) {
           window.location.href = res.data.data.payment_url;
         } else {
-          alert('Order placed successfully!');
+          toast.success('Order placed successfully!');
           navigate(`/order-confirmation/${res.data.data.order_id}`);
         }
       }
     } catch (err) {
       console.error('Place order error:', err);
-      alert(err.response?.data?.message || 'Failed to place order');
+      toast.error(err.response?.data?.message || 'Failed to place order');
     } finally {
       setPlacing(false);
     }
@@ -354,7 +356,7 @@ const Checkout = () => {
 
               <div className="summary-items">
                 {cart.items.map((item) => {
-                  // ✅ Calculate discounted price per item for display
+                  //  Calculate discounted price per item for display
                   const hasDiscount = item.product.has_discount === true || item.product.has_discount === 'true';
                   const discountPct = parseInt(item.product.discount_percentage) || 0;
                   const originalPrice = parseFloat(item.product.price);
@@ -373,13 +375,13 @@ const Checkout = () => {
                       <div className="summary-item-details">
                         <p className="summary-item-name">{item.product.name}</p>
                         <p className="summary-item-qty">Qty: {item.quantity}</p>
-                        {/* ✅ Show discount badge if discounted */}
+                        {/*  Show discount badge if discounted */}
                         {isDiscounted && (
                           <span className="summary-discount-badge">-{discountPct}% OFF</span>
                         )}
                       </div>
                       <div className="summary-item-price-wrap">
-                        {/* ✅ Show strikethrough original price if discounted */}
+                        {/*  Show strikethrough original price if discounted */}
                         {isDiscounted && (
                           <p className="summary-item-original-price">
                             Rs. {(originalPrice * item.quantity).toLocaleString()}
