@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useToast } from '../context/ToastContext';
+import BrandLogo from '../components/BrandLogo';
 import '../styles/RegisterSeller.css';
 
 const RegisterSeller = () => {
@@ -80,7 +81,7 @@ const RegisterSeller = () => {
       <div className="seller-register-container">
 
         <div className="seller-header">
-          <h1 className="seller-logo">हस्त KRAFTS</h1>
+          <BrandLogo variant="light" />
           <h2 className="seller-title">Become a Seller</h2>
           <p className="seller-subtitle">Join our marketplace and showcase your handmade crafts</p>
         </div>

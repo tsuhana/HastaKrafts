@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import BrandLogo from '../components/BrandLogo';
 import '../styles/Login.css';
 
 const Login = () => {
@@ -62,7 +63,7 @@ const Login = () => {
         <div className="auth-form-section">
           <div className="auth-form-wrapper">
             <div className="auth-header">
-              <h1 className="auth-logo">हस्त KRAFTS</h1>
+              <BrandLogo variant="light" />
               <p className="auth-subtitle">Welcome Back!</p>
             </div>
 

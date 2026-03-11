@@ -1,0 +1,24 @@
+
+.brand-logo {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-decoration: none;
+  display: inline-block;
+  transition: opacity 0.2s ease;
+}
+
+.brand-logo:hover {
+  opacity: 0.85;
+}
+
+/* ── On white/light backgrounds (Login, Register, RegisterSeller) ── */
+.brand-logo--light {
+  color: #2C1810;
+}
+
+/* ── On dark/brown backgrounds (NavBar) ── */
+.brand-logo--dark {
+  color: #FFFFFF;
+}
