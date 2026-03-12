@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cartAPI, pointsAPI } from '../api/axios';
+import { useTranslation } from 'react-i18next';
 import Icons from '../utils/icons';
+import LanguageSwitcher from './LanguageSwitcher';
 import '../styles/NavBar.css';
 
 const NavBar = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
   const [cartCount, setCartCount] = useState(0);
@@ -106,43 +109,43 @@ const NavBar = () => {
         <div className="navbar-links">
           <Link to="/" className="nav-link">
             <Icons.Home size={18} />
-            <span>Home</span>
+            <span>{t('nav.home')}</span>
           </Link>
           <Link to="/products" className="nav-link">
             <Icons.Package size={18} />
-            <span>Products</span>
+            <span>{t('nav.products')}</span>
           </Link>
           <Link to="/auctions" className="nav-link">
             <Icons.TrendingUp size={18} />
-            <span>Auctions</span>
+            <span>{t('nav.auctions')}</span>
           </Link>
-          {/* ✅ NEW: Blog link */}
           <Link to="/blog" className="nav-link">
             <Icons.Book size={18} />
-            <span>Blog</span>
+            <span>{t('nav.blog')}</span>
           </Link>
           <Link to="/contact" className="nav-link">
             <Icons.Mail size={18} />
-            <span>Contact</span>
+            <span>{t('nav.contact')}</span>
           </Link>
         </div>
 
         <div className="navbar-actions">
+          <LanguageSwitcher />
+
           {isLoggedIn ? (
             <>
               {user?.role === 'buyer' && (
                 <>
-                  {/* POINTS BADGE */}
-                  <Link to="/profile" className="nav-icon-btn points-btn" title={`${userPoints} Points`}>
+                  <Link to="/profile" className="nav-icon-btn points-btn" title={`${userPoints} ${t('nav.points')}`}>
                     <Icons.Gift size={22} />
                     <span className="points-badge">{userPoints}</span>
                   </Link>
 
-                  <Link to="/wishlist" className="nav-icon-btn" title="Wishlist">
+                  <Link to="/wishlist" className="nav-icon-btn" title={t('nav.wishlist')}>
                     <Icons.Heart size={22} />
                   </Link>
 
-                  <Link to="/cart" className="nav-icon-btn cart-btn" title="Cart">
+                  <Link to="/cart" className="nav-icon-btn cart-btn" title={t('nav.cart')}>
                     <Icons.Cart size={22} />
                     {cartCount > 0 && (
                       <span className="cart-badge">{cartCount}</span>
@@ -151,7 +154,7 @@ const NavBar = () => {
                 </>
               )}
 
-              <Link to="/messages" className="nav-icon-btn" title="Messages">
+              <Link to="/messages" className="nav-icon-btn" title={t('nav.messages')}>
                 <Icons.Messages size={22} />
               </Link>
 
@@ -178,7 +181,7 @@ const NavBar = () => {
                       onClick={() => setShowDropdown(false)}
                     >
                       <Icons.Home size={18} />
-                      <span>Dashboard</span>
+                      <span>{t('nav.dashboard')}</span>
                     </Link>
 
                     <Link
@@ -187,10 +190,9 @@ const NavBar = () => {
                       onClick={() => setShowDropdown(false)}
                     >
                       <Icons.User size={18} />
-                      <span>Profile</span>
+                      <span>{t('nav.profile')}</span>
                     </Link>
 
-                    {/* ✅ NEW: Write Blog shortcut for sellers in dropdown */}
                     {user?.role === 'seller' && (
                       <Link
                         to="/seller/create-blog"
@@ -207,7 +209,7 @@ const NavBar = () => {
                       className="dropdown-item logout-item"
                     >
                       <Icons.LogOut size={18} />
-                      <span>Logout</span>
+                      <span>{t('nav.logout')}</span>
                     </button>
                   </div>
                 )}
@@ -215,8 +217,8 @@ const NavBar = () => {
             </>
           ) : (
             <>
-              <Link to="/login" className="btn-login">Login</Link>
-              <Link to="/register" className="btn-register">Get Started</Link>
+              <Link to="/login" className="btn-login">{t('nav.login')}</Link>
+              <Link to="/register" className="btn-register">{t('nav.register')}</Link>
             </>
           )}
 
@@ -233,24 +235,23 @@ const NavBar = () => {
         <div className="mobile-menu">
           <Link to="/" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
             <Icons.Home size={20} />
-            <span>Home</span>
+            <span>{t('nav.home')}</span>
           </Link>
           <Link to="/products" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
             <Icons.Package size={20} />
-            <span>Products</span>
+            <span>{t('nav.products')}</span>
           </Link>
           <Link to="/auctions" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
             <Icons.TrendingUp size={20} />
-            <span>Auctions</span>
+            <span>{t('nav.auctions')}</span>
           </Link>
-          {/* ✅ NEW: Blog in mobile menu */}
           <Link to="/blog" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
             <Icons.Book size={20} />
-            <span>Blog</span>
+            <span>{t('nav.blog')}</span>
           </Link>
           <Link to="/contact" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
             <Icons.Mail size={20} />
-            <span>Contact</span>
+            <span>{t('nav.contact')}</span>
           </Link>
 
           {isLoggedIn && (
@@ -259,15 +260,15 @@ const NavBar = () => {
                 <>
                   <Link to="/profile" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
                     <Icons.Gift size={20} />
-                    <span>Points ({userPoints})</span>
+                    <span>{t('nav.points')} ({userPoints})</span>
                   </Link>
                   <Link to="/wishlist" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
                     <Icons.Heart size={20} />
-                    <span>Wishlist</span>
+                    <span>{t('nav.wishlist')}</span>
                   </Link>
                   <Link to="/cart" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
                     <Icons.Cart size={20} />
-                    <span>Cart {cartCount > 0 && `(${cartCount})`}</span>
+                    <span>{t('nav.cart')} {cartCount > 0 && `(${cartCount})`}</span>
                   </Link>
                 </>
               )}
@@ -279,15 +280,15 @@ const NavBar = () => {
               )}
               <Link to="/messages" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
                 <Icons.Messages size={20} />
-                <span>Messages</span>
+                <span>{t('nav.messages')}</span>
               </Link>
               <Link to="/profile" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
                 <Icons.User size={20} />
-                <span>Profile</span>
+                <span>{t('nav.profile')}</span>
               </Link>
               <button onClick={handleLogout} className="mobile-link logout-link">
                 <Icons.LogOut size={20} />
-                <span>Logout</span>
+                <span>{t('nav.logout')}</span>
               </button>
             </>
           )}

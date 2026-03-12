@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { productAPI, orderAPI } from '../api/axios';
+import { useToast } from '../context/ToastContext';
+import ConfirmModal from '../components/ConfirmModal';
 import '../styles/SellerDashboard.css';
 
 const SellerDashboard = () => {
+  const toast = useToast();
+
   const [stats, setStats] = useState({
     total: 0,
     totalSales: 0,
@@ -17,6 +21,8 @@ const SellerDashboard = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, productId: null });
+
   const API_URL = 'http://localhost:5000';
 
   useEffect(() => {
@@ -27,7 +33,6 @@ const SellerDashboard = () => {
     try {
       setLoading(true);
 
-      // Fetch products
       const productRes = await productAPI.getSellerProducts();
       if (productRes.data.success) {
         const data = productRes.data.data;
@@ -45,7 +50,6 @@ const SellerDashboard = () => {
         }));
       }
 
-      // Fetch orders
       const orderRes = await orderAPI.getSellerOrders();
       if (orderRes.data.success) {
         const orderData = orderRes.data.data;
@@ -68,35 +72,38 @@ const SellerDashboard = () => {
     try {
       const res = await orderAPI.updateOrderStatus(orderId, { order_status: newStatus });
       if (res.data.success) {
-        alert('Order status updated successfully');
+        toast.success('Order status updated successfully');
         fetchSellerData();
       }
     } catch (err) {
       console.error('Status update error:', err);
-      alert('Failed to update status');
+      toast.error('Failed to update order status');
     }
   };
 
-  const handleDelete = async (productId) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) return;
+  const handleDeleteClick = (productId) => {
+    setConfirmModal({ isOpen: true, productId });
+  };
 
+  const handleDeleteConfirm = async () => {
+    const { productId } = confirmModal;
+    setConfirmModal({ isOpen: false, productId: null });
     try {
       await productAPI.deleteProduct(productId);
-      alert('Product deleted successfully');
+      toast.success('Product deleted successfully');
       fetchSellerData();
     } catch (err) {
-      alert('Failed to delete product');
+      toast.error('Failed to delete product');
     }
   };
 
-  // Helper: calculate discounted price
   const getDiscountedPrice = (product) => {
     const hasDiscount = product.has_discount === true || product.has_discount === 'true';
     const discountPct = parseInt(product.discount_percentage) || 0;
     if (hasDiscount && discountPct > 0) {
       return Math.round(parseFloat(product.price) * (1 - discountPct / 100));
     }
-    return null; // null means no discount
+    return null;
   };
 
   if (loading) {
@@ -110,6 +117,18 @@ const SellerDashboard = () => {
 
   return (
     <div className="artisan-dashboard">
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title="Delete this product?"
+        message="This action cannot be undone. The product will be permanently removed."
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmVariant="danger"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setConfirmModal({ isOpen: false, productId: null })}
+      />
+
       <div className="dashboard-header-new">
         <h1>Artisan Dashboard</h1>
         <div style={{ display: 'flex', gap: '1rem' }}>
@@ -205,7 +224,6 @@ const SellerDashboard = () => {
         ) : (
           <div className="products-grid-modern">
             {products.slice(0, 6).map((product) => {
-              //  Discount logic per product card
               const hasDiscount = product.has_discount === true || product.has_discount === 'true';
               const discountPct = parseInt(product.discount_percentage) || 0;
               const originalPrice = parseFloat(product.price);
@@ -223,7 +241,6 @@ const SellerDashboard = () => {
                     <span className={`product-status-badge status-${product.status}`}>
                       {product.status}
                     </span>
-                    {/*  Discount badge on image */}
                     {isDiscounted && (
                       <span className="seller-discount-badge">-{discountPct}%</span>
                     )}
@@ -231,7 +248,6 @@ const SellerDashboard = () => {
                   <div className="product-details-modern">
                     <h4>{product.name}</h4>
                     <div className="product-price-wrap">
-                      {/*  Show strikethrough original + discounted price */}
                       {isDiscounted ? (
                         <>
                           <p className="product-original-price">
@@ -253,7 +269,7 @@ const SellerDashboard = () => {
                     <Link to={`/seller/edit-product/${product.product_id}`} className="btn-icon">
                       Edit
                     </Link>
-                    <button onClick={() => handleDelete(product.product_id)} className="btn-icon">
+                    <button onClick={() => handleDeleteClick(product.product_id)} className="btn-icon">
                       Delete
                     </button>
                   </div>

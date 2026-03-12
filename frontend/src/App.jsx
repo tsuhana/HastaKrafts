@@ -1,3 +1,4 @@
+import './i18n';
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 
@@ -9,7 +10,6 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import GoogleAuthSuccess from "./pages/GoogleAuthSuccess";
 import KhaltiCallback from './pages/KhaltiCallback';
 
-// ==================== PUBLIC PAGES ====================
 import Home from "./pages/Home";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
@@ -21,13 +21,11 @@ import ResetPassword from "./pages/ResetPassword";
 import VerifyOTP from "./pages/VerifyOTP";
 import Contact from "./pages/Contact";
 
-// BLOG STORIES
 import Blog from "./pages/Blog";
 import BlogDetail from "./pages/BlogDetail";
 import CreateBlog from "./pages/CreateBlog";
 import EditBlog from "./pages/EditBlog";
 
-// ==================== USER PAGES ====================
 import UserProfile from "./pages/UserProfile";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
@@ -35,17 +33,14 @@ import OrderConfirmation from "./pages/OrderConfirmation";
 import Chat from "./pages/Chat";
 import Wishlist from "./pages/Wishlist";
 
-// ==================== AUCTION PAGES ====================
 import Auctions from "./pages/Auctions";
 import AuctionDetail from "./pages/AuctionDetail";
 import CreateAuction from "./pages/CreateAuction";
 
-// ==================== SELLER PAGES ====================
 import SellerDashboard from "./pages/SellerDashboard.jsx";
 import AddProduct from "./pages/AddProduct";
 import EditProduct from "./pages/EditProduct";
 
-// ==================== ADMIN PAGES ====================
 import AdminDashboard from "./pages/AdminDashboard";
 
 import "./styles/variables.css";
@@ -64,8 +59,6 @@ const AppContent = () => {
 
       <main className="main-content">
         <Routes>
-
-          {/* ==================== PUBLIC ROUTES ==================== */}
           <Route path="/" element={<Home />} />
           <Route path="/products" element={<Products />} />
           <Route path="/products/:id" element={<ProductDetail />} />
@@ -86,19 +79,15 @@ const AppContent = () => {
           <Route path="/auth/google/success" element={<GoogleAuthSuccess />} />
           <Route path="/payment/khalti/callback" element={<KhaltiCallback />} />
 
-          {/* ==================== USER PROFILE (ALL ROLES) ==================== */}
           <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
 
-          {/* ==================== BUYER-ONLY ROUTES ==================== */}
           <Route path="/cart"     element={<ProtectedRoute allowedRoles={["buyer"]}><Cart /></ProtectedRoute>} />
           <Route path="/wishlist" element={<ProtectedRoute allowedRoles={["buyer"]}><Wishlist /></ProtectedRoute>} />
           <Route path="/checkout" element={<ProtectedRoute allowedRoles={["buyer"]}><Checkout /></ProtectedRoute>} />
           <Route path="/order-confirmation/:id" element={<ProtectedRoute allowedRoles={["buyer"]}><OrderConfirmation /></ProtectedRoute>} />
 
-          {/* ==================== MESSAGES / CHAT ==================== */}
           <Route path="/messages" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
 
-          {/* ==================== SELLER ROUTES ==================== */}
           <Route path="/seller/dashboard"        element={<ProtectedRoute allowedRoles={["seller"]}><SellerDashboard /></ProtectedRoute>} />
           <Route path="/seller/add-product"      element={<ProtectedRoute allowedRoles={["seller"]}><AddProduct /></ProtectedRoute>} />
           <Route path="/seller/edit-product/:id" element={<ProtectedRoute allowedRoles={["seller"]}><EditProduct /></ProtectedRoute>} />
@@ -106,13 +95,10 @@ const AppContent = () => {
           <Route path="/seller/create-blog"      element={<ProtectedRoute allowedRoles={["seller"]}><CreateBlog /></ProtectedRoute>} />
           <Route path="/seller/edit-blog/:id"    element={<ProtectedRoute allowedRoles={["seller"]}><EditBlog /></ProtectedRoute>} />
 
-          {/* ==================== ADMIN ROUTES ==================== */}
           <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
 
-          {/* ==================== FALLBACKS ==================== */}
           <Route path="/about" element={<div style={{ padding: "4rem 2rem", textAlign: "center" }}>About - Coming Soon</div>} />
           <Route path="*"      element={<div style={{ padding: "4rem 2rem", textAlign: "center" }}>404 - Page Not Found</div>} />
-
         </Routes>
       </main>
 

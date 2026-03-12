@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { productAPI, cartAPI, wishlistAPI } from '../api/axios';
 import { useToast } from '../context/ToastContext';
+import { useTranslation } from 'react-i18next';
 import Icons from '../utils/icons';
 import BannerCarousel from '../components/BannerCarousel';
 import '../styles/Home.css';
@@ -14,6 +15,8 @@ const calculateDiscountedPrice = (price, hasDiscount, discountPercentage) => {
 const Home = () => {
   const navigate = useNavigate();
   const toast = useToast();
+  const { t } = useTranslation();
+
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [trendingProducts, setTrendingProducts] = useState([]);
   const [topCategories, setTopCategories] = useState([]);
@@ -38,7 +41,7 @@ const Home = () => {
       const [featured, trending, categories] = await Promise.all([
         productAPI.getFeaturedProducts().catch(() => ({ data: { data: [] } })),
         productAPI.getTrendingProducts().catch(() => ({ data: { data: [] } })),
-        productAPI.getTopCategories().catch(() => ({ data: { data: [] } }))
+        productAPI.getTopCategories().catch(() => ({ data: { data: [] } })),
       ]);
 
       setFeaturedProducts(featured.data.data || []);
@@ -64,7 +67,7 @@ const Home = () => {
   const fetchWishlist = async () => {
     try {
       const res = await wishlistAPI.getWishlist();
-      const productIds = new Set(res.data.data.map(item => item.product_id));
+      const productIds = new Set(res.data.data.map((item) => item.product_id));
       setWishlistItems(productIds);
     } catch (err) {
       console.error('Fetch wishlist error:', err);
@@ -86,7 +89,7 @@ const Home = () => {
       return;
     }
 
-    setAddingToCart(prev => ({ ...prev, [product.product_id]: true }));
+    setAddingToCart((prev) => ({ ...prev, [product.product_id]: true }));
     try {
       await cartAPI.addToCart({ product_id: product.product_id, quantity: 1 });
       toast.success('Added to cart!');
@@ -94,7 +97,7 @@ const Home = () => {
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to add to cart');
     } finally {
-      setAddingToCart(prev => ({ ...prev, [product.product_id]: false }));
+      setAddingToCart((prev) => ({ ...prev, [product.product_id]: false }));
     }
   };
 
@@ -115,10 +118,14 @@ const Home = () => {
     try {
       if (wishlistItems.has(productId)) {
         await wishlistAPI.removeFromWishlist(productId);
-        setWishlistItems(prev => { const s = new Set(prev); s.delete(productId); return s; });
+        setWishlistItems((prev) => {
+          const s = new Set(prev);
+          s.delete(productId);
+          return s;
+        });
       } else {
         await wishlistAPI.addToWishlist({ product_id: productId });
-        setWishlistItems(prev => new Set(prev).add(productId));
+        setWishlistItems((prev) => new Set(prev).add(productId));
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update wishlist');
@@ -144,9 +151,7 @@ const Home = () => {
             )}
 
             {product.has_discount && product.discount_percentage > 0 && (
-              <span className="home-discount-badge">
-                -{product.discount_percentage}%
-              </span>
+              <span className="home-discount-badge">-{product.discount_percentage}%</span>
             )}
 
             {isLoggedIn && isBuyer && (
@@ -197,9 +202,9 @@ const Home = () => {
             disabled={addingToCart[product.product_id] || product.stock_quantity <= 0}
           >
             {addingToCart[product.product_id] ? (
-              'Adding...'
+              t('common.loading')
             ) : (
-              <><Icons.Cart size={16} /><span>Add to Cart</span></>
+              <><Icons.Cart size={16} /><span>{t('products.add_to_cart')}</span></>
             )}
           </button>
         )}
@@ -209,17 +214,18 @@ const Home = () => {
 
   return (
     <div className="home-page">
+
       {/* Hero Section */}
       <section className="hero-section">
         <div className="hero-content">
-          <h1 className="hero-title">Discover Authentic Nepali Handicrafts</h1>
-          <p className="hero-subtitle">Supporting local artisans, preserving traditional crafts</p>
+          <h1 className="hero-title">{t('home.hero_title')}</h1>
+          <p className="hero-subtitle">{t('home.hero_subtitle')}</p>
           <div className="hero-buttons">
             <Link to="/products" className="btn-hero-primary">
-              <Icons.Package size={20} /><span>Shop Now</span>
+              <Icons.Package size={20} /><span>{t('home.shop_now')}</span>
             </Link>
             <Link to="/register-seller" className="btn-hero-secondary">
-              <Icons.Shop size={20} /><span>Become a Seller</span>
+              <Icons.Shop size={20} /><span>{t('home.become_seller')}</span>
             </Link>
           </div>
         </div>
@@ -235,8 +241,10 @@ const Home = () => {
       {/* Categories Section */}
       <section className="categories-section">
         <div className="section-header">
-          <h2>Shop by Category</h2>
-          <Link to="/products" className="view-all">View All <Icons.ChevronRight size={18} /></Link>
+          <h2>{t('home.shop_by_category')}</h2>
+          <Link to="/products" className="view-all">
+            {t('home.view_all')} <Icons.ChevronRight size={18} />
+          </Link>
         </div>
         <div className="categories-grid">
           {topCategories.slice(0, 8).map((category) => (
@@ -246,7 +254,9 @@ const Home = () => {
               className="category-card"
             >
               <h3 className="category-name">{category.name}</h3>
-              <p className="category-count">{category.product_count || 0} products</p>
+              <p className="category-count">
+                {category.product_count || 0} {t('home.products')}
+              </p>
             </Link>
           ))}
         </div>
@@ -257,13 +267,20 @@ const Home = () => {
         <section className="products-section featured-section">
           <div className="section-header">
             <div>
-              <h2><Icons.TrendingUp size={28} style={{ color: '#DC2626' }} /> Featured Products</h2>
-              <p>Handpicked by our team</p>
+              <h2>
+                <Icons.TrendingUp size={28} style={{ color: '#DC2626' }} />{' '}
+                {t('home.featured_products')}
+              </h2>
+              <p>{t('home.handpicked')}</p>
             </div>
-            <Link to="/products" className="view-all">View All <Icons.ChevronRight size={18} /></Link>
+            <Link to="/products" className="view-all">
+              {t('home.view_all')} <Icons.ChevronRight size={18} />
+            </Link>
           </div>
           <div className="products-grid">
-            {featuredProducts.map(product => <ProductCard key={product.product_id} product={product} />)}
+            {featuredProducts.map((product) => (
+              <ProductCard key={product.product_id} product={product} />
+            ))}
           </div>
         </section>
       )}
@@ -273,51 +290,71 @@ const Home = () => {
         <section className="products-section trending-section">
           <div className="section-header">
             <div>
-              <h2><Icons.TrendingUp size={28} style={{ color: '#F59E0B' }} /> Trending Now</h2>
-              <p>Most popular this month</p>
+              <h2>
+                <Icons.TrendingUp size={28} style={{ color: '#F59E0B' }} />{' '}
+                {t('home.trending_now')}
+              </h2>
+              <p>{t('home.most_popular')}</p>
             </div>
-            <Link to="/products" className="view-all">View All <Icons.ChevronRight size={18} /></Link>
+            <Link to="/products" className="view-all">
+              {t('home.view_all')} <Icons.ChevronRight size={18} />
+            </Link>
           </div>
           <div className="products-grid">
-            {trendingProducts.map(product => <ProductCard key={product.product_id} product={product} />)}
+            {trendingProducts.map((product) => (
+              <ProductCard key={product.product_id} product={product} />
+            ))}
           </div>
         </section>
       )}
 
       {/* Why Choose Us */}
       <section className="features-section">
-        <h2 className="section-title">Why Choose HastaKrafts?</h2>
+        <h2 className="section-title">{t('home.why_choose')}</h2>
         <div className="features-grid">
           <div className="feature-card">
-            <div className="feature-icon" style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}>
+            <div
+              className="feature-icon"
+              style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}
+            >
               <Icons.CheckCircle size={32} />
             </div>
-            <h3>Authentic Products</h3>
-            <p>100% genuine handmade crafts from local artisans</p>
+            <h3>{t('home.authentic_products')}</h3>
+            <p>{t('home.authentic_desc')}</p>
           </div>
           <div className="feature-card">
-            <div className="feature-icon" style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)' }}>
+            <div
+              className="feature-icon"
+              style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)' }}
+            >
               <Icons.Truck size={32} />
             </div>
-            <h3>Nationwide Delivery</h3>
-            <p>Fast and reliable shipping across Nepal</p>
+            <h3>{t('home.nationwide_delivery')}</h3>
+            <p>{t('home.delivery_desc')}</p>
           </div>
           <div className="feature-card">
-            <div className="feature-icon" style={{ background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)' }}>
+            <div
+              className="feature-icon"
+              style={{ background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)' }}
+            >
               <Icons.CheckCircle size={32} />
             </div>
-            <h3>Secure Payment</h3>
-            <p>Multiple payment options for your convenience</p>
+            <h3>{t('home.secure_payment')}</h3>
+            <p>{t('home.payment_desc')}</p>
           </div>
           <div className="feature-card">
-            <div className="feature-icon" style={{ background: 'linear-gradient(135deg, #EC4899 0%, #DB2777 100%)' }}>
+            <div
+              className="feature-icon"
+              style={{ background: 'linear-gradient(135deg, #EC4899 0%, #DB2777 100%)' }}
+            >
               <Icons.Heart size={32} />
             </div>
-            <h3>Support Artisans</h3>
-            <p>Directly support local craftspeople and their families</p>
+            <h3>{t('home.support_artisans')}</h3>
+            <p>{t('home.support_desc')}</p>
           </div>
         </div>
       </section>
+
     </div>
   );
 };
