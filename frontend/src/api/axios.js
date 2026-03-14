@@ -9,6 +9,11 @@ API.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) config.headers.Authorization = `Bearer ${token}`;
+
+    // ✅ Send user's preferred language with every request
+    const language = localStorage.getItem('language') || 'en';
+    config.headers['Accept-Language'] = language;
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -39,7 +44,8 @@ export const authAPI = {
 // PRODUCTS
 export const productAPI = {
   getAllProducts: (params) => API.get('/products', { params }),
-  getProductById: (id) => API.get(`/products/${id}`),
+  // ✅ lang param added for translated product fetching
+  getProductById: (id, lang) => API.get(`/products/${id}`, { params: { lang } }),
   getCategories: () => API.get('/products/categories'),
   createProduct: (formData) => API.post('/products', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   getSellerProducts: () => API.get('/products/seller/my-products'),
@@ -61,7 +67,7 @@ export const productAPI = {
 // ADMIN
 export const adminAPI = {
   getDashboardStats: () => API.get('/admin/stats'),
-  getAnalytics: () => API.get('/admin/analytics'),          // ← THIS WAS MISSING
+  getAnalytics: () => API.get('/admin/analytics'),
   getPendingSellers: () => API.get('/admin/sellers/pending'),
   getAllSellers: () => API.get('/admin/sellers'),
   approveSeller: (id) => API.post(`/admin/sellers/${id}/approve`),
@@ -89,6 +95,8 @@ export const userAPI = {
   updateProfile: (data) => API.put('/users/profile', data),
   changePassword: (data) => API.put('/users/change-password', data),
   uploadAvatar: (formData) => API.post('/users/upload-avatar', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  // ✅ Added for language preference persistence
+  updateLanguagePreference: (data) => API.put('/users/language-preference', data),
   getCart: () => API.get('/cart'),
 };
 

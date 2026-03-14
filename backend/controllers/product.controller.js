@@ -6,7 +6,6 @@ const { translateText, SUPPORTED_LANGUAGES } = require('../utils/translate.util'
 // ==================== CREATE PRODUCT ====================
 const createProduct = async (req, res) => {
   try {
-    // ✅ has_discount + discount_percentage added
     const { name, description, price, stock_quantity, category_id, sku, has_discount, discount_percentage } = req.body;
 
     if (!name || !description || !price || !category_id) {
@@ -16,7 +15,6 @@ const createProduct = async (req, res) => {
       });
     }
 
-    // Get seller_id from authenticated user
     const seller = await db.Seller.findOne({
       where: { user_id: req.user.user_id },
     });
@@ -28,7 +26,6 @@ const createProduct = async (req, res) => {
       });
     }
 
-    // Handle image uploads
     const images = req.files ? req.files.map((file) => `/uploads/products/${file.filename}`) : [];
 
     if (images.length === 0) {
@@ -38,7 +35,6 @@ const createProduct = async (req, res) => {
       });
     }
 
-    // ✅ Coerce FormData strings to proper booleans/numbers
     const hasDiscount = has_discount === 'true' || has_discount === true;
     const discountPct = hasDiscount ? (parseInt(discount_percentage) || 0) : 0;
 
@@ -52,8 +48,8 @@ const createProduct = async (req, res) => {
       sku: sku || null,
       images,
       status: "pending",
-      has_discount: hasDiscount,        // ✅
-      discount_percentage: discountPct, // ✅
+      has_discount: hasDiscount,
+      discount_percentage: discountPct,
     });
 
     res.status(201).json({
@@ -77,7 +73,6 @@ const getAllProducts = async (req, res) => {
 
     const where = {};
 
-    // Only show approved products for public
     if (!req.user || req.user.role !== "admin") {
       where.status = "approved";
     } else if (status) {
@@ -171,7 +166,6 @@ const getProductById = async (req, res) => {
       });
     }
 
-    // Increment views
     product.views_count += 1;
     await product.save();
 
@@ -181,6 +175,72 @@ const getProductById = async (req, res) => {
     });
   } catch (error) {
     console.error("Get product error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch product",
+    });
+  }
+};
+
+// ==================== GET SINGLE PRODUCT WITH TRANSLATIONS ====================
+const getProductWithTranslations = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { lang = 'en' } = req.query;
+
+    const product = await db.Product.findByPk(id, {
+      include: [
+        {
+          model: db.Category,
+          as: "category",
+          attributes: ["category_id", "name", "slug", "icon"],
+        },
+        {
+          model: db.Seller,
+          as: "seller",
+          attributes: ["seller_id", "shop_name", "shop_description", "shop_logo", "city", "user_id"],
+          include: [
+            {
+              model: db.User,
+              as: "user",
+              attributes: ["full_name", "email"],
+            },
+          ],
+        },
+        {
+          model: db.ProductTranslation,
+          as: "translations",
+          where: lang !== 'en' ? { language_code: lang } : undefined,
+          required: false,
+        },
+      ],
+    });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    product.views_count += 1;
+    await product.save();
+
+    // If translation requested and exists, replace name/description
+    const responseProduct = product.toJSON();
+    if (lang !== 'en' && responseProduct.translations && responseProduct.translations.length > 0) {
+      const translation = responseProduct.translations[0];
+      responseProduct.name = translation.name;
+      responseProduct.description = translation.description;
+    }
+    delete responseProduct.translations;
+
+    res.status(200).json({
+      success: true,
+      data: responseProduct,
+    });
+  } catch (error) {
+    console.error("Get product with translations error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch product",
@@ -241,7 +301,7 @@ const getSellerProducts = async (req, res) => {
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    // ✅ has_discount + discount_percentage added
+
     const {
       name,
       description,
@@ -255,7 +315,6 @@ const updateProduct = async (req, res) => {
       discount_percentage,
     } = req.body;
 
-    // Find product
     const product = await db.Product.findByPk(id);
 
     if (!product) {
@@ -265,7 +324,6 @@ const updateProduct = async (req, res) => {
       });
     }
 
-    // Check ownership
     const seller = await db.Seller.findOne({
       where: { user_id: req.user.user_id },
     });
@@ -284,10 +342,8 @@ const updateProduct = async (req, res) => {
       });
     }
 
-    // ===== IMAGE HANDLING LOGIC =====
     let finalImages = [];
 
-    // Step 1: Parse existing images to keep (sent from frontend)
     if (existingImages) {
       try {
         const existingImagesArray = JSON.parse(existingImages);
@@ -297,13 +353,11 @@ const updateProduct = async (req, res) => {
       }
     }
 
-    // Step 2: Add newly uploaded images
     if (req.files && req.files.length > 0) {
       const newImagePaths = req.files.map((file) => `/uploads/products/${file.filename}`);
       finalImages = [...finalImages, ...newImagePaths];
     }
 
-    // Step 3: Validate total image count
     if (finalImages.length < 3) {
       return res.status(400).json({
         success: false,
@@ -318,7 +372,6 @@ const updateProduct = async (req, res) => {
       });
     }
 
-    // Step 4: Delete image files that were removed (sent from frontend)
     if (imagesToDelete) {
       try {
         const imagesToDeleteArray = JSON.parse(imagesToDelete);
@@ -334,11 +387,9 @@ const updateProduct = async (req, res) => {
       }
     }
 
-    // ✅ Coerce discount fields
     const hasDiscount = has_discount === 'true' || has_discount === true;
     const discountPct = hasDiscount ? (parseInt(discount_percentage) || 0) : 0;
 
-    // Update product
     await product.update({
       name: name || product.name,
       description: description || product.description,
@@ -348,8 +399,8 @@ const updateProduct = async (req, res) => {
       sku: sku || product.sku,
       images: finalImages,
       status: "pending",
-      has_discount: hasDiscount,        // ✅
-      discount_percentage: discountPct, // ✅
+      has_discount: hasDiscount,
+      discount_percentage: discountPct,
     });
 
     res.status(200).json({
@@ -380,7 +431,6 @@ const deleteProduct = async (req, res) => {
       });
     }
 
-    // Check ownership
     const seller = await db.Seller.findOne({
       where: { user_id: req.user.user_id },
     });
@@ -392,7 +442,6 @@ const deleteProduct = async (req, res) => {
       });
     }
 
-    // Delete images
     product.images.forEach((img) => {
       const filePath = path.join(__dirname, "..", img);
       if (fs.existsSync(filePath)) {
@@ -482,7 +531,6 @@ const getTrendingProducts = async (req, res) => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // Get products with most order items in last 30 days
     const trendingProducts = await db.Product.findAll({
       where: {
         status: 'approved',
@@ -634,7 +682,6 @@ const toggleFeatured = async (req, res) => {
       });
     }
 
-    // Toggle the featured status
     product.is_featured = !product.is_featured;
     await product.save();
 
@@ -665,7 +712,6 @@ const translateProduct = async (req, res) => {
       });
     }
 
-    // Validate requested language
     if (!SUPPORTED_LANGUAGES[language]) {
       return res.status(400).json({
         success: false,
@@ -673,7 +719,6 @@ const translateProduct = async (req, res) => {
       });
     }
 
-    // Fetch product
     const product = await db.Product.findByPk(id);
 
     if (!product) {
@@ -683,7 +728,6 @@ const translateProduct = async (req, res) => {
       });
     }
 
-    // If translation already exists, return cached version
     if (product.translations && product.translations[language]) {
       return res.json({
         success: true,
@@ -695,14 +739,12 @@ const translateProduct = async (req, res) => {
       });
     }
 
-    // Translate description using Google Translate (recursive fix handles Hindi/Nepali)
     const translatedDescription = await translateText(
       product.description,
       language,
-      'en' // source language is English
+      'en'
     );
 
-    // Cache translation in DB
     const updatedTranslations = {
       ...product.translations,
       [language]: translatedDescription,
@@ -748,6 +790,7 @@ module.exports = {
   createProduct,
   getAllProducts,
   getProductById,
+  getProductWithTranslations,
   getSellerProducts,
   updateProduct,
   deleteProduct,

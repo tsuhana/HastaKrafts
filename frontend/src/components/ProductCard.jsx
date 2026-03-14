@@ -67,7 +67,7 @@ const ProductCard = ({ product, showWishlist = true }) => {
     }
   };
 
-  // ✅ REMOVED: getStatusBadge() — no more "Live" badge shown to buyers
+  //  REMOVED: getStatusBadge() — no more "Live" badge shown to buyers
 
   return (
     <div className="product-card">
@@ -86,14 +86,14 @@ const ProductCard = ({ product, showWishlist = true }) => {
             </div>
           )}
 
-          {/* ✅ Discount badge — top LEFT */}
+          {/*  Discount badge — top LEFT */}
           {product.has_discount && product.discount_percentage > 0 && (
             <span className="discount-badge">
               -{product.discount_percentage}%
             </span>
           )}
 
-          {/* ✅ Featured badge — top RIGHT, now dark red and visible */}
+          {/*  Featured badge — top RIGHT, now dark red and visible */}
           {product.is_featured && (
             <span className="featured-badge">
               Featured

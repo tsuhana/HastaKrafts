@@ -5,6 +5,7 @@ const Seller = require("./seller.model");
 const PasswordReset = require("./passwordReset.model");
 const Category = require("./category.model");
 const Product = require("./product.model");
+const ProductTranslation = require("./productTranslation.model");
 const Cart = require("./cart.model");
 const CartItem = require("./cartItem.model");
 const Order = require("./order.model");
@@ -18,7 +19,7 @@ const Banner = require('./banner.model');
 const Contact = require('./contact.model');
 const UserPoints = require('./userPoints.model');
 const PointTransaction = require('./pointTransaction.model');
-const Story = require('./story.model'); 
+const Story = require('./story.model');
 
 const db = {};
 db.Sequelize = Sequelize;
@@ -28,6 +29,7 @@ db.Seller = Seller;
 db.PasswordReset = PasswordReset;
 db.Category = Category;
 db.Product = Product;
+db.ProductTranslation = ProductTranslation;
 db.Cart = Cart;
 db.CartItem = CartItem;
 db.Order = Order;
@@ -41,9 +43,7 @@ db.Banner = Banner;
 db.Contact = Contact;
 db.UserPoints = UserPoints;
 db.PointTransaction = PointTransaction;
-db.Story = Story; // 
-
-// ==================== EXISTING RELATIONSHIPS (unchanged) ====================
+db.Story = Story;
 
 User.hasOne(Seller, { foreignKey: "user_id", as: "sellerProfile" });
 Seller.belongsTo(User, { foreignKey: "user_id", as: "user" });
@@ -56,6 +56,11 @@ Product.belongsTo(Seller, { foreignKey: "seller_id", as: "seller" });
 
 Category.hasMany(Product, { foreignKey: "category_id", as: "products" });
 Product.belongsTo(Category, { foreignKey: "category_id", as: "category" });
+
+// ✅ Renamed alias from "translations" to "productTranslations" to avoid
+// collision with the existing JSONB "translations" column on Product model
+Product.hasMany(ProductTranslation, { foreignKey: "product_id", as: "productTranslations" });
+ProductTranslation.belongsTo(Product, { foreignKey: "product_id", as: "product" });
 
 User.hasMany(Product, { foreignKey: "approved_by", as: "approvedProducts" });
 Product.belongsTo(User, { foreignKey: "approved_by", as: "approver" });
@@ -129,7 +134,6 @@ PointTransaction.belongsTo(User, { foreignKey: "user_id", as: "user" });
 Order.hasMany(PointTransaction, { foreignKey: "order_id", as: "pointTransactions" });
 PointTransaction.belongsTo(Order, { foreignKey: "order_id", as: "order" });
 
-// Blog Story associations
 Seller.hasMany(Story, { foreignKey: "seller_id", as: "stories" });
 Story.belongsTo(Seller, { foreignKey: "seller_id", as: "seller" });
 

@@ -6,21 +6,22 @@ const { checkRole, checkSellerApproval } = require("../middlewares/roleCheck.mid
 const { uploadProduct } = require("../middlewares/upload.middleware");
 
 // ==================== PUBLIC ROUTES ====================
-// Homepage specific routes 
+// Homepage specific routes
 router.get('/featured', productController.getFeaturedProducts);
 router.get('/trending', productController.getTrendingProducts);
 router.get('/random', productController.getRandomProducts);
 router.get('/categories/top', productController.getTopCategories);
 
-
 // Translation routes
 router.post('/:id/translate', productController.translateProduct);
 router.get('/languages/supported', productController.getSupportedLanguages);
+
 // General public routes
 router.get("/", productController.getAllProducts);
 router.get("/categories", productController.getAllCategories);
 
-// Dynamic route 
+// Dynamic routes — translated version first, then plain
+router.get("/:id/translated", productController.getProductWithTranslations);
 router.get("/:id", productController.getProductById);
 
 // ==================== SELLER ROUTES (PROTECTED) ====================
@@ -74,6 +75,14 @@ router.delete(
   authenticate,
   checkRole("seller", "admin"),
   productController.deleteProduct
+);
+
+// ==================== ADMIN ROUTES (PROTECTED) ====================
+router.patch(
+  "/:id/toggle-featured",
+  authenticate,
+  checkRole("admin"),
+  productController.toggleFeatured
 );
 
 module.exports = router;

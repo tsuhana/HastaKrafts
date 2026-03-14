@@ -264,6 +264,8 @@ const login = async (req, res) => {
         role: user.role,
         phone: user.phone,
         profile_image: user.profile_image,
+        // ✅ Include preferred_language so frontend can set i18n on login
+        preferred_language: user.preferred_language || 'en',
       },
       token,
     };
