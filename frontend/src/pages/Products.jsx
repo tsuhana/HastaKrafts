@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { productAPI } from '../api/axios';
+import { useTranslation } from 'react-i18next';
 import ProductCard from '../components/ProductCard';
 import '../styles/Products.css';
 
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { t } = useTranslation();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,8 +39,6 @@ const Products = () => {
         ...(filters.search && { search: filters.search }),
       };
 
-      // If exactly one category selected, pass it as category_id
-      // If multiple, fetch all and filter client-side
       if (filters.categories.length === 1) {
         params.category_id = filters.categories[0];
       }
@@ -46,14 +46,12 @@ const Products = () => {
       const res = await productAPI.getAllProducts(params);
       let fetchedProducts = res.data.data.products || [];
 
-      // Client-side multi-category filter
       if (filters.categories.length > 1) {
         fetchedProducts = fetchedProducts.filter(p =>
           filters.categories.includes(p.category_id?.toString())
         );
       }
 
-      // Client-side price filtering
       if (filters.minPrice) {
         fetchedProducts = fetchedProducts.filter(p => parseFloat(p.price) >= parseFloat(filters.minPrice));
       }
@@ -83,11 +81,8 @@ const Products = () => {
       const updated = already
         ? prev.categories.filter(c => c !== id)
         : [...prev.categories, id];
-
-      // Sync URL — only set if single selection for shareability
       if (updated.length === 1) setSearchParams({ category: updated[0] });
       else setSearchParams({});
-
       return { ...prev, categories: updated };
     });
   };
@@ -102,16 +97,17 @@ const Products = () => {
     setSearchParams({});
   };
 
-  // Build result count label
   const getCountLabel = () => {
+    const count = products.length;
+    const productWord = count === 1 ? t('products.product_in') : t('products.products_in');
     if (filters.categories.length === 0) {
-      return `${products.length} ${products.length === 1 ? 'product' : 'products'} found`;
+      return `${count} ${productWord} ${t('products.found')}`;
     }
     if (filters.categories.length === 1) {
       const cat = categories.find(c => c.category_id.toString() === filters.categories[0]);
-      return `${products.length} ${products.length === 1 ? 'product' : 'products'} in ${cat?.name || 'category'}`;
+      return `${count} ${productWord} ${cat?.name || t('products.category')}`;
     }
-    return `${products.length} ${products.length === 1 ? 'product' : 'products'} in ${filters.categories.length} categories`;
+    return `${count} ${productWord} ${filters.categories.length} ${t('products.categories_word')}`;
   };
 
   const hasActiveFilters = filters.categories.length > 0 || filters.search || filters.minPrice || filters.maxPrice;
@@ -123,57 +119,52 @@ const Products = () => {
         {/* Sidebar Filters */}
         <aside className="filters-sidebar">
           <div className="filters-header">
-            <h2>Filters</h2>
+            <h2>{t('products.filters')}</h2>
             {hasActiveFilters && (
               <button onClick={clearFilters} className="clear-filters-btn">
-                Clear All
+                {t('products.clear_all')}
               </button>
             )}
           </div>
 
           {/* Search */}
           <div className="filter-section">
-            <h3>Search</h3>
+            <h3>{t('products.search')}</h3>
             <form onSubmit={handleSearch} className="search-form">
               <input
                 type="text"
                 name="search"
                 value={filters.search}
                 onChange={handleFilterChange}
-                placeholder="Search products..."
+                placeholder={t('products.search_products')}
                 className="filter-input"
               />
               <button type="submit" className="filter-btn full">
-                Search
+                {t('products.search')}
               </button>
             </form>
           </div>
 
-          {/* Categories — checkboxes, multi-select */}
+          {/* Categories */}
           <div className="filter-section">
             <h3>
-              Categories
+              {t('products.categories')}
               {filters.categories.length > 0 && (
-                <span className="cat-selected-count">{filters.categories.length} selected</span>
+                <span className="cat-selected-count">
+                  {filters.categories.length} {t('products.selected')}
+                </span>
               )}
             </h3>
             <div className="category-filters">
               {categories.map((cat) => {
                 const checked = filters.categories.includes(cat.category_id.toString());
                 return (
-                  <label
-                    key={cat.category_id}
-                    className={`category-filter-item ${checked ? 'checked' : ''}`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => handleCategoryToggle(cat.category_id)}
-                    />
+                  <label key={cat.category_id} className={`category-filter-item ${checked ? 'checked' : ''}`}>
+                    <input type="checkbox" checked={checked} onChange={() => handleCategoryToggle(cat.category_id)} />
                     <span className="cat-checkbox-box">
                       {checked && (
                         <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                          <path d="M1.5 5L4 7.5L8.5 2.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M1.5 5L4 7.5L8.5 2.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       )}
                     </span>
@@ -189,28 +180,14 @@ const Products = () => {
 
           {/* Price Range */}
           <div className="filter-section">
-            <h3>Price Range</h3>
+            <h3>{t('products.price_range')}</h3>
             <div className="price-row">
-              <input
-                type="number"
-                name="minPrice"
-                value={filters.minPrice}
-                onChange={handleFilterChange}
-                placeholder="Min"
-                className="filter-input"
-              />
+              <input type="number" name="minPrice" value={filters.minPrice} onChange={handleFilterChange} placeholder={t('products.min')} className="filter-input" />
               <span className="price-sep">—</span>
-              <input
-                type="number"
-                name="maxPrice"
-                value={filters.maxPrice}
-                onChange={handleFilterChange}
-                placeholder="Max"
-                className="filter-input"
-              />
+              <input type="number" name="maxPrice" value={filters.maxPrice} onChange={handleFilterChange} placeholder={t('products.max')} className="filter-input" />
             </div>
             <button type="button" onClick={fetchProducts} className="filter-btn full">
-              Apply
+              {t('products.apply')}
             </button>
           </div>
         </aside>
@@ -218,7 +195,7 @@ const Products = () => {
         {/* Products Grid */}
         <main className="products-main">
           <div className="products-header">
-            <h1>All Products</h1>
+            <h1>{t('products.all_products')}</h1>
             <p className="products-count">{getCountLabel()}</p>
           </div>
 
@@ -227,7 +204,7 @@ const Products = () => {
           {loading ? (
             <div className="loading-state">
               <div className="spinner"></div>
-              <p>Loading products...</p>
+              <p>{t('products.loading')}</p>
             </div>
           ) : products.length > 0 ? (
             <div className="products-grid">
@@ -238,10 +215,10 @@ const Products = () => {
           ) : (
             <div className="empty-state">
               <div className="empty-icon">📦</div>
-              <h3>No products found</h3>
-              <p>Try adjusting your filters or search terms</p>
+              <h3>{t('products.no_products')}</h3>
+              <p>{t('products.adjust_filters')}</p>
               <button onClick={clearFilters} className="btn-primary">
-                Clear Filters
+                {t('products.clear_all')}
               </button>
             </div>
           )}
