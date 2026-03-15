@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { productAPI, cartAPI } from "../api/axios";
 import { useToast } from "../context/ToastContext";
+import { useTranslation } from "react-i18next";
 import Reviews from "../components/Reviews";
 import Icons from "../utils/icons";
 import "../styles/ProductDetail.css";
@@ -10,6 +11,7 @@ const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const { t } = useTranslation();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -19,8 +21,8 @@ const ProductDetail = () => {
   const [addingToCart, setAddingToCart] = useState(false);
   const [reviewStats, setReviewStats] = useState({ totalReviews: 0, averageRating: 0 });
 
-  const [selectedLanguage, setSelectedLanguage] = useState('en');
-  const [translatedDescription, setTranslatedDescription] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState("en");
+  const [translatedDescription, setTranslatedDescription] = useState("");
   const [translating, setTranslating] = useState(false);
   const [supportedLanguages, setSupportedLanguages] = useState({});
 
@@ -31,10 +33,7 @@ const ProductDetail = () => {
   const isAdmin = currentUser?.role === "admin";
   const canBuy = isLoggedIn && !isSeller && !isAdmin;
 
-  useEffect(() => {
-    fetchProduct();
-    fetchSupportedLanguages();
-  }, [id]);
+  useEffect(() => { fetchProduct(); fetchSupportedLanguages(); }, [id]);
 
   const fetchProduct = async () => {
     try {
@@ -56,13 +55,13 @@ const ProductDetail = () => {
       const res = await productAPI.getSupportedLanguages();
       setSupportedLanguages(res.data.data || {});
     } catch (err) {
-      console.error('Fetch languages error:', err);
+      console.error("Fetch languages error:", err);
     }
   };
 
   const handleLanguageChange = async (langCode) => {
-    if (langCode === 'en') {
-      setSelectedLanguage('en');
+    if (langCode === "en") {
+      setSelectedLanguage("en");
       setTranslatedDescription(product.description);
       return;
     }
@@ -72,8 +71,8 @@ const ProductDetail = () => {
       const res = await productAPI.translateProduct(product.product_id, { language: langCode });
       if (res.data.success) setTranslatedDescription(res.data.data.translated);
     } catch (err) {
-      console.error('Translation error:', err);
-      toast.warning('Translation failed. Showing original text.');
+      console.error("Translation error:", err);
+      toast.warning("Translation failed. Showing original text.");
       setTranslatedDescription(product.description);
     } finally {
       setTranslating(false);
@@ -81,25 +80,18 @@ const ProductDetail = () => {
   };
 
   const handleStatsChange = (stats) => {
-    setReviewStats({
-      totalReviews: stats.totalReviews || 0,
-      averageRating: stats.averageRating || 0,
-    });
+    setReviewStats({ totalReviews: stats.totalReviews || 0, averageRating: stats.averageRating || 0 });
   };
 
   const handleQuantityChange = (type) => {
-    if (type === "increment" && quantity < product.stock_quantity) {
-      setQuantity((prev) => prev + 1);
-    } else if (type === "decrement" && quantity > 1) {
-      setQuantity((prev) => prev - 1);
-    }
+    if (type === "increment" && quantity < product.stock_quantity) setQuantity((prev) => prev + 1);
+    else if (type === "decrement" && quantity > 1) setQuantity((prev) => prev - 1);
   };
 
   const handleAddToCart = async () => {
     if (!isLoggedIn) { toast.error("Please login to add items to cart"); navigate("/login"); return; }
     if (!canBuy) { toast.error(isAdmin ? "Admins cannot purchase items" : "Sellers cannot purchase items"); return; }
     if (quantity > product.stock_quantity) { toast.warning(`Only ${product.stock_quantity} items available`); return; }
-
     setAddingToCart(true);
     try {
       const res = await cartAPI.addToCart({ product_id: product.product_id, quantity });
@@ -138,7 +130,7 @@ const ProductDetail = () => {
     return (
       <div className="loading-container">
         <div className="spinner"></div>
-        <p>Loading product...</p>
+        <p>{t('common.loading')}</p>
       </div>
     );
   }
@@ -148,7 +140,7 @@ const ProductDetail = () => {
       <div className="error-container">
         <h2>Product Not Found</h2>
         <p>{error}</p>
-        <Link to="/products" className="btn-primary">Back to Products</Link>
+        <Link to="/products" className="btn-primary">{t('common.back')}</Link>
       </div>
     );
   }
@@ -156,17 +148,14 @@ const ProductDetail = () => {
   const discountedPrice = product.has_discount && product.discount_percentage > 0
     ? Math.round(product.price * (1 - product.discount_percentage / 100))
     : null;
-
-  const savings = discountedPrice
-    ? Math.round(product.price * product.discount_percentage / 100)
-    : null;
+  const savings = discountedPrice ? Math.round(product.price * product.discount_percentage / 100) : null;
 
   return (
     <div className="product-detail-page">
       <div className="product-detail-container">
         <nav className="breadcrumb">
-          <Link to="/">Home</Link><span>/</span>
-          <Link to="/products">Products</Link><span>/</span>
+          <Link to="/">{t('nav.home')}</Link><span>/</span>
+          <Link to="/products">{t('nav.products')}</Link><span>/</span>
           <span>{product.name}</span>
         </nav>
 
@@ -183,11 +172,7 @@ const ProductDetail = () => {
             {product.images?.length > 1 && (
               <div className="image-thumbnails">
                 {product.images.map((img, index) => (
-                  <button
-                    key={index}
-                    className={`thumbnail ${index === selectedImage ? "active" : ""}`}
-                    onClick={() => setSelectedImage(index)}
-                  >
+                  <button key={index} className={`thumbnail ${index === selectedImage ? "active" : ""}`} onClick={() => setSelectedImage(index)}>
                     <img src={`${API_URL}${img}`} alt={`${product.name} ${index + 1}`} />
                   </button>
                 ))}
@@ -217,26 +202,22 @@ const ProductDetail = () => {
               {renderStars(reviewStats.averageRating)}
               <span className="rating-text">
                 {reviewStats.averageRating > 0 ? reviewStats.averageRating.toFixed(1) : "0.0"}
-                {" "}({reviewStats.totalReviews} {reviewStats.totalReviews === 1 ? "review" : "reviews"})
+                {" "}({reviewStats.totalReviews} {reviewStats.totalReviews === 1 ? t('product_detail.review') : t('product_detail.reviews')})
               </span>
             </div>
 
             <div className="product-price-section">
               {discountedPrice ? (
                 <div className="price-with-discount">
-                  <div className="discount-badge-large">
-                    -{product.discount_percentage}% OFF
-                  </div>
+                  <div className="discount-badge-large">-{product.discount_percentage}% {t('product_detail.off')}</div>
                   <div className="price-display">
-                    <span className="original-price-large">
-                      Rs. {parseFloat(product.price).toLocaleString()}
-                    </span>
+                    <span className="original-price-large">Rs. {parseFloat(product.price).toLocaleString()}</span>
                     <div className="discounted-price-large">
                       <span className="currency">Rs.</span>
                       <span className="amount">{discountedPrice.toLocaleString()}</span>
                     </div>
                     <div className="savings-amount">
-                      You save Rs. {savings.toLocaleString()}
+                      {t('product_detail.you_save')} Rs. {savings.toLocaleString()}
                     </div>
                   </div>
                 </div>
@@ -249,34 +230,28 @@ const ProductDetail = () => {
 
               <div className={`stock ${product.stock_quantity > 0 ? "in-stock" : "out-of-stock"}`}>
                 {product.stock_quantity > 0
-                  ? <><span className="stock-dot" />{product.stock_quantity} in stock</>
-                  : "Out of Stock"}
+                  ? <><span className="stock-dot" />{product.stock_quantity} {t('products.in_stock')}</>
+                  : t('products.out_of_stock')}
               </div>
             </div>
 
+            {/* Language selector for description translation */}
             <div className="language-selector-section">
-              <label className="language-label">Language:</label>
-              <select
-                value={selectedLanguage}
-                onChange={(e) => handleLanguageChange(e.target.value)}
-                className="language-dropdown"
-                disabled={translating}
-              >
+              <label className="language-label">{t('product_detail.language')}:</label>
+              <select value={selectedLanguage} onChange={(e) => handleLanguageChange(e.target.value)} className="language-dropdown" disabled={translating}>
                 {Object.entries(supportedLanguages).map(([code, { name, flag }]) => (
-                  <option key={code} value={code}>
-                    {flag} {name}
-                  </option>
+                  <option key={code} value={code}>{flag} {name}</option>
                 ))}
               </select>
-              {translating && <span className="translating-indicator">⏳ Translating...</span>}
+              {translating && <span className="translating-indicator">⏳ {t('product_detail.translating')}</span>}
             </div>
 
             <div className="product-description">
-              <h3>Product Description</h3>
+              <h3>{t('product_detail.description')}</h3>
               {translating ? (
                 <div className="translating-box">
                   <div className="spinner-small"></div>
-                  <p>Translating to {supportedLanguages[selectedLanguage]?.name}...</p>
+                  <p>{t('product_detail.translating')} {supportedLanguages[selectedLanguage]?.name}...</p>
                 </div>
               ) : (
                 <p>{translatedDescription}</p>
@@ -284,11 +259,11 @@ const ProductDetail = () => {
             </div>
 
             <div className="product-details">
-              <h3>Details</h3>
+              <h3>{t('product_detail.details')}</h3>
               <ul>
-                {product.category && <li><strong>Category:</strong> {product.category.icon} {product.category.name}</li>}
-                {product.sku && <li><strong>SKU:</strong> {product.sku}</li>}
-                <li><strong>Availability:</strong> {product.stock_quantity > 0 ? "In Stock" : "Out of Stock"}</li>
+                {product.category && <li><strong>{t('product_detail.category')}:</strong> {product.category.icon} {product.category.name}</li>}
+                {product.sku && <li><strong>{t('product_detail.sku')}:</strong> {product.sku}</li>}
+                <li><strong>{t('product_detail.availability')}:</strong> {product.stock_quantity > 0 ? t('products.in_stock') : t('products.out_of_stock')}</li>
               </ul>
             </div>
 
@@ -300,7 +275,7 @@ const ProductDetail = () => {
                   <button onClick={() => handleQuantityChange("increment")} disabled={quantity >= product.stock_quantity}>+</button>
                 </div>
                 <button className="btn-add-to-cart" onClick={handleAddToCart} disabled={addingToCart}>
-                  {addingToCart ? "Adding..." : "Add to Cart"}
+                  {addingToCart ? t('common.loading') : t('products.add_to_cart')}
                 </button>
               </div>
             )}
@@ -308,7 +283,7 @@ const ProductDetail = () => {
             {canBuy && (
               <button className="btn-chat" onClick={handleChatWithArtisan}>
                 <Icons.Messages size={18} />
-                <span>Chat with Artisan</span>
+                <span>{t('product_detail.chat_with_artisan')}</span>
               </button>
             )}
           </div>
