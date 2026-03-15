@@ -2,43 +2,47 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { storyAPI } from '../api/axios';
 import { useToast } from '../context/ToastContext';
+import { useTranslation } from 'react-i18next';
 import '../styles/BlogDetail.css';
-
-const CATEGORY_LABELS = {
-  craft_process:    'Craft Process',
-  heritage:         'Heritage',
-  personal_journey: 'Personal Journey',
-  tips_tricks:      'Tips & Tricks',
-  behind_scenes:    'Behind the Scenes',
-  other:            'Other',
-};
 
 const API_URL = 'http://localhost:5000';
 
-
 const SellerAvatar = ({ seller, className = 'bd-avatar', initClass = 'bd-avatar-init' }) => {
-  const name     = seller?.shop_name || '??';
+  const name = seller?.shop_name || '??';
   const initials = name.substring(0, 2).toUpperCase();
-  const photo    = seller?.shop_logo
+  const photo = seller?.shop_logo
     ? `${API_URL}${seller.shop_logo}`
     : seller?.user?.profile_image
       ? `${API_URL}${seller.user.profile_image}`
       : null;
-
   return photo
     ? <img className={className} src={photo} alt={name} />
     : <div className={initClass}>{initials}</div>;
 };
 
 const BlogDetail = () => {
-  const { id }                  = useParams();
-  const navigate                = useNavigate();
-  const toast                   = useToast();
-  const [story, setStory]       = useState(null);
-  const [loading, setLoading]   = useState(true);
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const { t } = useTranslation();
+  const [story, setStory] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
 
   const user = JSON.parse(localStorage.getItem('user') || 'null');
+
+  // Category label map using translation keys
+  const getCategoryLabel = (val) => {
+    const map = {
+      craft_process: 'blog.craft_process',
+      heritage: 'blog.heritage',
+      personal_journey: 'blog.personal_journey',
+      tips_tricks: 'blog.tips_tricks',
+      behind_scenes: 'blog.behind_scenes',
+      other: 'blog.other',
+    };
+    return map[val] ? t(map[val]) : val;
+  };
 
   useEffect(() => { fetchStory(); }, [id]);
 
@@ -69,25 +73,21 @@ const BlogDetail = () => {
   };
 
   if (loading) return (
-    <div className="bd-state"><div className="bd-spinner" /><p>Loading…</p></div>
+    <div className="bd-state"><div className="bd-spinner" /><p>{t('common.loading')}</p></div>
   );
 
   if (!story) return (
     <div className="bd-state">
       <h2>Story not found</h2>
-      <Link to="/blog">Back to Blog</Link>
+      <Link to="/blog">{t('blog.back')}</Link>
     </div>
   );
 
-  const isAuthor =
-    user?.role === 'seller' &&
-    story.seller?.user?.user_id === user?.user_id;
-
+  const isAuthor = user?.role === 'seller' && story.seller?.user?.user_id === user?.user_id;
   const paragraphs = story.content.split(/\n\n+/).filter(Boolean);
 
   return (
     <div className="bd-page">
-
       {story.featured_image && (
         <div className="bd-hero">
           <img src={`${API_URL}${story.featured_image}`} alt={story.title} />
@@ -96,20 +96,18 @@ const BlogDetail = () => {
       )}
 
       <div className="bd-container">
-
         <nav className="bd-breadcrumb">
-          <Link to="/blog">Blog</Link>
+          <Link to="/blog">{t('nav.blog')}</Link>
           <span>/</span>
           <span className="bd-crumb-current">{story.title}</span>
         </nav>
 
         <header className="bd-header">
-          <span className="bd-chip">{CATEGORY_LABELS[story.category] || story.category}</span>
+          <span className="bd-chip">{getCategoryLabel(story.category)}</span>
           <h1 className="bd-title">{story.title}</h1>
 
           <div className="bd-byline">
             <div className="bd-author">
-              {/* Avatar: shop_logo → profile_image → initials */}
               <SellerAvatar seller={story.seller} />
               <div>
                 <p className="bd-author-name">{story.seller?.shop_name}</p>
@@ -120,16 +118,16 @@ const BlogDetail = () => {
                   {new Date(story.published_at).toLocaleDateString('en-US', {
                     year: 'numeric', month: 'long', day: 'numeric',
                   })}
-                  {' · '}{story.views_count} views
+                  {' · '}{story.views_count} {t('blog.views')}
                 </p>
               </div>
             </div>
 
             {isAuthor && (
               <div className="bd-author-actions">
-                <Link to={`/seller/edit-blog/${id}`} className="bd-edit-btn">Edit</Link>
+                <Link to={`/seller/edit-blog/${id}`} className="bd-edit-btn">{t('blog.edit')}</Link>
                 <button onClick={handleDelete} disabled={deleting} className="bd-delete-btn">
-                  {deleting ? 'Deleting…' : 'Delete'}
+                  {deleting ? t('common.loading') : t('blog.delete')}
                 </button>
               </div>
             )}
@@ -155,15 +153,10 @@ const BlogDetail = () => {
           </section>
         )}
 
-        {/* AUTHOR CARD — shows profile_image or shop_logo */}
         <div className="bd-author-card">
-          <SellerAvatar
-            seller={story.seller}
-            className="bd-author-card-img"
-            initClass="bd-avatar-init lg"
-          />
+          <SellerAvatar seller={story.seller} className="bd-author-card-img" initClass="bd-avatar-init lg" />
           <div className="bd-author-card-info">
-            <p className="bd-written-by">Written by</p>
+            <p className="bd-written-by">{t('blog.written_by')}</p>
             <h3>{story.seller?.shop_name}</h3>
             <p className="bd-author-fullname">{story.seller?.user?.full_name}</p>
             {story.seller?.shop_description && (
@@ -173,8 +166,7 @@ const BlogDetail = () => {
           </div>
         </div>
 
-        <Link to="/blog" className="bd-back-btn">← All Stories</Link>
-
+        <Link to="/blog" className="bd-back-btn">{t('blog.back')}</Link>
       </div>
     </div>
   );

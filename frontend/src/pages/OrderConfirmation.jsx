@@ -2,26 +2,24 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { orderAPI } from '../api/axios';
 import { useToast } from '../context/ToastContext';
+import { useTranslation } from 'react-i18next';
 import '../styles/OrderConfirmation.css';
 
 const OrderConfirmation = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [order, setOrder] = useState(null);
 
-  useEffect(() => {
-    fetchOrder();
-  }, [id]);
+  useEffect(() => { fetchOrder(); }, [id]);
 
   const fetchOrder = async () => {
     try {
       setLoading(true);
       const res = await orderAPI.getOrderById(id);
-      if (res.data.success) {
-        setOrder(res.data.data);
-      }
+      if (res.data.success) setOrder(res.data.data);
     } catch (err) {
       console.error('Error fetching order:', err);
       toast.error('Failed to load order details');
@@ -30,22 +28,11 @@ const OrderConfirmation = () => {
     }
   };
 
-  const getStatusColor = (status) => {
-    const colors = {
-      pending: '#F59E0B',
-      processing: '#3B82F6',
-      shipped: '#8B5CF6',
-      delivered: '#10B981',
-      cancelled: '#EF4444',
-    };
-    return colors[status] || '#6B7280';
-  };
-
   const getStatusSteps = () => {
     const allSteps = ['pending', 'processing', 'shipped', 'delivered'];
     const currentIndex = allSteps.indexOf(order?.order_status);
     return allSteps.map((step, index) => ({
-      label: step.charAt(0).toUpperCase() + step.slice(1),
+      label: t(`orders.${step}`),
       status: step,
       completed: index <= currentIndex,
       active: index === currentIndex,
@@ -56,7 +43,7 @@ const OrderConfirmation = () => {
     return (
       <div className="confirmation-loading">
         <div className="spinner"></div>
-        <p>Loading order details...</p>
+        <p>{t('common.loading')}</p>
       </div>
     );
   }
@@ -65,9 +52,7 @@ const OrderConfirmation = () => {
     return (
       <div className="confirmation-error">
         <h2>Order not found</h2>
-        <button onClick={() => navigate('/products')} className="btn-shop">
-          Continue Shopping
-        </button>
+        <button onClick={() => navigate('/products')} className="btn-shop">Continue Shopping</button>
       </div>
     );
   }
@@ -84,13 +69,8 @@ const OrderConfirmation = () => {
             <h3>Order Status</h3>
             <div className="timeline-steps">
               {getStatusSteps().map((step, index) => (
-                <div
-                  key={step.status}
-                  className={`timeline-step ${step.completed ? 'completed' : ''} ${step.active ? 'active' : ''}`}
-                >
-                  <div className="step-circle">
-                    {step.completed ? '✓' : index + 1}
-                  </div>
+                <div key={step.status} className={`timeline-step ${step.completed ? 'completed' : ''} ${step.active ? 'active' : ''}`}>
+                  <div className="step-circle">{step.completed ? '✓' : index + 1}</div>
                   <div className="step-label">{step.label}</div>
                   {index < 3 && <div className="step-line"></div>}
                 </div>
@@ -100,7 +80,6 @@ const OrderConfirmation = () => {
         )}
 
         <div className="order-details-card">
-
           {order.points_earned > 0 && (
             <div className="points-earned-card">
               <div className="points-earned-icon">🎉</div>
@@ -108,9 +87,7 @@ const OrderConfirmation = () => {
                 <h3>Congratulations!</h3>
                 <p>You earned <strong>{order.points_earned} points</strong> from this order!</p>
                 {order.points_redeemed > 0 && (
-                  <p className="points-redeemed-text">
-                    (You redeemed {order.points_redeemed} points for free delivery)
-                  </p>
+                  <p className="points-redeemed-text">(You redeemed {order.points_redeemed} points for free delivery)</p>
                 )}
               </div>
             </div>
@@ -123,21 +100,15 @@ const OrderConfirmation = () => {
 
           <div className="order-info-grid">
             <div className="info-item">
-              <label>Order Date</label>
-              <p>
-                {new Date(order.createdAt || order.created_at).toLocaleDateString('en-US', {
-                  year: 'numeric', month: 'long', day: 'numeric',
-                })}
-              </p>
+              <label>{t('orders.order_date')}</label>
+              <p>{new Date(order.createdAt || order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
             </div>
             <div className="info-item">
               <label>Payment Method</label>
-              <p className="payment-badge">
-                {order.payment_method === 'khalti' ? 'Khalti' : 'Cash on Delivery'}
-              </p>
+              <p className="payment-badge">{order.payment_method === 'khalti' ? 'Khalti' : 'Cash on Delivery'}</p>
             </div>
             <div className="info-item">
-              <label>Total Amount</label>
+              <label>{t('orders.total')}</label>
               <p className="total-amount">Rs. {parseFloat(order.total).toLocaleString()}</p>
             </div>
           </div>
@@ -159,29 +130,21 @@ const OrderConfirmation = () => {
             <div className="order-items-list">
               {order.items && order.items.map((item) => {
                 const isDiscounted = item.discount_percentage > 0;
-                const originalTotal = item.original_price
-                  ? parseFloat(item.original_price) * item.quantity
-                  : null;
+                const originalTotal = item.original_price ? parseFloat(item.original_price) * item.quantity : null;
                 const paidTotal = parseFloat(item.subtotal);
-
                 return (
                   <div key={item.order_item_id} className="order-item">
                     <div className="item-image">
                       {item.product_image ? (
-                        <img
-                          src={`http://localhost:5000${item.product_image}`}
-                          alt={item.product_name}
-                        />
+                        <img src={`http://localhost:5000${item.product_image}`} alt={item.product_name} />
                       ) : (
                         <div className="no-image">No Image</div>
                       )}
                     </div>
                     <div className="item-details">
                       <p className="item-name">{item.product_name}</p>
-                      <p className="item-qty">Quantity: {item.quantity}</p>
-                      {isDiscounted && (
-                        <span className="item-discount-badge">-{item.discount_percentage}% OFF</span>
-                      )}
+                      <p className="item-qty">{t('common.qty')}: {item.quantity}</p>
+                      {isDiscounted && <span className="item-discount-badge">-{item.discount_percentage}% OFF</span>}
                     </div>
                     <div className="item-price-wrap">
                       {isDiscounted && originalTotal && (
@@ -199,32 +162,28 @@ const OrderConfirmation = () => {
 
           <div className="order-summary">
             <div className="summary-row">
-              <span>Subtotal</span>
+              <span>{t('cart.subtotal')}</span>
               <span>Rs. {parseFloat(order.subtotal).toLocaleString()}</span>
             </div>
             <div className="summary-row">
               <span>Delivery Fee</span>
               {parseFloat(order.delivery_fee) === 0 ? (
-                <span className="free-delivery-text">FREE 💎</span>
+                <span className="free-delivery-text">{t('checkout.free')} 💎</span>
               ) : (
                 <span>Rs. {parseFloat(order.delivery_fee).toLocaleString()}</span>
               )}
             </div>
             <div className="summary-divider"></div>
             <div className="summary-total">
-              <span>Total</span>
+              <span>{t('cart.total')}</span>
               <span>Rs. {parseFloat(order.total).toLocaleString()}</span>
             </div>
           </div>
         </div>
 
         <div className="action-buttons">
-          <button onClick={() => navigate('/products')} className="btn-continue">
-            Continue Shopping
-          </button>
-          <button onClick={() => navigate('/profile')} className="btn-view-orders">
-            View My Orders
-          </button>
+          <button onClick={() => navigate('/products')} className="btn-continue">Continue Shopping</button>
+          <button onClick={() => navigate('/profile')} className="btn-view-orders">{t('profile.order_history')}</button>
         </div>
       </div>
     </div>
