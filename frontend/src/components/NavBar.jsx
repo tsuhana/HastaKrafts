@@ -8,7 +8,7 @@ import '../styles/NavBar.css';
 
 const NavBar = () => {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
   const [cartCount, setCartCount] = useState(0);
@@ -42,6 +42,10 @@ const NavBar = () => {
       setIsLoggedIn(true);
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
+
+      if (parsedUser.preferred_language) {
+        i18n.changeLanguage(parsedUser.preferred_language);
+      }
 
       if (parsedUser.role === 'buyer') {
         fetchCartCount();
