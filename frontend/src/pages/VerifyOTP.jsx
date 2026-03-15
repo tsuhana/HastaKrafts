@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import API from '../api/axios';
 import { useToast } from '../context/ToastContext';
+import { useTranslation } from 'react-i18next';
 import '../styles/VerifyOTP.css';
 
 const VerifyOTP = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
+  const { t } = useTranslation();
   const email = location.state?.email || '';
 
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -16,22 +18,16 @@ const VerifyOTP = () => {
   const [resending, setResending] = useState(false);
 
   useEffect(() => {
-    if (!email) {
-      navigate('/forgot-password');
-    }
+    if (!email) navigate('/forgot-password');
   }, [email, navigate]);
 
   const handleChange = (index, value) => {
     if (value.length > 1) return;
-
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
     setError('');
-
-    if (value && index < 5) {
-      document.getElementById(`otp-${index + 1}`)?.focus();
-    }
+    if (value && index < 5) document.getElementById(`otp-${index + 1}`)?.focus();
   };
 
   const handleKeyDown = (index, e) => {
@@ -44,11 +40,7 @@ const VerifyOTP = () => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').slice(0, 6);
     const newOtp = pastedData.split('').slice(0, 6);
-
-    while (newOtp.length < 6) {
-      newOtp.push('');
-    }
-
+    while (newOtp.length < 6) newOtp.push('');
     setOtp(newOtp);
     setError('');
   };
@@ -56,28 +48,16 @@ const VerifyOTP = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const otpString = otp.join('');
-
     if (otpString.length !== 6) {
       setError('Please enter all 6 digits');
       return;
     }
-
     setLoading(true);
     setError('');
-
     try {
-      const response = await API.post('/auth/verify-otp', {
-        email,
-        otp: otpString
-      });
-
+      const response = await API.post('/auth/verify-otp', { email, otp: otpString });
       if (response.data.success) {
-        navigate('/reset-password', {
-          state: {
-            resetToken: response.data.data.resetToken,
-            email
-          }
-        });
+        navigate('/reset-password', { state: { resetToken: response.data.data.resetToken, email } });
       }
     } catch (err) {
       console.error('Verify OTP error:', err);
@@ -92,7 +72,6 @@ const VerifyOTP = () => {
   const handleResend = async () => {
     setResending(true);
     setError('');
-
     try {
       await API.post('/auth/forgot-password', { email });
       toast.success('New OTP sent to your email!');
@@ -109,7 +88,6 @@ const VerifyOTP = () => {
   return (
     <div className="verify-otp-page">
       <div className="verify-otp-container">
-
         <div className="verify-otp-header">
           <h1 className="verify-logo">हस्त KRAFTS</h1>
           <p className="verify-subtitle">Verify OTP</p>
@@ -119,11 +97,7 @@ const VerifyOTP = () => {
           <h2>Enter OTP</h2>
           <p>We have sent a 6-digit code to <strong>{email}</strong></p>
 
-          {error && (
-            <div className="error-message">
-              {error}
-            </div>
-          )}
+          {error && <div className="error-message">{error}</div>}
 
           <form onSubmit={handleSubmit} className="otp-form">
             <div className="otp-inputs" onPaste={handlePaste}>
@@ -144,29 +118,20 @@ const VerifyOTP = () => {
                 />
               ))}
             </div>
-
-            <button
-              type="submit"
-              disabled={loading || otp.join('').length !== 6}
-              className="submit-btn"
-            >
-              {loading ? 'Verifying...' : 'Verify OTP'}
+            <button type="submit" disabled={loading || otp.join('').length !== 6} className="submit-btn">
+              {loading ? t('common.loading') : 'Verify OTP'}
             </button>
           </form>
 
           <div className="resend-section">
             <p>Did not receive the code?</p>
-            <button
-              onClick={handleResend}
-              disabled={resending || loading}
-              className="resend-btn"
-            >
-              {resending ? 'Sending...' : 'Resend OTP'}
+            <button onClick={handleResend} disabled={resending || loading} className="resend-btn">
+              {resending ? t('common.loading') : 'Resend OTP'}
             </button>
           </div>
 
           <div className="back-to-login">
-            <a href="/forgot-password">← Back</a>
+            <a href="/forgot-password">← {t('common.back')}</a>
           </div>
         </div>
       </div>
