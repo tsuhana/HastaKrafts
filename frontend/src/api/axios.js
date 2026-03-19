@@ -10,7 +10,6 @@ API.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) config.headers.Authorization = `Bearer ${token}`;
 
-    // ✅ Send user's preferred language with every request
     const language = localStorage.getItem('language') || 'en';
     config.headers['Accept-Language'] = language;
 
@@ -44,7 +43,6 @@ export const authAPI = {
 // PRODUCTS
 export const productAPI = {
   getAllProducts: (params) => API.get('/products', { params }),
-  // ✅ lang param added for translated product fetching
   getProductById: (id, lang) => API.get(`/products/${id}`, { params: { lang } }),
   getCategories: () => API.get('/products/categories'),
   createProduct: (formData) => API.post('/products', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
@@ -53,14 +51,10 @@ export const productAPI = {
   deleteProduct: (id) => API.delete(`/products/${id}`),
   translateProduct: (id, data) => API.post(`/products/${id}/translate`, data),
   getSupportedLanguages: () => API.get('/products/languages/supported'),
-
-  // HOMEPAGE ENDPOINTS
   getFeaturedProducts: () => API.get('/products/featured'),
   getTrendingProducts: () => API.get('/products/trending'),
   getRandomProducts: () => API.get('/products/random'),
   getTopCategories: () => API.get('/products/categories/top'),
-
-  // BANNERS
   getActiveBanners: () => API.get('/banners/active'),
 };
 
@@ -80,8 +74,6 @@ export const adminAPI = {
   getAllContactMessages: (params) => API.get('/contact', { params }),
   updateContactStatus: (id, data) => API.put(`/contact/${id}`, data),
   deleteContactMessage: (id) => API.delete(`/contact/${id}`),
-
-  // BANNER MANAGEMENT
   getAllBanners: () => API.get('/banners'),
   createBanner: (formData) => API.post('/banners', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   updateBanner: (id, formData) => API.put(`/banners/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
@@ -95,9 +87,17 @@ export const userAPI = {
   updateProfile: (data) => API.put('/users/profile', data),
   changePassword: (data) => API.put('/users/change-password', data),
   uploadAvatar: (formData) => API.post('/users/upload-avatar', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
-  // ✅ Added for language preference persistence
   updateLanguagePreference: (data) => API.put('/users/language-preference', data),
   getCart: () => API.get('/cart'),
+};
+
+// SELLER ← NEW
+export const sellerAPI = {
+  getProfile: () => API.get('/sellers/profile'),
+  updateProfile: (data) => API.put('/sellers/profile', data),
+  uploadLogo: (formData) => API.post('/sellers/upload-logo', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  uploadCitizenship: (formData) => API.post('/sellers/upload-citizenship', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  getAnalytics: () => API.get('/sellers/analytics'),
 };
 
 // CART
@@ -117,8 +117,7 @@ export const orderAPI = {
   verifyKhaltiPayment: ({ pidx, order_id }) =>
     API.get(`/orders/khalti/verify?pidx=${encodeURIComponent(pidx)}&order_id=${encodeURIComponent(order_id)}`),
   getSellerOrders: () => API.get("/orders/seller/orders"),
-  updateOrderStatus: (orderId, data) =>
-    API.put(`/orders/seller/${orderId}/status`, data),
+  updateOrderStatus: (orderId, data) => API.put(`/orders/seller/${orderId}/status`, data),
 };
 
 // AUCTIONS

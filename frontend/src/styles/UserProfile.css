@@ -718,3 +718,110 @@
     width: 100%;
   }
 }
+
+
+/* Dashboard redirect button in header */
+.btn-goto-dashboard {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #b86e38, #a05e2a);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.btn-goto-dashboard:hover {
+  background: linear-gradient(135deg, #c97d48, #b86e38);
+  transform: translateY(-1px);
+}
+
+/* Shop profile header */
+.shop-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #EDE8E2;
+  margin-bottom: 0.5rem;
+}
+
+.shop-logo-wrap {
+  flex-shrink: 0;
+}
+
+.shop-logo-img {
+  width: 80px;
+  height: 80px;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 2px solid #E8E0D5;
+}
+
+.shop-logo-placeholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #b86e38, #a05e2a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.shop-header-info h2 {
+  font-size: 1.4rem;
+  color: #2C1810;
+  font-weight: 700;
+  margin: 0 0 0.3rem 0;
+}
+
+.shop-city {
+  font-size: 0.875rem;
+  color: #8B6F5E;
+  margin: 0 0 0.5rem 0;
+}
+
+/* Shop status badge */
+.shop-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.shop-status-badge.approved {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+.shop-status-badge.pending {
+  background: #FEF3C7;
+  color: #92400E;
+}
+
+.shop-status-badge.rejected {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+
+/* Rejection notice */
+.rejection-notice {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #991B1B;
+}

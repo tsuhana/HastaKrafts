@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { userAPI, orderAPI } from '../api/axios';
+import { useNavigate, Link } from 'react-router-dom';
+import { userAPI, orderAPI, sellerAPI } from '../api/axios';
 import { useToast } from '../context/ToastContext';
 import { useTranslation } from 'react-i18next';
 import '../styles/UserProfile.css';
+
+const API_URL = 'http://localhost:5000';
 
 const UserProfile = () => {
   const navigate = useNavigate();
@@ -26,7 +28,6 @@ const UserProfile = () => {
   });
 
   const [errors, setErrors] = useState({});
-
   const provinces = ['Bagmati', 'Gandaki', 'Lumbini', 'Koshi', 'Madhesh', 'Karnali', 'Sudurpashchim'];
 
   useEffect(() => { fetchUserProfile(); }, []);
@@ -79,7 +80,7 @@ const UserProfile = () => {
       const fd = new FormData();
       fd.append('profile_picture', file);
       const res = await userAPI.uploadAvatar(fd);
-      if (res.data.success) { toast.success('Profile picture updated successfully!'); fetchUserProfile(); }
+      if (res.data.success) { toast.success('Profile picture updated!'); fetchUserProfile(); }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to upload image');
     } finally {
@@ -156,15 +157,10 @@ const UserProfile = () => {
     } catch { return 'N/A'; }
   };
 
-  const getProfileImageUrl = () => user?.profile_image ? `http://localhost:5000${user.profile_image}` : null;
+  const getProfileImageUrl = () => user?.profile_image ? `${API_URL}${user.profile_image}` : null;
 
   if (loading) {
-    return (
-      <div className="profile-loading">
-        <div className="spinner"></div>
-        <p>{t('common.loading')}</p>
-      </div>
-    );
+    return <div className="profile-loading"><div className="spinner"></div><p>{t('common.loading')}</p></div>;
   }
 
   if (!user) {
@@ -176,9 +172,14 @@ const UserProfile = () => {
     );
   }
 
+  const isSeller = user.role === 'seller';
+  const isBuyer = user.role === 'buyer';
+
   return (
     <div className="user-profile-page">
       <div className="profile-container">
+
+        {/* ── Header ── */}
         <div className="profile-header-card">
           <div className="profile-avatar-section">
             <div className="avatar-wrapper">
@@ -203,29 +204,42 @@ const UserProfile = () => {
                   {t('profile.member_since')} {formatDate(user.createdAt || user.created_at)}
                 </span>
               </div>
+              {isSeller && (
+                <Link to="/seller/dashboard" className="btn-goto-dashboard">
+                  🏪 Go to Artisan Dashboard →
+                </Link>
+              )}
             </div>
           </div>
         </div>
 
+        {/* ── Tabs ── */}
         <div className="profile-tabs">
           <button className={`tab-btn ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>
-            {user.role === 'buyer' ? `${t('profile.title')} & ${t('profile.delivery')}` : t('profile.title')}
+            {isBuyer ? `${t('profile.title')} & ${t('profile.delivery')}` : t('profile.title')}
           </button>
           <button className={`tab-btn ${activeTab === 'password' ? 'active' : ''}`} onClick={() => setActiveTab('password')}>
             {t('profile.change_password')}
           </button>
-          {user.role !== 'admin' && (
+          {isBuyer && (
             <button className={`tab-btn ${activeTab === 'orders' ? 'active' : ''}`} onClick={() => setActiveTab('orders')}>
               {t('profile.order_history')}
+            </button>
+          )}
+          {isSeller && (
+            <button className={`tab-btn ${activeTab === 'shop' ? 'active' : ''}`} onClick={() => setActiveTab('shop')}>
+              🏪 Shop Info
             </button>
           )}
         </div>
 
         <div className="profile-content-card">
+
+          {/* ── Profile Tab ── */}
           {activeTab === 'profile' && (
             <div className="tab-content">
               <div className="content-header">
-                <h2>{user.role === 'buyer' ? `${t('profile.personal_info')} & ${t('profile.delivery_address')}` : t('profile.personal_info')}</h2>
+                <h2>{isBuyer ? `${t('profile.personal_info')} & ${t('profile.delivery_address')}` : t('profile.personal_info')}</h2>
                 {!isEditing ? (
                   <button onClick={() => setIsEditing(true)} className="btn-edit">{t('profile.edit_profile')}</button>
                 ) : (
@@ -250,7 +264,7 @@ const UserProfile = () => {
                       <p>{user.phone || t('profile.not_provided')}</p>
                     </div>
                   </div>
-                  {user.role === 'buyer' && (
+                  {isBuyer && (
                     <>
                       <div className="section-title">{t('profile.delivery_address')}</div>
                       <div className="info-grid">
@@ -258,22 +272,10 @@ const UserProfile = () => {
                           <label>{t('checkout.address')}</label>
                           <p>{user.address || t('profile.not_provided')}</p>
                         </div>
-                        <div className="info-item">
-                          <label>{t('checkout.city')}</label>
-                          <p>{user.city || t('profile.not_provided')}</p>
-                        </div>
-                        <div className="info-item">
-                          <label>{t('checkout.province')}</label>
-                          <p>{user.state || t('profile.not_provided')}</p>
-                        </div>
-                        <div className="info-item">
-                          <label>{t('checkout.postal_code')}</label>
-                          <p>{user.postal_code || t('profile.not_provided')}</p>
-                        </div>
-                        <div className="info-item">
-                          <label>{t('checkout.landmark')}</label>
-                          <p>{user.landmark || t('profile.not_provided')}</p>
-                        </div>
+                        <div className="info-item"><label>{t('checkout.city')}</label><p>{user.city || t('profile.not_provided')}</p></div>
+                        <div className="info-item"><label>{t('checkout.province')}</label><p>{user.state || t('profile.not_provided')}</p></div>
+                        <div className="info-item"><label>{t('checkout.postal_code')}</label><p>{user.postal_code || t('profile.not_provided')}</p></div>
+                        <div className="info-item"><label>{t('checkout.landmark')}</label><p>{user.landmark || t('profile.not_provided')}</p></div>
                       </div>
                     </>
                   )}
@@ -301,7 +303,7 @@ const UserProfile = () => {
                     </div>
                   </div>
 
-                  {user.role === 'buyer' && (
+                  {isBuyer && (
                     <div className="form-section">
                       <h3>{t('profile.delivery_address')}</h3>
                       <div className="form-grid">
@@ -331,7 +333,6 @@ const UserProfile = () => {
                       </div>
                     </div>
                   )}
-
                   <button type="submit" disabled={saving} className="btn-save">
                     {saving ? t('profile.saving') : t('profile.save_changes')}
                   </button>
@@ -340,6 +341,7 @@ const UserProfile = () => {
             </div>
           )}
 
+          {/* ── Change Password Tab ── */}
           {activeTab === 'password' && (
             <div className="tab-content">
               <h2>{t('profile.change_password')}</h2>
@@ -366,34 +368,115 @@ const UserProfile = () => {
             </div>
           )}
 
-          {activeTab === 'orders' && (
-            <div className="tab-content">
-              <OrderHistory t={t} />
-            </div>
+          {/* ── Order History — buyers only ── */}
+          {activeTab === 'orders' && isBuyer && (
+            <div className="tab-content"><OrderHistory t={t} /></div>
           )}
+
+          {/* ── Shop Info — sellers only ── */}
+          {activeTab === 'shop' && isSeller && (
+            <div className="tab-content"><SellerShopInfo t={t} navigate={navigate} /></div>
+          )}
+
         </div>
       </div>
     </div>
   );
 };
 
-// ==================== ORDER HISTORY COMPONENT ====================
+// ══════════════════════════════════════════
+//  SELLER SHOP INFO (read-only in profile)
+// ══════════════════════════════════════════
+const SellerShopInfo = ({ t, navigate }) => {
+  const [seller, setSeller] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    sellerAPI.getProfile()
+      .then((res) => { if (res.data.success) setSeller(res.data.data); })
+      .catch((err) => console.error('Seller profile error:', err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="loading">{t('common.loading')}</div>;
+  if (!seller) return <div className="empty-state"><p>Shop info not available.</p></div>;
+
+  return (
+    <div className="seller-shop-section">
+      <div className="shop-profile-header">
+        <div className="shop-logo-wrap">
+          {seller.shop_logo ? (
+            <img src={`${API_URL}${seller.shop_logo}`} alt={seller.shop_name} className="shop-logo-img" />
+          ) : (
+            <div className="shop-logo-placeholder">{seller.shop_name?.[0]?.toUpperCase() || 'S'}</div>
+          )}
+        </div>
+        <div className="shop-header-info">
+          <h2>{seller.shop_name}</h2>
+          <p className="shop-city">📍 {seller.city}</p>
+          <span className={`shop-status-badge ${seller.approval_status}`}>
+            {seller.approval_status === 'approved' ? '✅ Approved Seller'
+              : seller.approval_status === 'pending' ? '⏳ Pending Approval'
+              : '❌ Rejected'}
+          </span>
+        </div>
+      </div>
+
+      <div className="info-grid" style={{ marginTop: '1.5rem' }}>
+        <div className="info-item full-width">
+          <label>Shop Description</label>
+          <p>{seller.shop_description || t('profile.not_provided')}</p>
+        </div>
+        <div className="info-item">
+          <label>City</label>
+          <p>{seller.city || t('profile.not_provided')}</p>
+        </div>
+        <div className="info-item full-width">
+          <label>Address</label>
+          <p>{seller.address || t('profile.not_provided')}</p>
+        </div>
+        <div className="info-item">
+          <label>Citizenship Number</label>
+          <p>{seller.citizenship_number || t('profile.not_provided')}</p>
+        </div>
+        <div className="info-item">
+          <label>Bank Name</label>
+          <p>{seller.bank_name || t('profile.not_provided')}</p>
+        </div>
+        <div className="info-item">
+          <label>Account Number</label>
+          <p>{seller.bank_account_number || t('profile.not_provided')}</p>
+        </div>
+      </div>
+
+      {seller.rejection_reason && (
+        <div className="rejection-notice">
+          <strong>Rejection Reason:</strong> {seller.rejection_reason}
+        </div>
+      )}
+
+      <div style={{ marginTop: '1.5rem' }}>
+        <button className="btn-save" onClick={() => navigate('/seller/dashboard')}>
+          🏪 Manage Shop in Dashboard →
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════
+//  ORDER HISTORY — buyers only
+// ══════════════════════════════════════════
 const OrderHistory = ({ t }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { fetchOrders(); }, []);
-
-  const fetchOrders = async () => {
-    try {
-      const res = await orderAPI.getMyOrders();
-      if (res.data.success) setOrders(res.data.data);
-    } catch (err) {
-      console.error('Error fetching orders:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    orderAPI.getMyOrders()
+      .then((res) => { if (res.data.success) setOrders(res.data.data); })
+      .catch((err) => console.error('Orders error:', err))
+      .finally(() => setLoading(false));
+  }, []);
 
   const getStatusColor = (status) => {
     const colors = { pending: '#F59E0B', processing: '#3B82F6', shipped: '#8B5CF6', delivered: '#10B981', cancelled: '#EF4444' };
@@ -411,9 +494,7 @@ const OrderHistory = ({ t }) => {
     return (
       <div className="empty-state">
         <p>{t('orders.no_orders')}</p>
-        <button onClick={() => window.location.href = '/products'} className="btn-primary">
-          {t('orders.start_shopping')}
-        </button>
+        <button onClick={() => window.location.href = '/products'} className="btn-primary">{t('orders.start_shopping')}</button>
       </div>
     );
   }
@@ -426,9 +507,7 @@ const OrderHistory = ({ t }) => {
             <div>
               <h3>{t('orders.order_number')} #{order.order_number}</h3>
               <p className="order-date">
-                {new Date(order.createdAt || order.created_at).toLocaleDateString('en-US', {
-                  year: 'numeric', month: 'long', day: 'numeric',
-                })}
+                {new Date(order.createdAt || order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
               </p>
             </div>
             <div className="order-status-badges">
@@ -440,22 +519,18 @@ const OrderHistory = ({ t }) => {
               </span>
             </div>
           </div>
-
           <div className="order-items">
-            {order.items && order.items.slice(0, 3).map((item) => (
+            {order.items?.slice(0, 3).map((item) => (
               <div key={item.order_item_id} className="order-item-preview">
-                <img src={item.product_image ? `http://localhost:5000${item.product_image}` : '/placeholder.png'} alt={item.product_name} />
+                <img src={item.product_image ? `${API_URL}${item.product_image}` : '/placeholder.png'} alt={item.product_name} />
                 <div>
                   <p className="item-name">{item.product_name}</p>
                   <p className="item-qty">{t('common.qty')}: {item.quantity}</p>
                 </div>
               </div>
             ))}
-            {order.items && order.items.length > 3 && (
-              <p className="more-items">+{order.items.length - 3} {t('orders.more_items')}</p>
-            )}
+            {order.items?.length > 3 && <p className="more-items">+{order.items.length - 3} {t('orders.more_items')}</p>}
           </div>
-
           <div className="order-footer">
             <div className="order-total">
               <span>{t('orders.total')}:</span>
