@@ -7,17 +7,17 @@
   overflow: hidden;
 }
 
-/* Wave */
+/* ── Wave ── */
 .footer-wave {
-  width: 160px;
+  width: 100%;
   line-height: 0;
-  margin-bottom: -1px;
+  margin-bottom: -2px;
 }
 
 .footer-wave svg {
   display: block;
   width: 100%;
-  height: 100px;
+  height: 55px;
 }
 
 .wave-back {
@@ -25,21 +25,23 @@
   opacity: 0.5;
 }
 
+/* wave-front must match the page background above the footer */
+/* Change #f5f0ea to whatever your page bg color is           */
 .wave-front {
-  fill: #5A3E2B;
+  fill: #f5f0ea;
 }
 
-/* Grid */
+/* ── Grid ── */
 .footer-grid {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2.5rem 2rem 2rem;
+  padding: 1.5rem 2rem;
   display: grid;
   grid-template-columns: 1.5fr 1fr 1fr 1.3fr;
-  gap: 2.5rem;
+  gap: 2rem;
 }
 
-/* Brand */
+/* ── Brand ── */
 .footer-logo {
   width: 105px;
   margin-bottom: 12px;
@@ -53,7 +55,7 @@
   margin-bottom: 20px;
 }
 
-/* Socials */
+/* ── Socials ── */
 .footer-socials {
   display: flex;
   gap: 10px;
@@ -82,7 +84,7 @@
   box-shadow: 0 4px 12px rgba(107, 143, 94, 0.3);
 }
 
-/* Column headings */
+/* ── Column headings ── */
 .footer-col h4 {
   font-size: 12px;
   font-weight: 700;
@@ -95,7 +97,7 @@
   display: inline-block;
 }
 
-/* Links */
+/* ── Links ── */
 .footer-col ul {
   list-style: none;
   padding: 0;
@@ -119,7 +121,7 @@
   padding-left: 4px;
 }
 
-/* Contact */
+/* ── Contact ── */
 .footer-contact p,
 .footer-contact a {
   display: flex;
@@ -144,11 +146,11 @@
   flex-shrink: 0;
 }
 
-/* Bottom bar */
+/* ── Bottom bar ── */
 .footer-bottom {
   border-top: 1px solid rgba(107, 143, 94, 0.15);
-  margin: 0.5rem 2rem 0;
-  padding: 1.2rem 0;
+  margin: 0 2rem;
+  padding: 0.9rem 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -162,7 +164,7 @@
   margin: 0;
 }
 
-/* Payments */
+/* ── Payment badges ── */
 .footer-payments {
   display: flex;
   align-items: center;
@@ -174,12 +176,14 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 5px;
   padding: 4px 10px;
+  transition: background 0.2s, border-color 0.2s;
 }
 
 .pay-badge img {
   height: 20px;
   opacity: 0.75;
   display: block;
+  transition: opacity 0.2s;
 }
 
 .pay-badge:hover {
@@ -191,7 +195,7 @@
   opacity: 1;
 }
 
-/* Responsive */
+/* ── Responsive ── */
 @media (max-width: 900px) {
   .footer-grid {
     grid-template-columns: 1fr 1fr;

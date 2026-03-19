@@ -10,11 +10,17 @@ const Footer = () => {
   return (
     <footer className="footer">
 
-      {/* Wave */}
+      {/* Wave — paths close upward (L1440,0 L0,0 Z) to blend with page above */}
       <div className="footer-wave">
-        <svg viewBox="0 0 1440 160" preserveAspectRatio="none">
-          <path d="M0,80 C200,20 400,120 720,60 C1040,0 1280,100 1440,50 L1440,160 L0,160Z" className="wave-back" />
-          <path d="M0,110 C240,60 480,140 720,90 C960,40 1200,120 1440,80 L1440,160 L0,160Z" className="wave-front" />
+        <svg viewBox="0 0 1440 55" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+          <path
+            className="wave-back"
+            d="M0,20 C180,55 360,0 540,25 C720,50 900,5 1080,28 C1260,50 1380,15 1440,20 L1440,0 L0,0 Z"
+          />
+          <path
+            className="wave-front"
+            d="M0,35 C200,10 400,50 600,30 C800,10 1000,45 1200,28 C1320,18 1400,38 1440,35 L1440,0 L0,0 Z"
+          />
         </svg>
       </div>
 
@@ -57,10 +63,10 @@ const Footer = () => {
         {/* Contact */}
         <div className="footer-col footer-contact">
           <h4>{t('footer.contact_us')}</h4>
-          <p><i className="fas fa-map-marker-alt"></i>Kathmandu, Nepal</p>
-          <p><i className="fas fa-phone-alt"></i>+977 97XXXXXXXX</p>
+          <p><i className="fas fa-map-marker-alt"></i> Kathmandu, Nepal</p>
+          <p><i className="fas fa-phone-alt"></i> +977 97XXXXXXXX</p>
           <a href="mailto:support@hastakrafts.com">
-            <i className="fas fa-envelope"></i>support@hastakrafts.com
+            <i className="fas fa-envelope"></i> support@hastakrafts.com
           </a>
         </div>
       </div>
