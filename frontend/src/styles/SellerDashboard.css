@@ -1099,3 +1099,166 @@
   .sd-products-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
+
+
+/* ── KPI trend chip ── */
+.sd-kpi-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-top: 0.35rem;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+.sd-kpi-trend.up   { background: rgba(255,255,255,0.25); color: #fff; }
+.sd-kpi-trend.down { background: rgba(0,0,0,0.18);       color: rgba(255,255,255,0.9); }
+.sd-kpi-trend-icon { width: 11px; height: 11px; flex-shrink: 0; }
+.sd-kpi-trend-icon svg { width: 100%; height: 100%; }
+
+/* ── Two-column layout (overview charts) ── */
+.sd-two-col {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.25rem;
+}
+.sd-chart-wide { /* inside sd-two-col, the wide card */ }
+
+/* ── Chart header row ── */
+.sd-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* ── MoM badge on overview chart ── */
+.sd-mom-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.sd-mom-badge.up   { background: #D1FAE5; color: #065F46; }
+.sd-mom-badge.down { background: #FEE2E2; color: #991B1B; }
+
+/* ── Recent orders status text (overview, no dropdown) ── */
+.sd-status-text { font-size: 0.82rem; font-weight: 700; flex-shrink: 0; }
+.sd-status-text.status-text-delivered  { color: #059669; }
+.sd-status-text.status-text-pending    { color: #D97706; }
+.sd-status-text.status-text-processing { color: #2563EB; }
+.sd-status-text.status-text-shipped    { color: #7C3AED; }
+.sd-status-text.status-text-cancelled  { color: #DC2626; }
+
+/* ── Analytics CTA banner ── */
+.sd-analytics-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 1.1rem 1.5rem;
+  background: linear-gradient(135deg, #2d1a0a 0%, #4a2c14 100%);
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  text-align: left;
+  margin-bottom: 1.5rem;
+  transition: all 0.2s ease;
+}
+.sd-analytics-cta:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(184,110,56,0.25); }
+.sd-cta-title { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 0.2rem; }
+.sd-cta-sub   { font-size: 0.8rem; color: rgba(255,255,255,0.6); }
+.sd-cta-arrow { width: 22px; height: 22px; color: #f0c898; flex-shrink: 0; }
+.sd-cta-arrow svg { width: 100%; height: 100%; }
+
+/* ── Analytics section headers ── */
+.sd-ana-section-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.75rem 0 1rem 0;
+}
+.sd-ana-section-icon  { font-size: 1.3rem; }
+.sd-ana-section-title { font-size: 1.05rem; font-weight: 700; color: #2C1810; }
+.sd-ana-section-sub   { font-size: 0.8rem;  color: #8B6F5E; margin-top: 1px; }
+
+/* ── Chart two-col row ── */
+.sd-chart-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+/* ── Legend pct ── */
+.sd-legend-pct { font-size: 0.7rem; color: #B09070; margin-left: 4px; }
+
+/* ── Peak badge + note ── */
+.sd-peak-badge {
+  font-size: 0.72rem; font-weight: 700;
+  background: #D1FAE5; color: #065F46;
+  padding: 2px 8px; border-radius: 20px;
+}
+.sd-peak-note {
+  font-size: 0.78rem; color: #5D4E37;
+  background: #F5F0E8; border-radius: 8px;
+  padding: 0.4rem 0.75rem; margin-top: 0.6rem;
+}
+
+/* ── Stock health ── */
+.sd-stock-grid { display: flex; flex-direction: column; gap: 0.65rem; }
+.sd-stock-row {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.5rem 0.25rem;
+  border-bottom: 1px solid #F5F0E8;
+}
+.sd-stock-row:last-of-type { border-bottom: none; }
+.sd-stock-img {
+  width: 36px; height: 36px; border-radius: 8px;
+  overflow: hidden; background: #F5EDE5;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; flex-shrink: 0;
+}
+.sd-stock-img img { width: 100%; height: 100%; object-fit: cover; }
+.sd-stock-info { flex: 1; min-width: 0; }
+.sd-stock-name {
+  font-size: 0.82rem; font-weight: 600; color: #2C1810;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  margin-bottom: 4px;
+}
+.sd-stock-bar-wrap { height: 5px; background: #EDE8E2; border-radius: 3px; }
+.sd-stock-bar      { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.sd-stock-count    { font-size: 0.75rem; font-weight: 700; flex-shrink: 0; min-width: 80px; text-align: right; }
+.sd-stock-count.ok  { color: #059669; }
+.sd-stock-count.low { color: #D97706; }
+.sd-stock-count.out { color: #DC2626; }
+.sd-stock-edit {
+  font-size: 0.72rem; font-weight: 600;
+  color: #b86e38; text-decoration: none;
+  background: #FEF3C7; padding: 2px 10px;
+  border-radius: 6px; flex-shrink: 0;
+  transition: all 0.15s;
+}
+.sd-stock-edit:hover { background: #b86e38; color: #fff; }
+.sd-restock-alert {
+  font-size: 0.8rem; color: #92400E;
+  background: #FEF3C7; border: 1px solid #FDE68A;
+  border-radius: 8px; padding: 0.6rem 1rem;
+  margin-top: 0.75rem;
+}
+
+/* ── Sidebar action icon ── */
+.sd-action-icon { width: 14px; height: 14px; display: flex; flex-shrink: 0; }
+.sd-action-icon svg { width: 100%; height: 100%; }
+
+/* ── Responsive for new layouts ── */
+@media (max-width: 1100px) {
+  .sd-two-col      { grid-template-columns: 1fr; }
+  .sd-chart-row-2  { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+  .sd-two-col     { grid-template-columns: 1fr; }
+  .sd-chart-row-2 { grid-template-columns: 1fr; }
+}
