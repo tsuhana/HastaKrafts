@@ -7,42 +7,34 @@ const fs = require("fs");
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadPath = path.join(__dirname, "../uploads/auctions");
-
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
     }
-
     cb(null, uploadPath);
   },
-
   filename: (req, file, cb) => {
-    const uniqueName = `auction-${Date.now()}-${Math.round(
-      Math.random() * 1e9
-    )}${path.extname(file.originalname)}`;
-
+    const uniqueName = `auction-${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
     cb(null, uniqueName);
-  }
+  },
 });
 
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedExt = /jpeg|jpg|png|webp/;
-    const extnameOk = allowedExt.test(
-      path.extname(file.originalname).toLowerCase()
-    );
+    const extnameOk = allowedExt.test(path.extname(file.originalname).toLowerCase());
     const mimetypeOk = allowedExt.test(file.mimetype);
-
     if (extnameOk && mimetypeOk) {
       cb(null, true);
     } else {
       cb(new Error("Only image files allowed (jpeg, jpg, png, webp)"));
     }
-  }
+  },
 }).array("images", 5);
 
 // ==================== HELPER: AUTO UPDATE STATUS ====================
+// BUG FIX 1: autoUpdateStatus now sets winner_id when ending
 const autoUpdateStatus = async (auction) => {
   const now = new Date();
   const start = new Date(auction.auction_start);
@@ -51,13 +43,26 @@ const autoUpdateStatus = async (auction) => {
   if (now >= start && now < end && auction.status === "upcoming") {
     await auction.update({ status: "live" });
     auction.status = "live";
-  } else if (
-    now >= end &&
-    auction.status !== "ended" &&
-    auction.status !== "cancelled"
-  ) {
-    await auction.update({ status: "ended" });
+  } else if (now >= end && auction.status !== "ended" && auction.status !== "cancelled") {
+    let winnerId = null;
+
+    // Use already-loaded bids if available, otherwise fetch
+    if (auction.bids && auction.bids.length > 0) {
+      const highest = [...auction.bids]
+        .sort((a, b) => parseFloat(b.bid_amount) - parseFloat(a.bid_amount))[0];
+      winnerId = highest.user_id;
+    } else {
+      const bids = await db.Bid.findAll({
+        where: { auction_id: auction.auction_id },
+        order: [["bid_amount", "DESC"]],
+        limit: 1,
+      });
+      winnerId = bids[0]?.user_id || null;
+    }
+
+    await auction.update({ status: "ended", winner_id: winnerId });
     auction.status = "ended";
+    auction.winner_id = winnerId;
   }
 };
 
@@ -65,32 +70,19 @@ const autoUpdateStatus = async (auction) => {
 const createAuction = async (req, res) => {
   upload(req, res, async (err) => {
     if (err) {
-      return res.status(400).json({
-        success: false,
-        message: err.message || "File upload error"
-      });
+      return res.status(400).json({ success: false, message: err.message || "File upload error" });
     }
 
     try {
       const {
-        title,
-        description,
-        starting_bid,
-        minimum_increment,
-        auction_start,
-        auction_end,
-        product_id
+        title, description, starting_bid, minimum_increment,
+        auction_start, auction_end, product_id,
       } = req.body;
 
-      const seller = await db.Seller.findOne({
-        where: { user_id: req.user.user_id }
-      });
+      const seller = await db.Seller.findOne({ where: { user_id: req.user.user_id } });
 
       if (!seller) {
-        return res.status(403).json({
-          success: false,
-          message: "Only sellers can create auctions"
-        });
+        return res.status(403).json({ success: false, message: "Only sellers can create auctions" });
       }
 
       const startDate = new Date(auction_start);
@@ -98,17 +90,11 @@ const createAuction = async (req, res) => {
       const now = new Date();
 
       if (endDate <= startDate) {
-        return res.status(400).json({
-          success: false,
-          message: "End date must be after start date"
-        });
+        return res.status(400).json({ success: false, message: "End date must be after start date" });
       }
 
       if (endDate <= now) {
-        return res.status(400).json({
-          success: false,
-          message: "End date must be in the future"
-        });
+        return res.status(400).json({ success: false, message: "End date must be in the future" });
       }
 
       const imagePaths = req.files
@@ -129,21 +115,17 @@ const createAuction = async (req, res) => {
         auction_start: startDate,
         auction_end: endDate,
         status,
-        total_bids: 0
+        total_bids: 0,
       });
 
       return res.status(201).json({
         success: true,
         message: "Auction created successfully",
-        data: auction
+        data: auction,
       });
     } catch (error) {
       console.error("Create auction error:", error);
-
-      return res.status(500).json({
-        success: false,
-        message: "Failed to create auction"
-      });
+      return res.status(500).json({ success: false, message: "Failed to create auction" });
     }
   });
 };
@@ -152,7 +134,6 @@ const createAuction = async (req, res) => {
 const getAllAuctions = async (req, res) => {
   try {
     const { status, search } = req.query;
-
     const where = {};
 
     if (status && status !== "all") {
@@ -162,7 +143,7 @@ const getAllAuctions = async (req, res) => {
     if (search) {
       where[db.Sequelize.Op.or] = [
         { title: { [db.Sequelize.Op.iLike]: `%${search}%` } },
-        { description: { [db.Sequelize.Op.iLike]: `%${search}%` } }
+        { description: { [db.Sequelize.Op.iLike]: `%${search}%` } },
       ];
     }
 
@@ -173,44 +154,30 @@ const getAllAuctions = async (req, res) => {
           model: db.Seller,
           as: "seller",
           attributes: ["seller_id", "shop_name", "user_id"],
-          include: [
-            {
-              model: db.User,
-              as: "user",
-              attributes: ["full_name"]
-            }
-          ]
+          include: [{ model: db.User, as: "user", attributes: ["full_name"] }],
         },
         {
           model: db.User,
           as: "winner",
-          attributes: ["user_id", "full_name"]
+          attributes: ["user_id", "full_name"],
         },
         {
           model: db.Bid,
           as: "bids",
-          attributes: ["bid_id", "bid_amount"]
-        }
+          attributes: ["bid_id", "bid_amount", "user_id"],
+        },
       ],
-      order: [["created_at", "DESC"]]
+      order: [["created_at", "DESC"]],
     });
 
-    // Auto-update statuses
     for (const auction of auctions) {
       await autoUpdateStatus(auction);
     }
 
-    return res.status(200).json({
-      success: true,
-      data: auctions
-    });
+    return res.status(200).json({ success: true, data: auctions });
   } catch (error) {
     console.error("Get auctions error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch auctions"
-    });
+    return res.status(500).json({ success: false, message: "Failed to fetch auctions" });
   }
 };
 
@@ -223,69 +190,48 @@ const getAuctionById = async (req, res) => {
           model: db.Seller,
           as: "seller",
           attributes: ["seller_id", "shop_name", "user_id"],
-          include: [
-            {
-              model: db.User,
-              as: "user",
-              attributes: ["full_name", "email"]
-            }
-          ]
+          include: [{ model: db.User, as: "user", attributes: ["full_name", "email"] }],
         },
         {
           model: db.User,
           as: "winner",
-          attributes: ["user_id", "full_name"]
+          attributes: ["user_id", "full_name"],
         },
         {
           model: db.Bid,
           as: "bids",
-          include: [
-            {
-              model: db.User,
-              as: "user",
-              attributes: ["user_id", "full_name"]
-            }
-          ],
-          order: [["bid_amount", "DESC"]]
-        }
-      ]
+          include: [{ model: db.User, as: "user", attributes: ["user_id", "full_name"] }],
+        },
+      ],
     });
 
     if (!auction) {
-      return res.status(404).json({
-        success: false,
-        message: "Auction not found"
-      });
+      return res.status(404).json({ success: false, message: "Auction not found" });
     }
 
     await autoUpdateStatus(auction);
 
-    return res.status(200).json({
-      success: true,
-      data: auction
-    });
+    // ✅ BUG FIX 2: Sort bids by bid_amount DESC in JS
+    // Sequelize ignores `order` inside nested hasMany includes — must sort manually
+    const auctionData = auction.toJSON();
+    auctionData.bids = (auctionData.bids || []).sort(
+      (a, b) => parseFloat(b.bid_amount) - parseFloat(a.bid_amount)
+    );
+
+    return res.status(200).json({ success: true, data: auctionData });
   } catch (error) {
     console.error("Get auction error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch auction"
-    });
+    return res.status(500).json({ success: false, message: "Failed to fetch auction" });
   }
 };
 
 // ==================== GET SELLER AUCTIONS ====================
 const getSellerAuctions = async (req, res) => {
   try {
-    const seller = await db.Seller.findOne({
-      where: { user_id: req.user.user_id }
-    });
+    const seller = await db.Seller.findOne({ where: { user_id: req.user.user_id } });
 
     if (!seller) {
-      return res.status(404).json({
-        success: false,
-        message: "Seller not found"
-      });
+      return res.status(404).json({ success: false, message: "Seller not found" });
     }
 
     const auctions = await db.Auction.findAll({
@@ -294,39 +240,25 @@ const getSellerAuctions = async (req, res) => {
         {
           model: db.Bid,
           as: "bids",
-          include: [
-            {
-              model: db.User,
-              as: "user",
-              attributes: ["user_id", "full_name"]
-            }
-          ]
+          include: [{ model: db.User, as: "user", attributes: ["user_id", "full_name"] }],
         },
         {
           model: db.User,
           as: "winner",
-          attributes: ["user_id", "full_name"]
-        }
+          attributes: ["user_id", "full_name"],
+        },
       ],
-      order: [["created_at", "DESC"]]
+      order: [["created_at", "DESC"]],
     });
 
-    // Auto-update statuses
     for (const auction of auctions) {
       await autoUpdateStatus(auction);
     }
 
-    return res.status(200).json({
-      success: true,
-      data: auctions
-    });
+    return res.status(200).json({ success: true, data: auctions });
   } catch (error) {
     console.error("Get seller auctions error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch auctions"
-    });
+    return res.status(500).json({ success: false, message: "Failed to fetch auctions" });
   }
 };
 
@@ -336,88 +268,55 @@ const placeBid = async (req, res) => {
     const { auction_id } = req.params;
     const { bid_amount } = req.body;
 
-    // Check if user is admin
     if (req.user.role === "admin") {
-      return res.status(403).json({
-        success: false,
-        message: "Admins cannot place bids"
-      });
+      return res.status(403).json({ success: false, message: "Admins cannot place bids" });
     }
 
     const auction = await db.Auction.findByPk(auction_id, {
-      include: [{ model: db.Seller, as: "seller" }]
+      include: [{ model: db.Seller, as: "seller" }],
     });
 
     if (!auction) {
-      return res.status(404).json({
-        success: false,
-        message: "Auction not found"
-      });
+      return res.status(404).json({ success: false, message: "Auction not found" });
     }
 
     await autoUpdateStatus(auction);
 
     if (auction.status !== "live") {
-      return res.status(400).json({
-        success: false,
-        message: "Auction is not active"
-      });
+      return res.status(400).json({ success: false, message: "Auction is not active" });
     }
 
     if (new Date() > new Date(auction.auction_end)) {
-      return res.status(400).json({
-        success: false,
-        message: "Auction has ended"
-      });
+      return res.status(400).json({ success: false, message: "Auction has ended" });
     }
 
-    // Prevent seller from bidding on their own auction
     if (auction.seller?.user_id === req.user.user_id) {
-      return res.status(403).json({
-        success: false,
-        message: "You cannot bid on your own auction"
-      });
+      return res.status(403).json({ success: false, message: "You cannot bid on your own auction" });
     }
 
-    // Prevent ANY seller from bidding
-    const isSeller = await db.Seller.findOne({
-      where: { user_id: req.user.user_id }
-    });
-
+    const isSeller = await db.Seller.findOne({ where: { user_id: req.user.user_id } });
     if (isSeller) {
-      return res.status(403).json({
-        success: false,
-        message: "Sellers cannot place bids"
-      });
+      return res.status(403).json({ success: false, message: "Sellers cannot place bids" });
     }
 
-    const currentBid =
-      parseFloat(auction.current_bid) || parseFloat(auction.starting_bid);
-
+    const currentBid = parseFloat(auction.current_bid) || parseFloat(auction.starting_bid);
     const minimumIncrement = parseFloat(auction.minimum_increment) || 100;
     const minimumBid = currentBid + minimumIncrement;
-
     const bidValue = parseFloat(bid_amount);
 
     if (!bidValue || Number.isNaN(bidValue)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid bid amount"
-      });
+      return res.status(400).json({ success: false, message: "Invalid bid amount" });
     }
 
     if (bidValue < minimumBid) {
       return res.status(400).json({
         success: false,
-        message: `Minimum bid is Rs. ${minimumBid.toLocaleString()}`
+        message: `Minimum bid is Rs. ${minimumBid.toLocaleString()}`,
       });
     }
 
     // Unmark previous highest bid
-    await db.Bid.update(
-      { is_highest: false },
-      { where: { auction_id, is_highest: true } }
-    );
+    await db.Bid.update({ is_highest: false }, { where: { auction_id, is_highest: true } });
 
     // Create new highest bid
     const bid = await db.Bid.create({
@@ -425,23 +324,19 @@ const placeBid = async (req, res) => {
       user_id: req.user.user_id,
       bid_amount: bidValue,
       is_highest: true,
-      bid_time: new Date()
+      bid_time: new Date(),
     });
 
-    // Update auction current bid + total bids
+    // ✅ BUG FIX 3: Pre-calculate newTotalBids ONCE — prevents socket emit sending wrong count
+    const newTotalBids = auction.total_bids + 1;
+
     await auction.update({
       current_bid: bidValue,
-      total_bids: auction.total_bids + 1
+      total_bids: newTotalBids,
     });
 
     const bidWithUser = await db.Bid.findByPk(bid.bid_id, {
-      include: [
-        {
-          model: db.User,
-          as: "user",
-          attributes: ["user_id", "full_name"]
-        }
-      ]
+      include: [{ model: db.User, as: "user", attributes: ["user_id", "full_name"] }],
     });
 
     // REAL-TIME: emit to all viewers of this auction
@@ -451,8 +346,8 @@ const placeBid = async (req, res) => {
         bid_id: bidWithUser.bid_id,
         bid_amount: parseFloat(bidWithUser.bid_amount),
         user: bidWithUser.user,
-        total_bids: auction.total_bids + 1,
-        current_bid: bidValue
+        total_bids: newTotalBids,   // ✅ correct count
+        current_bid: bidValue,
       });
     } catch (e) {
       console.log("Socket emit error (non-critical):", e.message);
@@ -461,15 +356,11 @@ const placeBid = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "Bid placed successfully",
-      data: bidWithUser
+      data: bidWithUser,
     });
   } catch (error) {
     console.error("Place bid error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to place bid"
-    });
+    return res.status(500).json({ success: false, message: "Failed to place bid" });
   }
 };
 
@@ -478,27 +369,14 @@ const getAuctionBids = async (req, res) => {
   try {
     const bids = await db.Bid.findAll({
       where: { auction_id: req.params.auction_id },
-      include: [
-        {
-          model: db.User,
-          as: "user",
-          attributes: ["user_id", "full_name"]
-        }
-      ],
-      order: [["bid_amount", "DESC"]]
+      include: [{ model: db.User, as: "user", attributes: ["user_id", "full_name"] }],
+      order: [["bid_amount", "DESC"]],
     });
 
-    return res.status(200).json({
-      success: true,
-      data: bids
-    });
+    return res.status(200).json({ success: true, data: bids });
   } catch (error) {
     console.error("Get bids error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch bids"
-    });
+    return res.status(500).json({ success: false, message: "Failed to fetch bids" });
   }
 };
 
@@ -508,5 +386,5 @@ module.exports = {
   getAuctionById,
   getSellerAuctions,
   placeBid,
-  getAuctionBids
+  getAuctionBids,
 };

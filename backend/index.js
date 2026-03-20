@@ -14,7 +14,7 @@ const authRoutes = require("./routes/auth.routes");
 const productRoutes = require("./routes/product.routes");
 const adminRoutes = require("./routes/admin.routes");
 const userRoutes = require("./routes/user.routes");
-const sellerRoutes = require("./routes/seller.routes"); // ← NEW
+const sellerRoutes = require("./routes/seller.routes");
 const cartRoutes = require("./routes/cart.routes");
 const orderRoutes = require("./routes/order.routes");
 const auctionRoutes = require("./routes/auction.routes");
@@ -75,7 +75,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api/sellers", sellerRoutes); // ← NEW
+app.use("/api/sellers", sellerRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/auctions", auctionRoutes);
@@ -132,7 +132,7 @@ io.on("connection", (socket) => {
   });
 });
 
-// AUTO END AUCTIONS (every 30 seconds)
+// ✅ AUTO END AUCTIONS (every 30 seconds)
 const autoEndAuctions = async () => {
   try {
     const now = new Date();
@@ -178,6 +178,69 @@ const autoEndAuctions = async () => {
   }
 };
 
+// ✅ STARTUP WINNER RECOVERY
+// Fixes auctions that ended while backend was down (missed the cron window)
+const recoverMissedWinners = async () => {
+  try {
+    const missedAuctions = await db.Auction.findAll({
+      where: {
+        status: "ended",
+        winner_id: null,
+      },
+      include: [{ model: db.Bid, as: "bids" }],
+    });
+
+    if (missedAuctions.length === 0) return;
+
+    for (const auction of missedAuctions) {
+      if (!auction.bids?.length) continue;
+
+      const highest = [...auction.bids]
+        .sort((a, b) => parseFloat(b.bid_amount) - parseFloat(a.bid_amount))[0];
+
+      await auction.update({ winner_id: highest.user_id });
+      console.log(`✅ Winner recovered — Auction #${auction.auction_id}: user_id ${highest.user_id} (Rs. ${highest.bid_amount})`);
+    }
+
+    console.log(`✅ Recovered winners for ${missedAuctions.length} auction(s)`);
+  } catch (err) {
+    console.error("Startup winner recovery error:", err.message);
+  }
+};
+
+// ✅ ALSO: End any auctions that ended while backend was down
+const recoverMissedEndedAuctions = async () => {
+  try {
+    const now = new Date();
+
+    const shouldBeEnded = await db.Auction.findAll({
+      where: {
+        status: "live",
+        auction_end: { [db.Sequelize.Op.lte]: now },
+      },
+      include: [{ model: db.Bid, as: "bids" }],
+    });
+
+    for (const auction of shouldBeEnded) {
+      const highest = [...(auction.bids || [])]
+        .sort((a, b) => parseFloat(b.bid_amount) - parseFloat(a.bid_amount))[0];
+
+      await auction.update({
+        status: "ended",
+        winner_id: highest?.user_id || null,
+      });
+
+      console.log(`✅ Ended missed auction #${auction.auction_id}, winner: user_id ${highest?.user_id || "none"}`);
+    }
+
+    if (shouldBeEnded.length > 0) {
+      console.log(`✅ Ended ${shouldBeEnded.length} auction(s) that were missed`);
+    }
+  } catch (err) {
+    console.error("Startup auction recovery error:", err.message);
+  }
+};
+
 // SERVER START
 const PORT = process.env.PORT || 5000;
 
@@ -196,8 +259,12 @@ db.sequelize
     setInterval(autoEndAuctions, 30000);
     console.log("Auction auto-end service started");
 
-    server.listen(PORT, () => {
+    server.listen(PORT, async () => {
       console.log(`Server running on http://localhost:${PORT}`);
+
+      //  Run both recovery functions on every startup
+      await recoverMissedEndedAuctions();
+      await recoverMissedWinners();
     });
   })
   .catch((err) => {

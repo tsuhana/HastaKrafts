@@ -47,7 +47,8 @@ import "./styles/variables.css";
 import "./styles/Toast.css";
 import "./App.css";
 
-const NO_FOOTER_PATHS = ["/admin", "/seller/dashboard"];
+// ✅ FIXED: was ["/admin", "/seller/dashboard"] — /admin never matched /admin/dashboard
+const NO_FOOTER_PATHS = ["/admin/dashboard", "/seller/dashboard"];
 
 const AppContent = () => {
   const location = useLocation();

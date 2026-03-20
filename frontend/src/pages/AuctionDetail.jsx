@@ -37,7 +37,8 @@ const AuctionDetail = () => {
           created_at: new Date().toISOString(),
           is_highest: true,
         }, ...prev.map(b => ({ ...b, is_highest: false }))]);
-        setBidAmount(String(Math.ceil(parseFloat(data.current_bid) + 100)));
+        const increment = data.minimum_increment || parseFloat(auction?.minimum_increment) || 100;
+        setBidAmount(String(Math.ceil(parseFloat(data.current_bid) + increment)));
       }
     });
 
@@ -66,7 +67,8 @@ const AuctionDetail = () => {
       if (res.data.success) {
         const data = res.data.data;
         setAuction(data);
-        setBidHistory(data.bids || []);
+        const sortedBids = (data.bids || []).sort((a, b) => parseFloat(b.bid_amount) - parseFloat(a.bid_amount));
+        setBidHistory(sortedBids);
         const currentBid = parseFloat(data.current_bid) || parseFloat(data.starting_bid);
         const increment = parseFloat(data.minimum_increment) || 100;
         setBidAmount(String(Math.ceil(currentBid + increment)));
@@ -119,7 +121,7 @@ const AuctionDetail = () => {
     }
   };
 
-  //  Fixed formatDate — handles createdAt, created_at, and null gracefully
+  // ✅ Fixed formatDate — handles createdAt, created_at, and null gracefully
   const formatDate = (dateStr) => {
     if (!dateStr) return '—';
     try {
@@ -134,7 +136,7 @@ const AuctionDetail = () => {
     }
   };
 
-  // Get time from bid — supports both createdAt and created_at
+  // ✅ Get time from bid — supports both createdAt and created_at
   const getBidTime = (bid) => {
     return bid?.createdAt || bid?.created_at || null;
   };
@@ -315,7 +317,7 @@ const AuctionDetail = () => {
               <div className="ad-no-bids"><p>{t('auctions.no_bids')}</p></div>
             ) : (
               <div className="ad-bids-list">
-                {bidHistory.slice(0, 10).map((bid, i) => (
+                {bidHistory.map((bid, i) => (
                   <div key={bid.bid_id} className={`ad-bid-row ${i === 0 ? 'highest' : ''}`}>
                     <div className="ad-bid-user">
                       <div className="ad-bid-avatar">
@@ -325,7 +327,7 @@ const AuctionDetail = () => {
                         <span className="ad-bid-name">
                           {i === 0 ? '👑 ' : ''}{bid.user?.full_name || 'Anonymous'}
                         </span>
-                        {/*  use getBidTime to handle both field names */}
+                        {/* use getBidTime to handle both field names */}
                         <span className="ad-bid-time">{formatDate(getBidTime(bid))}</span>
                       </div>
                     </div>
