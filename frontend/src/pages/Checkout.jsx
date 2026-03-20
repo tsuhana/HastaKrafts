@@ -9,23 +9,18 @@ const Checkout = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const { t } = useTranslation();
-  const [loading, setLoading] = useState(true);
-  const [cart, setCart] = useState(null);
-  const [subtotal, setSubtotal] = useState(0);
-  const [user, setUser] = useState(null);
-  const [placing, setPlacing] = useState(false);
+  const [loading, setLoading]     = useState(true);
+  const [cart, setCart]           = useState(null);
+  const [subtotal, setSubtotal]   = useState(0);
+  const [user, setUser]           = useState(null);
+  const [placing, setPlacing]     = useState(false);
   const [userPoints, setUserPoints] = useState(0);
   const [redeemPoints, setRedeemPoints] = useState(false);
 
   const [shippingInfo, setShippingInfo] = useState({
-    delivery_name: '',
-    delivery_phone: '',
-    delivery_email: '',
-    delivery_address: '',
-    delivery_city: '',
-    delivery_state: '',
-    delivery_postal_code: '',
-    delivery_landmark: '',
+    delivery_name: '', delivery_phone: '', delivery_email: '',
+    delivery_address: '', delivery_city: '', delivery_state: '',
+    delivery_postal_code: '', delivery_landmark: '',
   });
 
   const [paymentMethod, setPaymentMethod] = useState('khalti');
@@ -46,26 +41,25 @@ const Checkout = () => {
 
       const userRes = await userAPI.getProfile();
       if (userRes.data.success) {
-        const userData = userRes.data.data;
-        setUser(userData);
+        const u = userRes.data.data;
+        setUser(u);
         setShippingInfo({
-          delivery_name: userData.full_name || '',
-          delivery_phone: userData.phone || '',
-          delivery_email: userData.email || '',
-          delivery_address: userData.address || '',
-          delivery_city: userData.city || '',
-          delivery_state: userData.state || '',
-          delivery_postal_code: userData.postal_code || '',
-          delivery_landmark: userData.landmark || '',
+          delivery_name:        u.full_name   || '',
+          delivery_phone:       u.phone       || '',
+          delivery_email:       u.email       || '',
+          delivery_address:     u.address     || '',
+          delivery_city:        u.city        || '',
+          delivery_state:       u.state       || '',
+          delivery_postal_code: u.postal_code || '',
+          delivery_landmark:    u.landmark    || '',
         });
       }
 
       const pointsRes = await pointsAPI.getBalance();
-      if (pointsRes.data.success) {
-        setUserPoints(pointsRes.data.data.total_points || 0);
-      }
+      if (pointsRes.data.success) setUserPoints(pointsRes.data.data.total_points || 0);
+
     } catch (err) {
-      console.error('Error fetching data:', err);
+      console.error('Checkout fetch error:', err);
       toast.error('Failed to load checkout data');
     } finally {
       setLoading(false);
@@ -79,33 +73,34 @@ const Checkout = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!shippingInfo.delivery_name.trim()) newErrors.delivery_name = 'Name is required';
-    if (!shippingInfo.delivery_phone.trim()) newErrors.delivery_phone = 'Phone is required';
-    else if (!/^\d{10}$/.test(shippingInfo.delivery_phone.replace(/\D/g, ''))) newErrors.delivery_phone = 'Phone must be 10 digits';
+    if (!shippingInfo.delivery_name.trim())    newErrors.delivery_name    = 'Name is required';
+    if (!shippingInfo.delivery_phone.trim())   newErrors.delivery_phone   = 'Phone is required';
+    else if (!/^\d{10}$/.test(shippingInfo.delivery_phone.replace(/\D/g, '')))
+                                               newErrors.delivery_phone   = 'Phone must be 10 digits';
     if (!shippingInfo.delivery_address.trim()) newErrors.delivery_address = 'Address is required';
-    if (!shippingInfo.delivery_city.trim()) newErrors.delivery_city = 'City is required';
+    if (!shippingInfo.delivery_city.trim())    newErrors.delivery_city    = 'City is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handlePlaceOrder = async () => {
-    if (!validateForm()) {
-      toast.warning('Please fill in all required fields');
-      return;
-    }
-    if (!cart || !cart.items || cart.items.length === 0) {
-      toast.error('Your cart is empty');
-      return;
-    }
+    if (!validateForm()) { toast.warning('Please fill in all required fields'); return; }
+    if (!cart?.items?.length) { toast.error('Your cart is empty'); return; }
+
     setPlacing(true);
     try {
       const orderData = { ...shippingInfo, payment_method: paymentMethod, redeem_points: redeemPoints };
       const res = await orderAPI.createOrder(orderData);
+
       if (res.data.success) {
-        window.dispatchEvent(new Event('pointsUpdated'));
         if (paymentMethod === 'khalti' && res.data.data.payment_url) {
+          // ✅ Cart is NOT cleared yet — backend only clears it after payment confirmed
+          // So if user comes back, cart is still there
           window.location.href = res.data.data.payment_url;
         } else {
+          // COD — cart already cleared by backend, update navbar
+          window.dispatchEvent(new Event('cartUpdated'));
+          window.dispatchEvent(new Event('pointsUpdated'));
           toast.success('Order placed successfully!');
           navigate(`/order-confirmation/${res.data.data.order_id}`);
         }
@@ -119,7 +114,7 @@ const Checkout = () => {
   };
 
   const getImageUrl = (images) => {
-    if (!images || images.length === 0) return null;
+    if (!images?.length) return null;
     return `http://localhost:5000${images[0]}`;
   };
 
@@ -139,7 +134,7 @@ const Checkout = () => {
     );
   }
 
-  if (!cart || !cart.items || cart.items.length === 0) {
+  if (!cart?.items?.length) {
     return (
       <div className="checkout-empty">
         <h2>{t('cart.empty')}</h2>
@@ -150,8 +145,8 @@ const Checkout = () => {
     );
   }
 
-  const deliveryFee = redeemPoints ? 0 : BASE_DELIVERY_FEE;
-  const total = subtotal + deliveryFee;
+  const deliveryFee  = redeemPoints ? 0 : BASE_DELIVERY_FEE;
+  const total        = subtotal + deliveryFee;
   const pointsToEarn = Math.floor(subtotal / 100);
 
   return (
@@ -162,10 +157,9 @@ const Checkout = () => {
         <div className="checkout-content">
           <div className="checkout-left">
 
-            {/* Shipping Information */}
+            {/* Shipping Info */}
             <div className="checkout-section">
               <h2>{t('checkout.shipping_info')}</h2>
-
               <div className="form-row">
                 <div className="form-field">
                   <label>{t('checkout.full_name')} *</label>
@@ -245,26 +239,25 @@ const Checkout = () => {
             </div>
           </div>
 
+          {/* Order Summary */}
           <div className="checkout-right">
             <div className="order-summary">
               <h2>{t('checkout.order_summary')}</h2>
 
               <div className="summary-items">
                 {cart.items.map((item) => {
-                  const hasDiscount = item.product.has_discount === true || item.product.has_discount === 'true';
-                  const discountPct = parseInt(item.product.discount_percentage) || 0;
-                  const originalPrice = parseFloat(item.product.price);
+                  const hasDiscount    = item.product.has_discount === true || item.product.has_discount === 'true';
+                  const discountPct    = parseInt(item.product.discount_percentage) || 0;
+                  const originalPrice  = parseFloat(item.product.price);
                   const discountedPrice = getDiscountedPrice(item.product);
-                  const isDiscounted = hasDiscount && discountPct > 0;
+                  const isDiscounted   = hasDiscount && discountPct > 0;
 
                   return (
                     <div key={item.cart_item_id} className="summary-item">
                       <div className="summary-item-image">
-                        {getImageUrl(item.product.images) ? (
-                          <img src={getImageUrl(item.product.images)} alt={item.product.name} />
-                        ) : (
-                          <div className="no-image">📦</div>
-                        )}
+                        {getImageUrl(item.product.images)
+                          ? <img src={getImageUrl(item.product.images)} alt={item.product.name} />
+                          : <div className="no-image">📦</div>}
                       </div>
                       <div className="summary-item-details">
                         <p className="summary-item-name">{item.product.name}</p>
@@ -272,9 +265,7 @@ const Checkout = () => {
                         {isDiscounted && <span className="summary-discount-badge">-{discountPct}% OFF</span>}
                       </div>
                       <div className="summary-item-price-wrap">
-                        {isDiscounted && (
-                          <p className="summary-item-original-price">Rs. {(originalPrice * item.quantity).toLocaleString()}</p>
-                        )}
+                        {isDiscounted && <p className="summary-item-original-price">Rs. {(originalPrice * item.quantity).toLocaleString()}</p>}
                         <p className={`summary-item-price ${isDiscounted ? 'discounted' : ''}`}>
                           Rs. {(discountedPrice * item.quantity).toLocaleString()}
                         </p>
@@ -291,7 +282,6 @@ const Checkout = () => {
                 <span>Rs. {subtotal.toLocaleString()}</span>
               </div>
 
-              {/* Points Redemption */}
               {userPoints >= 150 && (
                 <div className="points-redemption-section">
                   <label className="points-checkbox">
@@ -311,13 +301,8 @@ const Checkout = () => {
                 <span>{t('cart.delivery')}</span>
                 <span className={redeemPoints ? 'free-delivery' : ''}>
                   {redeemPoints ? (
-                    <>
-                      <span className="original-delivery">Rs. {BASE_DELIVERY_FEE}</span>
-                      <span className="free-text">{t('checkout.free')} 💎</span>
-                    </>
-                  ) : (
-                    `Rs. ${deliveryFee}`
-                  )}
+                    <><span className="original-delivery">Rs. {BASE_DELIVERY_FEE}</span><span className="free-text">{t('checkout.free')} 💎</span></>
+                  ) : `Rs. ${deliveryFee}`}
                 </span>
               </div>
 
@@ -334,7 +319,11 @@ const Checkout = () => {
               </div>
 
               <button onClick={handlePlaceOrder} disabled={placing} className="btn-place-order">
-                {placing ? t('common.loading') : paymentMethod === 'khalti' ? t('checkout.proceed_payment') : t('checkout.place_order')}
+                {placing
+                  ? t('common.loading')
+                  : paymentMethod === 'khalti'
+                    ? t('checkout.proceed_payment')
+                    : t('checkout.place_order')}
               </button>
             </div>
           </div>

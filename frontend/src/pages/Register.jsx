@@ -37,6 +37,8 @@ const Register = () => {
       if (response.data.success) {
         localStorage.setItem('token', response.data.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.data.user));
+        // ✅ Fire event so NavBar updates immediately
+        window.dispatchEvent(new Event('userLoggedIn'));
         navigate('/');
       }
     } catch (err) {

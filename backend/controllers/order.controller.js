@@ -57,41 +57,27 @@ const createOrder = async (req, res) => {
     } = req.body;
 
     if (!["khalti", "cod"].includes(payment_method)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid payment method. Choose 'khalti' or 'cod'",
-      });
+      return res.status(400).json({ success: false, message: "Invalid payment method. Choose 'khalti' or 'cod'" });
     }
 
     if (!delivery_name || !delivery_phone || !delivery_address || !delivery_city) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide all delivery information",
-      });
+      return res.status(400).json({ success: false, message: "Please provide all delivery information" });
     }
 
     const cart = await db.Cart.findOne({
       where: { user_id: req.user.user_id },
-      include: [
-        {
-          model: db.CartItem,
-          as: "items",
-          include: [
-            {
-              model: db.Product,
-              as: "product",
-              include: [{ model: db.Seller, as: "seller", attributes: ["seller_id"] }],
-            },
-          ],
-        },
-      ],
+      include: [{
+        model: db.CartItem, as: "items",
+        include: [{
+          model: db.Product, as: "product",
+          include: [{ model: db.Seller, as: "seller", attributes: ["seller_id"] }],
+        }],
+      }],
     });
 
     if (!cart || !cart.items || cart.items.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Cart is empty",
-      });
+      await transaction.rollback();
+      return res.status(400).json({ success: false, message: "Cart is empty" });
     }
 
     let subtotal = 0;
@@ -100,10 +86,7 @@ const createOrder = async (req, res) => {
     for (const item of cart.items) {
       if (!item.product) {
         await transaction.rollback();
-        return res.status(400).json({
-          success: false,
-          message: "Product not found",
-        });
+        return res.status(400).json({ success: false, message: "Product not found" });
       }
 
       if (item.quantity > item.product.stock_quantity) {
@@ -114,7 +97,6 @@ const createOrder = async (req, res) => {
         });
       }
 
-      // USE DISCOUNTED PRICE IF APPLICABLE
       const hasDiscount = item.product.has_discount === true || item.product.has_discount === 'true';
       const discountPct = parseInt(item.product.discount_percentage) || 0;
       const originalPrice = parseFloat(item.product.price);
@@ -129,33 +111,27 @@ const createOrder = async (req, res) => {
         product_id: item.product.product_id,
         seller_id: item.product.seller.seller_id,
         product_name: item.product.name,
-        product_price: actualPrice,         //  actual paid (discounted) price
-        original_price: originalPrice,      //  original price for display
-        discount_percentage: hasDiscount && discountPct > 0 ? discountPct : 0, //  for display
+        product_price: actualPrice,
+        original_price: originalPrice,
+        discount_percentage: hasDiscount && discountPct > 0 ? discountPct : 0,
         product_image: item.product.images?.[0] || null,
         quantity: item.quantity,
         subtotal: itemSubtotal,
       });
     }
 
-    // POINTS REDEMPTION LOGIC
+    // Points redemption logic
     let delivery_fee = 150;
     let points_redeemed = 0;
 
     if (redeem_points) {
-      const userPoints = await db.UserPoints.findOne({
-        where: { user_id: req.user.user_id },
-      });
-
+      const userPoints = await db.UserPoints.findOne({ where: { user_id: req.user.user_id } });
       if (userPoints && userPoints.total_points >= 150) {
         delivery_fee = 0;
         points_redeemed = 150;
       } else {
         await transaction.rollback();
-        return res.status(400).json({
-          success: false,
-          message: "You need at least 150 points to redeem free delivery",
-        });
+        return res.status(400).json({ success: false, message: "You need at least 150 points to redeem free delivery" });
       }
     }
 
@@ -194,14 +170,19 @@ const createOrder = async (req, res) => {
       )
     );
 
-    for (const item of cart.items) {
-      await item.product.update(
-        { stock_quantity: item.product.stock_quantity - item.quantity },
-        { transaction }
-      );
+    // ✅ KEY FIX:
+    // COD → clear cart + deduct stock immediately (payment confirmed at delivery)
+    // Khalti → do NOT clear cart or deduct stock yet — wait for payment verification
+    if (payment_method === "cod") {
+      for (const item of cart.items) {
+        await item.product.update(
+          { stock_quantity: item.product.stock_quantity - item.quantity },
+          { transaction }
+        );
+      }
+      await db.CartItem.destroy({ where: { cart_id: cart.cart_id }, transaction });
     }
-
-    await db.CartItem.destroy({ where: { cart_id: cart.cart_id }, transaction });
+    // For Khalti: cart items stay, stock stays — cleared in verifyKhaltiPayment on success
 
     if (points_redeemed > 0) {
       await redeemPoints(req.user.user_id, points_redeemed);
@@ -221,43 +202,39 @@ const createOrder = async (req, res) => {
 
     if (payment_method === "cod") {
       await awardPoints(req.user.user_id, order.order_id, subtotal);
-    }
-
-    if (payment_method === "khalti") {
-      const paymentUrl = await initiateKhaltiPayment(order);
       return res.status(201).json({
         success: true,
-        message: "Order created. Proceed to payment.",
+        message: "Order placed successfully!",
         data: {
           order_id: order.order_id,
           order_number: order.order_number,
           total: order.total,
-          payment_method: "khalti",
-          payment_url: paymentUrl,
+          payment_method: "cod",
+          points_redeemed,
           points_earned: points_to_earn,
         },
       });
     }
 
+    // Khalti — initiate payment
+    const paymentUrl = await initiateKhaltiPayment(order);
     return res.status(201).json({
       success: true,
-      message: "Order placed successfully!",
+      message: "Order created. Proceed to payment.",
       data: {
         order_id: order.order_id,
         order_number: order.order_number,
         total: order.total,
-        payment_method: "cod",
-        points_redeemed,
+        payment_method: "khalti",
+        payment_url: paymentUrl,
         points_earned: points_to_earn,
       },
     });
+
   } catch (error) {
     await transaction.rollback();
     console.error("Create order error:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Failed to create order",
-    });
+    return res.status(500).json({ success: false, message: error.message || "Failed to create order" });
   }
 };
 
@@ -267,18 +244,12 @@ const verifyKhaltiPayment = async (req, res) => {
     const { pidx, order_id } = req.query;
 
     if (!pidx || !order_id) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing pidx or order_id",
-      });
+      return res.status(400).json({ success: false, message: "Missing pidx or order_id" });
     }
 
     const KHALTI_SECRET_KEY = process.env.KHALTI_SECRET_KEY;
     if (!KHALTI_SECRET_KEY) {
-      return res.status(500).json({
-        success: false,
-        message: "KHALTI_SECRET_KEY missing in backend .env",
-      });
+      return res.status(500).json({ success: false, message: "KHALTI_SECRET_KEY missing in backend .env" });
     }
 
     const lookupRes = await axios.post(
@@ -288,12 +259,13 @@ const verifyKhaltiPayment = async (req, res) => {
     );
 
     const status = lookupRes.data.status;
-    const order = await db.Order.findByPk(order_id);
+
+    const order = await db.Order.findByPk(order_id, {
+      include: [{ model: db.OrderItem, as: "items" }],
+    });
+
     if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
+      return res.status(404).json({ success: false, message: "Order not found" });
     }
 
     if (status === "Completed") {
@@ -304,6 +276,37 @@ const verifyKhaltiPayment = async (req, res) => {
         paid_at: new Date(),
         payment_data: lookupRes.data,
       });
+
+      // ✅ NOW deduct stock and clear cart (Khalti payment confirmed)
+      const cart = await db.Cart.findOne({
+        where: { user_id: order.user_id },
+        include: [{
+          model: db.CartItem, as: "items",
+          include: [{ model: db.Product, as: "product" }],
+        }],
+      });
+
+      if (cart && cart.items && cart.items.length > 0) {
+        const cartTransaction = await db.sequelize.transaction();
+        try {
+          for (const cartItem of cart.items) {
+            if (cartItem.product) {
+              // Only deduct for products that are in this order
+              const orderItem = order.items.find((oi) => oi.product_id === cartItem.product_id);
+              if (orderItem) {
+                const newStock = Math.max(0, cartItem.product.stock_quantity - cartItem.quantity);
+                await cartItem.product.update({ stock_quantity: newStock }, { transaction: cartTransaction });
+              }
+            }
+          }
+          await db.CartItem.destroy({ where: { cart_id: cart.cart_id }, transaction: cartTransaction });
+          await cartTransaction.commit();
+        } catch (stockErr) {
+          await cartTransaction.rollback();
+          console.error("Stock/cart update error after Khalti payment:", stockErr);
+          // Don't fail the payment verification — order is already paid
+        }
+      }
 
       await awardPoints(order.user_id, order.order_id, order.subtotal);
 
@@ -318,6 +321,7 @@ const verifyKhaltiPayment = async (req, res) => {
       });
     }
 
+    // Payment not completed
     await order.update({
       payment_status: status === "Pending" ? "pending" : "failed",
       payment_data: lookupRes.data,
@@ -328,12 +332,10 @@ const verifyKhaltiPayment = async (req, res) => {
       message: `Payment not completed. Status: ${status}`,
       data: lookupRes.data,
     });
+
   } catch (error) {
     console.error("Khalti verification error:", error?.response?.data || error.message);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to verify payment",
-    });
+    return res.status(500).json({ success: false, message: "Failed to verify payment" });
   }
 };
 
@@ -342,26 +344,16 @@ const getUserOrders = async (req, res) => {
   try {
     const orders = await db.Order.findAll({
       where: { user_id: req.user.user_id },
-      include: [
-        {
-          model: db.OrderItem,
-          as: "items",
-          include: [{ model: db.Product, as: "product", attributes: ["product_id", "name", "images"] }],
-        },
-      ],
+      include: [{
+        model: db.OrderItem, as: "items",
+        include: [{ model: db.Product, as: "product", attributes: ["product_id", "name", "images"] }],
+      }],
       order: [["created_at", "DESC"]],
     });
-
-    return res.status(200).json({
-      success: true,
-      data: orders,
-    });
+    return res.status(200).json({ success: true, data: orders });
   } catch (error) {
     console.error("Get user orders error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch orders",
-    });
+    return res.status(500).json({ success: false, message: "Failed to fetch orders" });
   }
 };
 
@@ -369,65 +361,35 @@ const getUserOrders = async (req, res) => {
 const getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
-
     const order = await db.Order.findOne({
       where: { order_id: id, user_id: req.user.user_id },
-      include: [
-        {
-          model: db.OrderItem,
-          as: "items",
-          include: [{ model: db.Product, as: "product", attributes: ["product_id", "name", "images"] }],
-        },
-      ],
+      include: [{
+        model: db.OrderItem, as: "items",
+        include: [{ model: db.Product, as: "product", attributes: ["product_id", "name", "images"] }],
+      }],
     });
-
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      data: order,
-    });
+    if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+    return res.status(200).json({ success: true, data: order });
   } catch (error) {
     console.error("Get order error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch order",
-    });
+    return res.status(500).json({ success: false, message: "Failed to fetch order" });
   }
 };
 
 // ==================== GET SELLER ORDERS ====================
 const getSellerOrders = async (req, res) => {
   try {
-    const seller = await db.Seller.findOne({
-      where: { user_id: req.user.user_id },
-    });
-
-    if (!seller) {
-      return res.status(404).json({
-        success: false,
-        message: "Seller profile not found",
-      });
-    }
+    const seller = await db.Seller.findOne({ where: { user_id: req.user.user_id } });
+    if (!seller) return res.status(404).json({ success: false, message: "Seller profile not found" });
 
     const orderItems = await db.OrderItem.findAll({
       where: { seller_id: seller.seller_id },
       include: [
         {
-          model: db.Order,
-          as: "order",
+          model: db.Order, as: "order",
           include: [{ model: db.User, as: "user", attributes: ["full_name", "email", "phone"] }],
         },
-        {
-          model: db.Product,
-          as: "product",
-          attributes: ["product_id", "name", "images"],
-        },
+        { model: db.Product, as: "product", attributes: ["product_id", "name", "images"] },
       ],
       order: [["created_at", "DESC"]],
     });
@@ -437,22 +399,16 @@ const getSellerOrders = async (req, res) => {
     const stats = {
       total_orders: orderItems.length,
       total_sales: totalSales,
-      pending: orderItems.filter((i) => i.order.order_status === "pending").length,
+      pending:    orderItems.filter((i) => i.order.order_status === "pending").length,
       processing: orderItems.filter((i) => i.order.order_status === "processing").length,
-      shipped: orderItems.filter((i) => i.order.order_status === "shipped").length,
-      delivered: orderItems.filter((i) => i.order.order_status === "delivered").length,
+      shipped:    orderItems.filter((i) => i.order.order_status === "shipped").length,
+      delivered:  orderItems.filter((i) => i.order.order_status === "delivered").length,
     };
 
-    return res.status(200).json({
-      success: true,
-      data: { orders: orderItems, stats },
-    });
+    return res.status(200).json({ success: true, data: { orders: orderItems, stats } });
   } catch (error) {
     console.error("Get seller orders error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch orders",
-    });
+    return res.status(500).json({ success: false, message: "Failed to fetch orders" });
   }
 };
 
@@ -464,22 +420,14 @@ const updateOrderStatus = async (req, res) => {
 
     const validStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
     if (!validStatuses.includes(order_status)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid order status",
-      });
+      return res.status(400).json({ success: false, message: "Invalid order status" });
     }
 
     const order = await db.Order.findByPk(order_id);
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
-    }
+    if (!order) return res.status(404).json({ success: false, message: "Order not found" });
 
     const updateData = { order_status };
-    if (order_status === "shipped" && !order.shipped_at) updateData.shipped_at = new Date();
+    if (order_status === "shipped"   && !order.shipped_at)   updateData.shipped_at   = new Date();
     if (order_status === "delivered" && !order.delivered_at) updateData.delivered_at = new Date();
     if (order_status === "delivered" && order.payment_method === "cod") {
       updateData.payment_status = "paid";
@@ -487,18 +435,10 @@ const updateOrderStatus = async (req, res) => {
     }
 
     await order.update(updateData);
-
-    return res.status(200).json({
-      success: true,
-      message: "Order status updated successfully",
-      data: order,
-    });
+    return res.status(200).json({ success: true, message: "Order status updated successfully", data: order });
   } catch (error) {
     console.error("Update order status error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to update order status",
-    });
+    return res.status(500).json({ success: false, message: "Failed to update order status" });
   }
 };
 

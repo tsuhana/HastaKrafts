@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import ConfirmModal from '../components/ConfirmModal';
 import '../styles/Cart.css';
 
-// Helper function for discount calculation
 const calculateDiscountedPrice = (price, hasDiscount, discountPercentage) => {
   if (!hasDiscount || !discountPercentage) return price;
   return Math.round(price * (1 - discountPercentage / 100));
@@ -14,13 +13,11 @@ const calculateDiscountedPrice = (price, hasDiscount, discountPercentage) => {
 
 const Cart = () => {
   const navigate = useNavigate();
-  const toast = useToast();
-  const { t } = useTranslation();
-  const [loading, setLoading] = useState(true);
-  const [cart, setCart] = useState(null);
+  const toast    = useToast();
+  const { t }    = useTranslation();
+  const [loading, setLoading]   = useState(true);
+  const [cart, setCart]         = useState(null);
   const [updating, setUpdating] = useState(false);
-
-  // Modal state
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, cartItemId: null });
 
   useEffect(() => { fetchCart(); }, []);
@@ -29,7 +26,11 @@ const Cart = () => {
     try {
       setLoading(true);
       const res = await cartAPI.getCart();
-      if (res.data.success) setCart(res.data.data.cart);
+      if (res.data.success) {
+        setCart(res.data.data.cart);
+        // ✅ Always sync navbar badge when cart page loads
+        window.dispatchEvent(new Event('cartUpdated'));
+      }
     } catch (err) {
       console.error('Error fetching cart:', err);
       if (err.response?.status === 401) navigate('/login');
@@ -43,7 +44,11 @@ const Cart = () => {
     setUpdating(true);
     try {
       const res = await cartAPI.updateCartItem(cartItemId, { quantity: newQuantity });
-      if (res.data.success) fetchCart();
+      if (res.data.success) {
+        await fetchCart();
+        // ✅ Update navbar badge
+        window.dispatchEvent(new Event('cartUpdated'));
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update quantity');
     } finally {
@@ -59,8 +64,12 @@ const Cart = () => {
     setUpdating(true);
     try {
       const res = await cartAPI.removeFromCart(cartItemId);
-      if (res.data.success) fetchCart();
-    } catch (err) {
+      if (res.data.success) {
+        await fetchCart();
+        // ✅ Update navbar badge
+        window.dispatchEvent(new Event('cartUpdated'));
+      }
+    } catch {
       toast.error('Failed to remove item');
     } finally {
       setUpdating(false);
@@ -68,11 +77,11 @@ const Cart = () => {
   };
 
   const getImageUrl = (images) => {
-    if (!images || images.length === 0) return null;
+    if (!images?.length) return null;
     return `http://localhost:5000${images[0]}`;
   };
 
-  const subtotal = cart?.items.reduce((sum, item) => {
+  const subtotal = cart?.items?.reduce((sum, item) => {
     const price = calculateDiscountedPrice(item.product.price, item.product.has_discount, item.product.discount_percentage);
     return sum + price * item.quantity;
   }, 0) || 0;
@@ -89,7 +98,7 @@ const Cart = () => {
     );
   }
 
-  if (!cart || !cart.items || cart.items.length === 0) {
+  if (!cart?.items?.length) {
     return (
       <div className="cart-empty">
         <div className="empty-cart-icon">🛒</div>
@@ -118,7 +127,6 @@ const Cart = () => {
       <div className="cart-container">
         <div className="cart-content">
 
-          {/* Cart Items */}
           <div className="cart-items-section">
             <div className="cart-header">
               <h1>{t('cart.title')}</h1>
@@ -137,15 +145,11 @@ const Cart = () => {
                 return (
                   <div key={item.cart_item_id} className="cart-item">
                     <div className="item-image">
-                      {getImageUrl(item.product.images) ? (
-                        <img src={getImageUrl(item.product.images)} alt={item.product.name} />
-                      ) : (
-                        <div className="no-image">📦</div>
-                      )}
+                      {getImageUrl(item.product.images)
+                        ? <img src={getImageUrl(item.product.images)} alt={item.product.name} />
+                        : <div className="no-image">📦</div>}
                       <div className="item-category">{item.product.seller?.shop_name || 'Product'}</div>
-                      {hasDiscount && (
-                        <div className="cart-discount-badge">-{item.product.discount_percentage}%</div>
-                      )}
+                      {hasDiscount && <div className="cart-discount-badge">-{item.product.discount_percentage}%</div>}
                     </div>
 
                     <div className="item-details">
@@ -180,7 +184,6 @@ const Cart = () => {
             </div>
           </div>
 
-          {/* Order Summary */}
           <div className="order-summary-section">
             <div className="order-summary-card">
               <h2>{t('checkout.order_summary')}</h2>

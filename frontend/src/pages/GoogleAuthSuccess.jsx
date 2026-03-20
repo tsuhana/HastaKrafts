@@ -30,6 +30,9 @@ const GoogleAuthSuccess = () => {
             profile_image: data.data.profile_image,
           }));
 
+          // ✅ Fire event so NavBar updates immediately
+          window.dispatchEvent(new Event('userLoggedIn'));
+
           if (data.data.role === 'seller') {
             navigate('/seller/dashboard');
           } else if (data.data.role === 'admin') {
