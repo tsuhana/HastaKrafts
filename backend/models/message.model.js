@@ -12,29 +12,26 @@ const Message = sequelize.define(
     sender_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      references: {
-        model: "users",
-        key: "user_id",
-      },
+      references: { model: "users", key: "user_id" },
     },
     receiver_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      references: {
-        model: "users",
-        key: "user_id",
-      },
+      references: { model: "users", key: "user_id" },
     },
     auction_id: {
       type: DataTypes.INTEGER,
-      references: {
-        model: "auctions",
-        key: "auction_id",
-      },
+      allowNull: true,
+      references: { model: "auctions", key: "auction_id" },
     },
     message_text: {
       type: DataTypes.TEXT,
-      allowNull: false,
+      allowNull: true, // nullable — image-only messages are valid
+    },
+    // stores path like /uploads/messages/msg-123.jpg
+    image_url: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
     is_read: {
       type: DataTypes.BOOLEAN,

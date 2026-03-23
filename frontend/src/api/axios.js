@@ -130,9 +130,13 @@ export const auctionAPI = {
   placeBid: (auctionId, data) => API.post(`/auctions/${auctionId}/bid`, data),
 };
 
-// MESSAGES / CHAT
+// MESSAGES
 export const messageAPI = {
+  //  text-only message (JSON)
   sendMessage: (data) => API.post('/messages/send', data),
+  //  message with optional image (multipart/form-data)
+  sendMessageWithImage: (formData) =>
+    API.post('/messages/send', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   getConversations: () => API.get('/messages/conversations'),
   getMessages: (partnerId) => API.get(`/messages/${partnerId}`),
   getUnreadCount: () => API.get('/messages/unread-count'),
