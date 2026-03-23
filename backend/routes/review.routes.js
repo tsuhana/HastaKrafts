@@ -2,21 +2,24 @@ const express = require("express");
 const router = express.Router();
 const {
   createReview,
+  createReply,
+  toggleHelpful,
   getProductReviews,
   getUserReviews,
   updateReview,
-  deleteReview
+  deleteReview,
 } = require("../controllers/review.controller");
-const { authenticate } = require("../middlewares/auth.middleware");
-const { checkRole } = require("../middlewares/roleCheck.middleware");
+const { authenticate, optionalAuthenticate } = require("../middlewares/auth.middleware");
 
-// Public routes
-router.get("/product/:product_id", getProductReviews);
+// optionalAuthenticate — guests see reviews, logged-in users get helpful state
+router.get("/product/:product_id", optionalAuthenticate, getProductReviews);
+router.get("/my-reviews", authenticate, getUserReviews);
 
-// Protected routes (buyers only)
-router.post("/", authenticate, checkRole("buyer"), createReview);
-router.get("/my-reviews", authenticate, checkRole("buyer"), getUserReviews);
-router.put("/:review_id", authenticate, checkRole("buyer"), updateReview);
-router.delete("/:review_id", authenticate, checkRole("buyer"), deleteReview);
+// Authenticated routes
+router.post("/", authenticate, createReview);
+router.post("/:review_id/reply", authenticate, createReply);
+router.post("/:review_id/helpful", authenticate, toggleHelpful);
+router.put("/:review_id", authenticate, updateReview);
+router.delete("/:review_id", authenticate, deleteReview);
 
 module.exports = router;

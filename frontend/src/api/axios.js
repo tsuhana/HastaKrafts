@@ -152,12 +152,15 @@ export const wishlistAPI = {
 };
 
 // REVIEWS
+// REVIEWS
 export const reviewAPI = {
   getProductReviews: (product_id) => API.get(`/reviews/product/${product_id}`),
   createReview: (formData) => API.post('/reviews', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   getMyReviews: () => API.get('/reviews/my-reviews'),
   updateReview: (review_id, data) => API.put(`/reviews/${review_id}`, data),
   deleteReview: (review_id) => API.delete(`/reviews/${review_id}`),
+  toggleHelpful: (review_id) => API.post(`/reviews/${review_id}/helpful`),  // ✅ ADD
+  createReply: (review_id, data) => API.post(`/reviews/${review_id}/reply`, data), // ✅ ADD
 };
 
 // CONTACT

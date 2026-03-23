@@ -13,9 +13,7 @@ const authenticate = async (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
-
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
     const user = await db.User.findByPk(decoded.user_id);
 
     if (!user || !user.is_active) {
@@ -42,6 +40,24 @@ const authenticate = async (req, res, next) => {
   }
 };
 
+// ── Optional: attaches user if token present, passes through as guest if not ──
+const optionalAuthenticate = (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      req.user = null;
+      return next(); // no token = guest, keep going
+    }
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch {
+    req.user = null;
+    next(); // invalid token = treat as guest, don't reject
+  }
+};
+
 const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
@@ -50,16 +66,14 @@ const authorize = (...roles) => {
         message: "Please authenticate first",
       });
     }
-
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
         message: "You don't have permission to access this resource",
       });
     }
-
     next();
   };
 };
 
-module.exports = { authenticate, authorize };
+module.exports = { authenticate, optionalAuthenticate, authorize };
