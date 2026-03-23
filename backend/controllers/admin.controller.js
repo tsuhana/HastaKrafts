@@ -1,4 +1,5 @@
 const db = require("../models");
+const { sendSellerApprovalEmail, sendSellerRejectionEmail } = require("../utils/email");
 
 // ==================== DASHBOARD STATS ====================
 const getDashboardStats = async (req, res) => {
@@ -24,39 +25,17 @@ const getDashboardStats = async (req, res) => {
       totalOrders     = await db.Order.count();
       pendingOrders   = await db.Order.count({ where: { status: "pending" } });
       completedOrders = await db.Order.count({ where: { status: "delivered" } });
-      const revenueResult = await db.Order.sum("total_amount", {
-        where: { payment_status: "paid" },
-      });
+      const revenueResult = await db.Order.sum("total_amount", { where: { payment_status: "paid" } });
       totalRevenue = revenueResult || 0;
     } catch (_) {}
 
     res.status(200).json({
       success: true,
       data: {
-        users: {
-          total:   totalUsers,
-          buyers:  totalBuyers,
-          // NOTE: frontend reads d.users.sellers → map totalSellerUsers here
-          sellers: totalSellerUsers,
-        },
-        sellers: {
-          total:    totalSellers,
-          pending:  pendingSellers,
-          approved: approvedSellers,
-          rejected: rejectedSellers,
-        },
-        products: {
-          total:    totalProducts,
-          pending:  pendingProducts,
-          approved: approvedProducts,
-          rejected: rejectedProducts,
-        },
-        orders: {
-          total:     totalOrders,
-          pending:   pendingOrders,
-          completed: completedOrders,
-          revenue:   totalRevenue,
-        },
+        users:    { total: totalUsers, buyers: totalBuyers, sellers: totalSellerUsers },
+        sellers:  { total: totalSellers, pending: pendingSellers, approved: approvedSellers, rejected: rejectedSellers },
+        products: { total: totalProducts, pending: pendingProducts, approved: approvedProducts, rejected: rejectedProducts },
+        orders:   { total: totalOrders, pending: pendingOrders, completed: completedOrders, revenue: totalRevenue },
       },
     });
   } catch (error) {
@@ -71,7 +50,7 @@ const getAnalytics = async (req, res) => {
     const { Op, fn, col, literal } = db.Sequelize;
     const now = new Date();
 
-    // ── 1. Last 7 days daily sales ──
+    // ── Last 7 days daily sales ──
     const sevenDaysAgo = new Date(now);
     sevenDaysAgo.setDate(now.getDate() - 6);
     sevenDaysAgo.setHours(0, 0, 0, 0);
@@ -84,17 +63,13 @@ const getAnalytics = async (req, res) => {
           [fn("COUNT", col("order_id")), "orders"],
           [fn("SUM", col("total_amount")), "revenue"],
         ],
-        where: {
-          created_at: { [Op.gte]: sevenDaysAgo },
-          payment_status: "paid",
-        },
+        where: { created_at: { [Op.gte]: sevenDaysAgo }, payment_status: "paid" },
         group: [fn("DATE", col("created_at"))],
         order: [[fn("DATE", col("created_at")), "ASC"]],
         raw: true,
       });
     } catch (_) {}
 
-    // Fill missing days with zeros
     const dailySales = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now);
@@ -108,7 +83,7 @@ const getAnalytics = async (req, res) => {
       });
     }
 
-    // ── 2. Last 6 months monthly sales ──
+    // ── Last 6 months monthly sales ──
     const sixMonthsAgo = new Date(now);
     sixMonthsAgo.setMonth(now.getMonth() - 5);
     sixMonthsAgo.setDate(1);
@@ -122,10 +97,7 @@ const getAnalytics = async (req, res) => {
           [fn("COUNT", col("order_id")), "orders"],
           [fn("SUM", col("total_amount")), "revenue"],
         ],
-        where: {
-          created_at: { [Op.gte]: sixMonthsAgo },
-          payment_status: "paid",
-        },
+        where: { created_at: { [Op.gte]: sixMonthsAgo }, payment_status: "paid" },
         group: [fn("TO_CHAR", col("created_at"), "YYYY-MM")],
         order: [[fn("TO_CHAR", col("created_at"), "YYYY-MM"), "ASC"]],
         raw: true,
@@ -137,16 +109,15 @@ const getAnalytics = async (req, res) => {
       const d = new Date(now);
       d.setMonth(now.getMonth() - i);
       const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      const mon = d.toLocaleDateString("en-US", { month: "short" });
       const found = monthlyRaw.find((r) => r.month_key === monthKey);
       monthlySales.push({
-        month:   mon,
+        month:   d.toLocaleDateString("en-US", { month: "short" }),
         orders:  found ? parseInt(found.orders) || 0 : 0,
         revenue: found ? Math.round(parseFloat(found.revenue) || 0) : 0,
       });
     }
 
-    // ── 3. Product status donut ──
+    // ── Product status donut ──
     let productDonut = [];
     try {
       const productStats = await db.Product.findAll({
@@ -160,7 +131,7 @@ const getAnalytics = async (req, res) => {
       }));
     } catch (_) {}
 
-    // ── 4. Order status donut ──
+    // ── Order status donut ──
     let orderDonut = [];
     try {
       const orderStats = await db.Order.findAll({
@@ -174,20 +145,14 @@ const getAnalytics = async (req, res) => {
       }));
     } catch (_) {}
 
-    // ── 5. Top 5 categories by approved products ──
+    // ── Top 5 categories ──
     let topCategories = [];
     try {
       const cats = await db.Category.findAll({
-        attributes: [
-          "name",
-          [fn("COUNT", col("products.product_id")), "count"],
-        ],
+        attributes: ["name", [fn("COUNT", col("products.product_id")), "count"]],
         include: [{
-          model: db.Product,
-          as: "products",
-          attributes: [],
-          where: { status: "approved" },
-          required: false,
+          model: db.Product, as: "products", attributes: [],
+          where: { status: "approved" }, required: false,
         }],
         group: ["Category.category_id"],
         order: [[literal("count"), "DESC"]],
@@ -200,20 +165,12 @@ const getAnalytics = async (req, res) => {
         .filter((c) => c.count > 0);
     } catch (_) {}
 
-    // ── 6. Top 5 sellers by order items ──
+    // ── Top 5 sellers ──
     let topSellers = [];
     try {
       const sellers = await db.Seller.findAll({
-        attributes: [
-          "shop_name",
-          [fn("COUNT", col("orderItems.order_item_id")), "sales"],
-        ],
-        include: [{
-          model: db.OrderItem,
-          as: "orderItems",
-          attributes: [],
-          required: false,
-        }],
+        attributes: ["shop_name", [fn("COUNT", col("orderItems.order_item_id")), "sales"]],
+        include: [{ model: db.OrderItem, as: "orderItems", attributes: [], required: false }],
         group: ["Seller.seller_id"],
         order: [[literal("sales"), "DESC"]],
         limit: 5,
@@ -225,7 +182,7 @@ const getAnalytics = async (req, res) => {
         .filter((s) => s.sales > 0);
     } catch (_) {}
 
-    // ── 7. Revenue summary ──
+    // ── Revenue summary ──
     let totalRevenue = 0, thisMonthRevenue = 0, totalOrders = 0;
     try {
       const totalRevRes = await db.Order.findOne({
@@ -242,21 +199,13 @@ const getAnalytics = async (req, res) => {
         raw: true,
       });
       thisMonthRevenue = Math.round(parseFloat(monthRevRes?.total) || 0);
-
       totalOrders = await db.Order.count({ where: { payment_status: "paid" } });
     } catch (_) {}
 
     res.json({
       success: true,
-      data: {
-        dailySales,
-        monthlySales,
-        productDonut,
-        orderDonut,
-        topCategories,
-        topSellers,
-        summary: { totalRevenue, thisMonthRevenue, totalOrders },
-      },
+      data: { dailySales, monthlySales, productDonut, orderDonut, topCategories, topSellers,
+        summary: { totalRevenue, thisMonthRevenue, totalOrders } },
     });
   } catch (error) {
     console.error("Analytics error:", error);
@@ -269,11 +218,7 @@ const getPendingSellers = async (req, res) => {
   try {
     const sellers = await db.Seller.findAll({
       where: { approval_status: "pending" },
-      include: [{
-        model: db.User,
-        as: "user",
-        attributes: ["user_id", "full_name", "email", "phone"],
-      }],
+      include: [{ model: db.User, as: "user", attributes: ["user_id", "full_name", "email", "phone"] }],
       order: [["created_at", "ASC"]],
     });
     res.status(200).json({ success: true, data: sellers });
@@ -283,13 +228,27 @@ const getPendingSellers = async (req, res) => {
   }
 };
 
-// ==================== APPROVE SELLER ====================
+// ==================== APPROVE SELLER ✅ + EMAIL ====================
 const approveSeller = async (req, res) => {
   try {
     const { id } = req.params;
-    const seller = await db.Seller.findByPk(id);
+
+    const seller = await db.Seller.findByPk(id, {
+      include: [{ model: db.User, as: "user", attributes: ["full_name", "email"] }],
+    });
     if (!seller) return res.status(404).json({ success: false, message: "Seller not found" });
+
     await seller.update({ approval_status: "approved", approved_at: new Date() });
+
+    // ✅ Send approval email (non-blocking — don't fail the request if email fails)
+    if (seller.user?.email) {
+      sendSellerApprovalEmail(
+        seller.user.email,
+        seller.user.full_name,
+        seller.shop_name || "your shop"
+      ).catch((err) => console.error("Approval email error (non-fatal):", err.message));
+    }
+
     res.status(200).json({ success: true, message: "Seller approved successfully", data: seller });
   } catch (error) {
     console.error("Approve seller error:", error);
@@ -297,15 +256,33 @@ const approveSeller = async (req, res) => {
   }
 };
 
-// ==================== REJECT SELLER ====================
+// ==================== REJECT SELLER ✅ + EMAIL ====================
 const rejectSeller = async (req, res) => {
   try {
     const { id } = req.params;
     const { rejection_reason } = req.body;
-    if (!rejection_reason) return res.status(400).json({ success: false, message: "Please provide rejection reason" });
-    const seller = await db.Seller.findByPk(id);
+
+    if (!rejection_reason || !rejection_reason.trim()) {
+      return res.status(400).json({ success: false, message: "Please provide a rejection reason" });
+    }
+
+    const seller = await db.Seller.findByPk(id, {
+      include: [{ model: db.User, as: "user", attributes: ["full_name", "email"] }],
+    });
     if (!seller) return res.status(404).json({ success: false, message: "Seller not found" });
-    await seller.update({ approval_status: "rejected", rejection_reason });
+
+    await seller.update({ approval_status: "rejected", rejection_reason: rejection_reason.trim() });
+
+    // ✅ Send rejection email with the admin's reason (non-blocking)
+    if (seller.user?.email) {
+      sendSellerRejectionEmail(
+        seller.user.email,
+        seller.user.full_name,
+        seller.shop_name || "your shop",
+        rejection_reason.trim()
+      ).catch((err) => console.error("Rejection email error (non-fatal):", err.message));
+    }
+
     res.status(200).json({ success: true, message: "Seller rejected", data: seller });
   } catch (error) {
     console.error("Reject seller error:", error);
@@ -384,11 +361,7 @@ const getAllUsers = async (req, res) => {
 const getAllSellers = async (req, res) => {
   try {
     const sellers = await db.Seller.findAll({
-      include: [{
-        model: db.User,
-        as: "user",
-        attributes: ["user_id", "full_name", "email", "phone"],
-      }],
+      include: [{ model: db.User, as: "user", attributes: ["user_id", "full_name", "email", "phone"] }],
       order: [["created_at", "DESC"]],
     });
     res.status(200).json({ success: true, data: sellers });
