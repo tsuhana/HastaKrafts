@@ -11,9 +11,9 @@ const KhaltiCallback = () => {
     const run = async () => {
       const params = new URLSearchParams(location.search);
 
-      const pidx = params.get("pidx");
-      const status = params.get("status");
-      const order_id = params.get("order_id"); //added this in return_url
+      const pidx     = params.get("pidx");
+      const status   = params.get("status");
+      const order_id = params.get("order_id");
 
       if (!pidx || !order_id) {
         setMsg("Missing payment data. Please contact support.");
@@ -21,10 +21,14 @@ const KhaltiCallback = () => {
       }
 
       try {
-        // If status already says Completed, still do lookup for safety
         const res = await orderAPI.verifyKhaltiPayment({ pidx, order_id });
 
         if (res.data.success) {
+          // Tell NavBar to immediately refetch points + cart badges
+          // NavBar listens for these events — no page refresh needed
+          window.dispatchEvent(new Event("pointsUpdated"));
+          window.dispatchEvent(new Event("cartUpdated"));
+
           setMsg("Payment successful! Redirecting...");
           setTimeout(() => navigate(`/order-confirmation/${order_id}`), 800);
         } else {

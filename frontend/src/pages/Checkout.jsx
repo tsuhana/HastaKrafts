@@ -94,11 +94,12 @@ const Checkout = () => {
 
       if (res.data.success) {
         if (paymentMethod === 'khalti' && res.data.data.payment_url) {
-          // ✅ Cart is NOT cleared yet — backend only clears it after payment confirmed
-          // So if user comes back, cart is still there
+          // Cart is NOT cleared yet — backend clears it after Khalti payment confirmed
+          // pointsUpdated + cartUpdated fired in KhaltiCallback.jsx after verification
           window.location.href = res.data.data.payment_url;
         } else {
-          // COD — cart already cleared by backend, update navbar
+          // COD — backend already cleared cart and awarded points
+          // ✅ Fire both events so NavBar badges update immediately without refresh
           window.dispatchEvent(new Event('cartUpdated'));
           window.dispatchEvent(new Event('pointsUpdated'));
           toast.success('Order placed successfully!');
@@ -246,11 +247,11 @@ const Checkout = () => {
 
               <div className="summary-items">
                 {cart.items.map((item) => {
-                  const hasDiscount    = item.product.has_discount === true || item.product.has_discount === 'true';
-                  const discountPct    = parseInt(item.product.discount_percentage) || 0;
-                  const originalPrice  = parseFloat(item.product.price);
+                  const hasDiscount     = item.product.has_discount === true || item.product.has_discount === 'true';
+                  const discountPct     = parseInt(item.product.discount_percentage) || 0;
+                  const originalPrice   = parseFloat(item.product.price);
                   const discountedPrice = getDiscountedPrice(item.product);
-                  const isDiscounted   = hasDiscount && discountPct > 0;
+                  const isDiscounted    = hasDiscount && discountPct > 0;
 
                   return (
                     <div key={item.cart_item_id} className="summary-item">

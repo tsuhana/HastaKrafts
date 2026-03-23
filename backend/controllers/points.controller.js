@@ -8,30 +8,19 @@ const getUserPoints = async (req, res) => {
     });
 
     if (!userPoints) {
-      // Create points account if doesn't exist
       const newPoints = await db.UserPoints.create({
         user_id: req.user.user_id,
         total_points: 0,
         lifetime_earned: 0,
         lifetime_redeemed: 0,
       });
-
-      return res.json({
-        success: true,
-        data: newPoints,
-      });
+      return res.json({ success: true, data: newPoints });
     }
 
-    res.json({
-      success: true,
-      data: userPoints,
-    });
+    res.json({ success: true, data: userPoints });
   } catch (error) {
     console.error("Get user points error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch points",
-    });
+    res.status(500).json({ success: false, message: "Failed to fetch points" });
   }
 };
 
@@ -51,28 +40,29 @@ const getPointsHistory = async (req, res) => {
       limit: 50,
     });
 
-    res.json({
-      success: true,
-      data: transactions,
-    });
+    res.json({ success: true, data: transactions });
   } catch (error) {
     console.error("Get points history error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch points history",
-    });
+    res.status(500).json({ success: false, message: "Failed to fetch points history" });
   }
 };
 
 // ==================== AWARD POINTS (INTERNAL - Called after order completes) ====================
 const awardPoints = async (userId, orderId, orderTotal) => {
   try {
-    // Calculate points: Rs. 100 = 1 point
     const pointsToAward = Math.floor(orderTotal / 100);
-
     if (pointsToAward === 0) return 0;
 
-    // Get or create user points
+    // DUPLICATE GUARD — blocks double-award if awardPoints is called twice
+    // for the same order (e.g. Khalti callback page refreshed, or request fired twice)
+    const existing = await db.PointTransaction.findOne({
+      where: { user_id: userId, order_id: orderId, type: "earned" },
+    });
+    if (existing) {
+      console.log(`  Duplicate award blocked — order ${orderId} already has earned transaction`);
+      return 0;
+    }
+
     let userPoints = await db.UserPoints.findOne({ where: { user_id: userId } });
 
     if (!userPoints) {
@@ -84,22 +74,20 @@ const awardPoints = async (userId, orderId, orderTotal) => {
       });
     }
 
-    // Update points balance
     await userPoints.update({
-      total_points: userPoints.total_points + pointsToAward,
+      total_points:    userPoints.total_points    + pointsToAward,
       lifetime_earned: userPoints.lifetime_earned + pointsToAward,
     });
 
-    // Create transaction record
     await db.PointTransaction.create({
-      user_id: userId,
-      order_id: orderId,
-      points: pointsToAward,
-      type: "earned",
+      user_id:     userId,
+      order_id:    orderId,
+      points:      pointsToAward,
+      type:        "earned",
       description: `Earned ${pointsToAward} points from order`,
     });
 
-    console.log(`Awarded ${pointsToAward} points to user ${userId}`);
+    console.log(` Awarded ${pointsToAward} points to user ${userId} for order ${orderId}`);
     return pointsToAward;
   } catch (error) {
     console.error("Award points error:", error);
@@ -116,13 +104,12 @@ const redeemPoints = async (userId, pointsToRedeem) => {
       throw new Error("Insufficient points");
     }
 
-    // Deduct points
     await userPoints.update({
-      total_points: userPoints.total_points - pointsToRedeem,
+      total_points:      userPoints.total_points      - pointsToRedeem,
       lifetime_redeemed: userPoints.lifetime_redeemed + pointsToRedeem,
     });
 
-    console.log(`Redeemed ${pointsToRedeem} points for user ${userId}`);
+    console.log(` Redeemed ${pointsToRedeem} points for user ${userId}`);
     return true;
   } catch (error) {
     console.error("Redeem points error:", error);
