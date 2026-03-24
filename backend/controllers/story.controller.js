@@ -188,7 +188,7 @@ const getSellerStories = async (req, res) => {
 const updateStory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, content, excerpt, category } = req.body;
+    const { title, content, excerpt, category, is_published } = req.body;
 
     const story = await db.Story.findByPk(id);
 
@@ -203,34 +203,44 @@ const updateStory = async (req, res) => {
       where: { user_id: req.user.user_id },
     });
 
+    if (!seller) {
+      return res.status(404).json({
+        success: false,
+        message: "Seller not found",
+      });
+    }
+
     if (story.seller_id !== seller.seller_id) {
       return res.status(403).json({
         success: false,
-        message: "You don't have permission to update this story",
+        message: "No permission",
       });
     }
 
     await story.update({
-      title:    title    || story.title,
-      content:  content  || story.content,
-      excerpt:  excerpt  || story.excerpt,
-      category: category || story.category,
+      title: title ?? story.title,
+      content: content ?? story.content,
+      excerpt: excerpt ?? story.excerpt,
+      category: category ?? story.category,
+      is_published: is_published ?? story.is_published,
+      published_at: is_published
+        ? (story.published_at || new Date())
+        : null,
     });
 
     res.json({
       success: true,
-      message: "Story updated successfully",
+      message: "Story updated",
       data: story,
     });
   } catch (error) {
     console.error("Update story error:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to update story",
+      message: error.message || "Update failed",
     });
   }
 };
-
 // ==================== DELETE STORY ====================
 const deleteStory = async (req, res) => {
   try {
@@ -256,7 +266,7 @@ const deleteStory = async (req, res) => {
       });
     }
 
-    story.images.forEach((img) => {
+    (story.images || []).forEach((img) => {
       const filePath = path.join(__dirname, "..", img);
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);

@@ -1,0 +1,469 @@
+/* ═══════════════════════════════════════════════
+   SellerMyBlogs.css
+   Import in SellerMyBlogs.jsx:
+     import "./SellerMyBlogs.css";
+═══════════════════════════════════════════════ */
+
+/* ── Wrapper ── */
+.smb-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Stats row ── */
+.smb-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.smb-stat-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+  border-left: 4px solid transparent;
+}
+
+.smb-stat-brown { border-left-color: #b86e38; }
+.smb-stat-green  { border-left-color: #10B981; }
+.smb-stat-blue   { border-left-color: #3B82F6; }
+
+.smb-stat-label {
+  font-size: 0.72rem;
+  color: #8B6F5E;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 4px;
+}
+
+.smb-stat-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #2C1810;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Controls row ── */
+.smb-controls {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.smb-filter-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ── Search ── */
+.smb-search-wrap {
+  flex: 1;
+  min-width: 200px;
+  position: relative;
+}
+
+.smb-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #B09070;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.smb-search-input {
+  width: 100%;
+  padding: 0.45rem 2rem 0.45rem 2rem;
+  border: 1.5px solid #E8E0D5;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  color: #2C1810;
+  background: #fff;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.smb-search-input:focus {
+  border-color: #b86e38;
+}
+
+.smb-search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #B09070;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.smb-search-clear:hover {
+  color: #b86e38;
+}
+
+/* ── Empty states ── */
+.smb-empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: #fff;
+  border-radius: 16px;
+  border: 2px dashed #E8E0D5;
+}
+
+.smb-empty-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.smb-empty-state h3 {
+  color: #2C1810;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.smb-empty-state p {
+  color: #8B6F5E;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
+.smb-empty-filter {
+  text-align: center;
+  padding: 3rem;
+  background: #fff;
+  border-radius: 16px;
+  color: #8B6F5E;
+  font-size: 0.9rem;
+}
+
+/* ── Blog list ── */
+.smb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* ── Blog card ── */
+.smb-card {
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #EDE8E2;
+  overflow: hidden;
+  display: flex;
+  align-items: stretch;
+  transition: box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.smb-card:hover {
+  box-shadow: 0 4px 16px rgba(184,110,56,0.12);
+}
+
+.smb-card-deleting {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Thumbnail */
+.smb-card-thumb {
+  width: 120px;
+  min-height: 110px;
+  background: #f5e6d3;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.smb-card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.smb-card-thumb-placeholder {
+  font-size: 2rem;
+}
+
+/* Body */
+.smb-card-body {
+  flex: 1;
+  padding: 1rem 1.25rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.smb-card-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+/* Category badges */
+.smb-cat-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.smb-cat-craft    { background: #EFF6FF; color: #1D4ED8; }
+.smb-cat-heritage { background: #FDF4FF; color: #7E22CE; }
+.smb-cat-journey  { background: #FFF7ED; color: #C2410C; }
+.smb-cat-tips     { background: #F0FDF4; color: #15803D; }
+.smb-cat-behind   { background: #FEF9C3; color: #854D0E; }
+.smb-cat-other    { background: #F1F5F9; color: #475569; }
+
+/* Status badges */
+.smb-status-badge {
+  font-size: 0.63rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.smb-published { background: #D1FAE5; color: #065F46; }
+.smb-draft     { background: #FEF3C7; color: #92400E; }
+
+.smb-views {
+  font-size: 0.72rem;
+  color: #B09070;
+  margin-left: auto;
+}
+
+.smb-card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #2C1810;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.smb-card-excerpt {
+  font-size: 0.8rem;
+  color: #8B6F5E;
+  margin: 0;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.smb-card-date {
+  font-size: 0.7rem;
+  color: #B09070;
+  margin-top: 2px;
+}
+
+/* Actions column */
+.smb-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 1rem;
+  border-left: 1px solid #F0EBE3;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.smb-action-btn {
+  padding: 0.38rem 0.9rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  display: block;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.smb-action-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.smb-btn-view {
+  background: #F5F2EE;
+  color: #5D4E37;
+}
+.smb-btn-view:hover {
+  background: #b86e38;
+  color: #fff;
+}
+
+.smb-btn-edit {
+  background: #EFF6FF;
+  color: #1D4ED8;
+}
+.smb-btn-edit:hover {
+  background: #1D4ED8;
+  color: #fff;
+}
+
+.smb-btn-publish {
+  background: #D1FAE5;
+  color: #065F46;
+}
+.smb-btn-publish:hover:not(:disabled) {
+  background: #059669;
+  color: #fff;
+}
+
+.smb-btn-unpublish {
+  background: #FEF3C7;
+  color: #92400E;
+}
+.smb-btn-unpublish:hover:not(:disabled) {
+  background: #D97706;
+  color: #fff;
+}
+
+.smb-btn-delete {
+  background: #FEE2E2;
+  color: #991B1B;
+}
+.smb-btn-delete:hover:not(:disabled) {
+  background: #DC2626;
+  color: #fff;
+}
+
+/* ── Delete confirm overlay ── */
+.smb-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.smb-confirm-modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 380px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  text-align: center;
+}
+
+.smb-confirm-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.smb-confirm-modal h3 {
+  color: #2C1810;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.smb-confirm-modal p {
+  color: #8B6F5E;
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
+.smb-confirm-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.smb-confirm-cancel {
+  padding: 0.6rem 1.5rem;
+  background: #F5F2EE;
+  border: 1.5px solid #E8E0D5;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #5D4E37;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.smb-confirm-cancel:hover {
+  border-color: #b86e38;
+  color: #b86e38;
+}
+
+.smb-confirm-delete {
+  padding: 0.6rem 1.5rem;
+  background: #DC2626;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s;
+}
+
+.smb-confirm-delete:hover {
+  background: #b91c1c;
+}
+
+/* ── Responsive ── */
+@media (max-width: 700px) {
+  .smb-stats-row {
+    grid-template-columns: 1fr;
+  }
+
+  .smb-card {
+    flex-direction: column;
+  }
+
+  .smb-card-thumb {
+    width: 100%;
+    height: 160px;
+    min-height: unset;
+  }
+
+  .smb-card-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-left: none;
+    border-top: 1px solid #F0EBE3;
+    padding: 0.75rem 1rem;
+  }
+
+  .smb-action-btn {
+    flex: 1;
+    min-width: 70px;
+  }
+}

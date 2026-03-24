@@ -10,6 +10,7 @@ import { useToast } from "../context/ToastContext";
 import { useTranslation } from "react-i18next";
 import ConfirmModal from "../components/ConfirmModal";
 import "../styles/SellerDashboard.css";
+import SellerMyBlogs from "../components/SellerMyBlogs";
 
 const API_URL = "http://localhost:5000";
 
@@ -24,6 +25,13 @@ const Icons = {
   upload:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
   trendUp:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
   trendDown: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>,
+  blog: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+  <polyline points="14 2 14 8 20 8"/>
+  <line x1="16" y1="13" x2="8" y2="13"/>
+  <line x1="16" y1="17" x2="8" y2="17"/>
+  <polyline points="10 9 9 9 8 9"/>
+</svg>,
   arrow:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
 };
 
@@ -165,8 +173,9 @@ const SellerDashboard = () => {
               { key: "analytics", label: "Analytics",       icon: Icons.analytics },
               { key: "orders",    label: "All Orders",      icon: Icons.orders, badge: pendingCount },
               { key: "products",  label: "My Products",     icon: Icons.products },
+              { key: "blogs",     label: "My Blogs",        icon: Icons.blog },
               { key: "shop",      label: "Shop Management", icon: Icons.shop },
-            ].map((item) => (
+              ].map((item) => (
               <button key={item.key} className={`sd-nav-item ${activeTab === item.key ? "active" : ""}`} onClick={() => setActiveTab(item.key)}>
                 <span className="sd-nav-icon">{item.icon}</span>
                 <span className="sd-nav-label-text">{item.label}</span>
@@ -554,6 +563,7 @@ const SellerDashboard = () => {
           )}
 
           {activeTab === "shop" && <ShopManagement toast={toast} t={t} />}
+          {activeTab === "blogs" && <SellerMyBlogs toast={toast} t={t} />}
           <div className="sd-footer">© 2025 HastaKrafts Nepal. All rights reserved.</div>
         </main>
       </div>
