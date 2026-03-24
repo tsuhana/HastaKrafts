@@ -100,6 +100,7 @@ const ReplyForm = ({ reviewId, isLoggedIn, onSubmitted, onCancel }) => {
   const submit = async () => {
     if (!text.trim()) return;
     if (!isLoggedIn) { toast.info("Please log in to reply"); return; }
+    if (text.trim().length > 500) { toast.warning("Reply must be under 500 characters"); return; }
     setSaving(true);
     try {
       await reviewAPI.createReply(reviewId, { comment: text.trim() });
@@ -124,6 +125,7 @@ const ReplyForm = ({ reviewId, isLoggedIn, onSubmitted, onCancel }) => {
         maxLength={500}
         autoFocus
       />
+      <div className="rv-replyChar">{text.length}/500</div>
       <div className="rv-replyActions">
         <button className="rv-replyCancel" onClick={onCancel} disabled={saving}>Cancel</button>
         <button className="rv-replySubmit" onClick={submit} disabled={saving || !text.trim()}>
@@ -143,34 +145,49 @@ const ReviewCard = ({ review, currentUser, isLoggedIn, depth = 0, onRefresh, fmt
   const [editSaving, setEditSaving]       = useState(false);
   const toast = useToast();
 
-  const name    = review.user?.full_name || "Anonymous";
-  const isOwn   = currentUser?.user_id === review.user_id;
+  const name      = review.user?.full_name || "Anonymous";
+  const isReply   = review.parent_id !== null;
+  // ✅ Owner check: currentUser owns this entry OR currentUser is admin
+  const isOwn     = currentUser?.user_id === review.user_id;
+  const isAdmin   = currentUser?.role === "admin";
+  const canEdit   = isOwn || isAdmin;
+  const canDelete = isOwn || isAdmin;
+
   const indentClass = depth === 0 ? "" : depth === 1 ? "rv-depth1" : "rv-depth2";
 
   const handleDelete = async () => {
     if (!window.confirm("Delete this review?")) return;
     try {
       await reviewAPI.deleteReview(review.review_id);
-      toast.success("Review deleted");
+      toast.success("Deleted successfully");
       onRefresh?.();
     } catch {
       toast.error("Could not delete.");
     }
   };
 
+  // ✅ handleEdit: only sends rating for top-level reviews, never for replies
   const handleEdit = async () => {
-    if (!editRating) { toast.warning("Rating is required"); return; }
+    if (!isReply && !editRating) {
+      toast.warning("Rating is required");
+      return;
+    }
+    if (!editComment.trim()) {
+      toast.warning("Comment cannot be empty");
+      return;
+    }
     setEditSaving(true);
     try {
-      await reviewAPI.updateReview(review.review_id, {
-        rating: editRating,
-        comment: editComment.trim(),
-      });
-      toast.success("Review updated!");
+      const payload = { comment: editComment.trim() };
+      // Only include rating for top-level reviews
+      if (!isReply) payload.rating = editRating;
+
+      await reviewAPI.updateReview(review.review_id, payload);
+      toast.success("Updated successfully!");
       setIsEditing(false);
       onRefresh?.();
-    } catch {
-      toast.error("Could not update review.");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not update.");
     } finally {
       setEditSaving(false);
     }
@@ -195,21 +212,22 @@ const ReviewCard = ({ review, currentUser, isLoggedIn, depth = 0, onRefresh, fmt
           <div className="rv-userInfo">
             <div className="rv-name">{name}</div>
             <div className="rv-rowSmall">
-              {review.rating && !isEditing && <Stars value={review.rating} size={13} />}
+              {/* Stars only shown on top-level reviews, not replies */}
+              {review.rating && !isReply && !isEditing && <Stars value={review.rating} size={13} />}
               {review.verified_purchase && (
                 <span className="rv-badge rv-badge--verified">✓ Verified</span>
               )}
-              {depth > 0 && <span className="rv-replyBadge">Reply</span>}
+              {isReply && <span className="rv-replyBadge">Reply</span>}
             </div>
           </div>
         </div>
 
         <div className="rv-meta">
           <span className="rv-date">{fmtDate(review.created_at || review.createdAt)}</span>
-          {isOwn && (
+          {/* ✅ Show Edit/Delete for owner OR admin, on BOTH reviews and replies */}
+          {canEdit || canDelete ? (
             <div className="rv-ownerBtns">
-              {/* Edit only for top-level reviews (replies have no rating) */}
-              {depth === 0 && (
+              {canEdit && (
                 <button
                   className="rv-editBtn"
                   onClick={() => isEditing ? cancelEdit() : setIsEditing(true)}
@@ -217,34 +235,40 @@ const ReviewCard = ({ review, currentUser, isLoggedIn, depth = 0, onRefresh, fmt
                   {isEditing ? "✕ Cancel" : "Edit"}
                 </button>
               )}
-              <button className="rv-dangerBtn" onClick={handleDelete}>Delete</button>
+              {canDelete && (
+                <button className="rv-dangerBtn" onClick={handleDelete}>Delete</button>
+              )}
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 
       {/* Row 2: comment OR inline edit form */}
       {isEditing ? (
         <div className="rv-editForm">
-          <div className="rv-editRatingRow">
-            <span className="rv-editLabel">Rating</span>
-            <Stars value={editRating} interactive onChange={setEditRating} size={20} />
-            {editRating > 0 && <span className="rvLabelTag">{LABELS[editRating]}</span>}
-          </div>
+          {/* Rating row — only for top-level reviews, not replies */}
+          {!isReply && (
+            <div className="rv-editRatingRow">
+              <span className="rv-editLabel">Rating</span>
+              <Stars value={editRating} interactive onChange={setEditRating} size={20} />
+              {editRating > 0 && <span className="rvLabelTag">{LABELS[editRating]}</span>}
+            </div>
+          )}
           <textarea
             className="rv-replyTextarea"
             value={editComment}
             onChange={(e) => setEditComment(e.target.value)}
             rows={3}
-            maxLength={1000}
-            placeholder="Update your review..."
+            maxLength={isReply ? 500 : 1000}
+            placeholder={isReply ? "Update your reply..." : "Update your review..."}
           />
+          <div className="rv-replyChar">{editComment.length}/{isReply ? 500 : 1000}</div>
           <div className="rv-replyActions">
             <button className="rv-replyCancel" onClick={cancelEdit} disabled={editSaving}>Cancel</button>
             <button
               className="rv-replySubmit"
               onClick={handleEdit}
-              disabled={editSaving || !editRating}
+              disabled={editSaving || (!isReply && !editRating) || !editComment.trim()}
             >
               {editSaving ? "Saving…" : "Save Changes"}
             </button>
@@ -254,8 +278,8 @@ const ReviewCard = ({ review, currentUser, isLoggedIn, depth = 0, onRefresh, fmt
         review.comment && <p className="rv-comment">{review.comment}</p>
       )}
 
-      {/* Row 3: images */}
-      {!isEditing && review.images?.length > 0 && (
+      {/* Row 3: images (top-level only) */}
+      {!isEditing && !isReply && review.images?.length > 0 && (
         <div className="rv-imgs">
           {review.images.map((img, i) => (
             <img key={i} src={`${API_URL}${img}`} alt="" className="rv-img" />
@@ -266,7 +290,8 @@ const ReviewCard = ({ review, currentUser, isLoggedIn, depth = 0, onRefresh, fmt
       {/* Row 4: helpful + reply actions */}
       {!isEditing && (
         <div className="rv-actions">
-          {depth === 0 && (
+          {/* Helpful only on top-level reviews */}
+          {!isReply && (
             <HelpfulBtn
               reviewId={review.review_id}
               count={review.helpful_count || 0}
@@ -275,6 +300,7 @@ const ReviewCard = ({ review, currentUser, isLoggedIn, depth = 0, onRefresh, fmt
               onToggle={onRefresh}
             />
           )}
+          {/* ✅ Reply button available to all logged-in users, at all depths */}
           {isLoggedIn && (
             <button className="rv-replyBtn" onClick={() => setShowReplyForm((v) => !v)}>
               {showReplyForm ? "Cancel" : "↩ Reply"}
@@ -377,6 +403,10 @@ const Reviews = ({ productId, currentUser, isLoggedIn, canBuy, onStatsChange }) 
 
   const submit = async () => {
     if (!rating) { toast.warning("Please select a rating."); return; }
+    if (comment && comment.trim().length > 1000) {
+      toast.warning("Comment must be under 1000 characters.");
+      return;
+    }
     setSaving(true);
     try {
       const fd = new FormData();

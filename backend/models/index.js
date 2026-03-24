@@ -157,7 +157,7 @@ PointTransaction.belongsTo(User, { foreignKey: "user_id", as: "user" });
 Order.hasMany(PointTransaction, { foreignKey: "order_id", as: "pointTransactions" });
 PointTransaction.belongsTo(Order, { foreignKey: "order_id", as: "order" });
 
-// ── Story ─────────────────────────────────────────────────────
+// ── Story ────────────────────────────────────────────────────
 Seller.hasMany(Story, { foreignKey: "seller_id", as: "stories" });
 Story.belongsTo(Seller, { foreignKey: "seller_id", as: "seller" });
 

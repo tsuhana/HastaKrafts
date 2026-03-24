@@ -228,7 +228,7 @@ const getPendingSellers = async (req, res) => {
   }
 };
 
-// ==================== APPROVE SELLER ✅ + EMAIL ====================
+// ==================== APPROVE SELLER  + EMAIL ====================
 const approveSeller = async (req, res) => {
   try {
     const { id } = req.params;
@@ -240,7 +240,7 @@ const approveSeller = async (req, res) => {
 
     await seller.update({ approval_status: "approved", approved_at: new Date() });
 
-    // ✅ Send approval email (non-blocking — don't fail the request if email fails)
+    //  Send approval email (non-blocking — don't fail the request if email fails)
     if (seller.user?.email) {
       sendSellerApprovalEmail(
         seller.user.email,
@@ -256,7 +256,7 @@ const approveSeller = async (req, res) => {
   }
 };
 
-// ==================== REJECT SELLER ✅ + EMAIL ====================
+// ==================== REJECT SELLER + EMAIL ====================
 const rejectSeller = async (req, res) => {
   try {
     const { id } = req.params;
@@ -273,7 +273,7 @@ const rejectSeller = async (req, res) => {
 
     await seller.update({ approval_status: "rejected", rejection_reason: rejection_reason.trim() });
 
-    // ✅ Send rejection email with the admin's reason (non-blocking)
+    //  Send rejection email with the admin's reason (non-blocking)
     if (seller.user?.email) {
       sendSellerRejectionEmail(
         seller.user.email,
