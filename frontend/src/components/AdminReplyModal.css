@@ -1,0 +1,313 @@
+
+
+/* ── Overlay ── */
+.arm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 1rem;
+}
+
+/* ── Modal box ── */
+.arm-modal {
+  background: var(--bg-card, #ffffff);
+  border-radius: 16px;
+  padding: 1.75rem;
+  max-width: 540px;
+  width: 100%;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  font-family: var(--font, 'Inter', system-ui, sans-serif);
+}
+
+/* ── Header ── */
+.arm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.arm-header-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.arm-title {
+  color: var(--text-1, #1a0e04);
+  font-size: 1rem;
+  font-weight: 800;
+  margin: 0 0 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.arm-editing-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  background: var(--blue-bg, #eef2fd);
+  color: var(--blue, #1a509a);
+  border: 1px solid var(--blue-border, #aac4e8);
+  padding: 2px 7px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.arm-subtitle {
+  color: var(--text-3, #9a8268);
+  font-size: 0.75rem;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  overflow: hidden;
+}
+
+.arm-email {
+  color: var(--accent, #b86e38);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.arm-dot {
+  color: var(--border, #ddd5c4);
+}
+
+.arm-subject {
+  color: var(--text-2, #5a3e26);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Close button */
+.arm-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  color: var(--text-3, #9a8268);
+  padding: 2px 6px;
+  line-height: 1;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.arm-close-btn:hover {
+  background: var(--bg-muted, #ede8de);
+  color: var(--text-1, #1a0e04);
+}
+
+/* ── Original message box ── */
+.arm-original {
+  background: var(--bg-hover, #faf7f2);
+  border: 1px solid var(--border-light, #e9e4da);
+  border-left: 3px solid var(--border, #ddd5c4);
+  border-radius: 0 8px 8px 0;
+  padding: 10px 14px;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.arm-original::-webkit-scrollbar {
+  width: 4px;
+}
+.arm-original::-webkit-scrollbar-track {
+  background: transparent;
+}
+.arm-original::-webkit-scrollbar-thumb {
+  background: var(--border, #ddd5c4);
+  border-radius: 2px;
+}
+
+.arm-original-label {
+  display: block;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--text-3, #9a8268);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 5px;
+}
+
+.arm-original-text {
+  font-size: 0.82rem;
+  color: var(--text-2, #5a3e26);
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Reply section ── */
+.arm-reply-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.arm-reply-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-2, #5a3e26);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.arm-textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid var(--border, #ddd5c4);
+  border-radius: 10px;
+  font-size: 0.875rem;
+  color: var(--text-1, #1a0e04);
+  background: var(--bg-hover, #fafaf8);
+  font-family: var(--font, 'Inter', system-ui, sans-serif);
+  line-height: 1.65;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+  min-height: 130px;
+}
+
+.arm-textarea:focus {
+  border-color: var(--accent, #b86e38);
+  background: var(--bg-card, #fff);
+}
+
+.arm-textarea-error {
+  border-color: var(--red, #aa2c1c) !important;
+}
+
+.arm-textarea-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.arm-email-hint {
+  font-size: 0.68rem;
+  color: var(--text-3, #9a8268);
+  display: flex;
+  align-items: center;
+}
+
+.arm-char-count {
+  font-size: 0.68rem;
+  color: var(--text-3, #9a8268);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.arm-char-over {
+  color: var(--red, #aa2c1c);
+  font-weight: 700;
+}
+
+/* ── Actions row ── */
+.arm-actions {
+  display: flex;
+  gap: 0.65rem;
+  justify-content: flex-end;
+  padding-top: 0.25rem;
+}
+
+.arm-btn-cancel {
+  padding: 0.55rem 1.25rem;
+  background: var(--bg-hover, #f6f2eb);
+  border: 1.5px solid var(--border, #ddd5c4);
+  border-radius: 8px;
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: var(--text-2, #5a3e26);
+  cursor: pointer;
+  font-family: var(--font, inherit);
+  transition: all 0.15s;
+}
+
+.arm-btn-cancel:hover {
+  border-color: var(--accent-border, #e8c49a);
+  color: var(--accent, #b86e38);
+}
+
+.arm-btn-send {
+  padding: 0.55rem 1.5rem;
+  background: var(--accent, #b86e38);
+  border: none;
+  border-radius: 8px;
+  font-size: 0.825rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  font-family: var(--font, inherit);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  min-width: 120px;
+}
+
+.arm-btn-send:hover:not(.arm-btn-send-disabled) {
+  background: var(--accent-h, #9a5a28);
+}
+
+.arm-btn-send-disabled {
+  background: var(--accent-border, #e8c49a) !important;
+  cursor: not-allowed;
+}
+
+/* Spinner inside send button */
+.arm-sending-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.arm-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: arm-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes arm-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .arm-modal {
+    padding: 1.25rem;
+  }
+
+  .arm-actions {
+    flex-direction: column-reverse;
+  }
+
+  .arm-btn-cancel,
+  .arm-btn-send {
+    width: 100%;
+    justify-content: center;
+  }
+}

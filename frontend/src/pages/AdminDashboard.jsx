@@ -6,6 +6,7 @@ import {
 import { adminAPI, productAPI } from "../api/axios";
 import { useToast } from "../context/ToastContext";
 import ConfirmModal from "../components/ConfirmModal";
+ import AdminReplyModal from "../components/AdminReplyModal";
 import "../styles/AdminDashboard.css";
 
 /* ── SVG icons ── */
@@ -124,6 +125,8 @@ const RejectModal = ({ isOpen, title, onConfirm, onCancel }) => {
   );
 };
 
+
+
 /* ════════════════════ MAIN COMPONENT ════════════════════ */
 const AdminDashboard = () => {
   const toast = useToast();
@@ -133,7 +136,7 @@ const AdminDashboard = () => {
   const [msgFilter, setMsgFilter] = useState("all");
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [revenueView, setRevenueView] = useState("weekly"); // "weekly" | "monthly"
-
+  const [replyModal, setReplyModal] = useState({ isOpen: false, contact: null });
   const [stats, setStats] = useState({
     totalUsers: 0, totalSellersUsers: 0, totalBuyers: 0,
     totalSellerProfiles: 0, pendingSellers: 0, approvedSellers: 0,
@@ -270,6 +273,27 @@ const AdminDashboard = () => {
     try { const res = await adminAPI.updateContactStatus(contactId, { status }); if (res.data.success) { toast.success("Status updated"); fetchContactMessages(); } }
     catch { toast.error("Failed to update status"); }
   };
+  const handleOpenReply  = (contact) =>
+  setReplyModal({ isOpen: true, contact });
+
+  const handleCloseReply = () =>
+  setReplyModal({ isOpen: false, contact: null });
+
+const handleSendReply  = async (contactId, reply) => {
+  try {
+    const res = await adminAPI.updateContactStatus(contactId, {
+      status: "in_progress",
+      admin_reply: reply,
+    });
+
+    if (res.data.success) {
+      toast.success("Reply sent and email delivered!");
+      fetchContactMessages();
+    }
+  } catch {
+    toast.error("Failed to send reply");
+  }
+};
   const handleDeleteContact       = (id) => setConfirmModal({ isOpen: true, type: "deleteContact", id });
   const handleApproveSeller       = (id) => setConfirmModal({ isOpen: true, type: "approveSeller", id });
   const handleRejectSeller        = (id) => setRejectModal({ isOpen: true, type: "rejectSeller", id });
@@ -351,7 +375,12 @@ const AdminDashboard = () => {
         onConfirm={handleConfirmAction} onCancel={() => setConfirmModal({ isOpen: false, type: null, id: null })} />
       <RejectModal isOpen={rejectModal.isOpen} title={activeRejCfg.title}
         onConfirm={handleRejectAction} onCancel={() => setRejectModal({ isOpen: false, type: null, id: null })} />
-
+      <AdminReplyModal
+      isOpen={replyModal.isOpen}
+        contact={replyModal.contact}
+        onClose={handleCloseReply}
+        onSend={handleSendReply}
+      />
       {/* ─── SIDEBAR ─── */}
       <aside className="admin-sidebar">
         <div className="sidebar-header">
@@ -827,11 +856,58 @@ const AdminDashboard = () => {
                         <div className="msg-text">{contact.message}</div>
                       </div>
                       <div className="msg-actions">
-                        {contact.status === "pending"     && <button className="btn-inprogress" onClick={() => handleContactStatus(contact.contact_id, "in_progress")}>Mark In Progress</button>}
-                        {(contact.status === "pending" || contact.status === "in_progress") && <button className="btn-resolve" onClick={() => handleContactStatus(contact.contact_id, "resolved")}>Mark Resolved</button>}
-                        {contact.status === "resolved"    && <button className="btn-reopen"    onClick={() => handleContactStatus(contact.contact_id, "pending")}>Reopen</button>}
-                        <button className="btn-delete" onClick={() => handleDeleteContact(contact.contact_id)}>Delete</button>
-                      </div>
+
+  <button
+    className="btn-inprogress"
+    onClick={() => handleOpenReply(contact)}
+  >
+    Reply
+  </button>
+
+  {contact.status === "pending" && (
+    <button
+      className="btn-inprogress"
+      onClick={() =>
+        handleContactStatus(contact.contact_id, "in_progress")
+      }
+    >
+      Mark In Progress
+    </button>
+  )}
+
+  {(contact.status === "pending" ||
+    contact.status === "in_progress") && (
+    <button
+      className="btn-resolve"
+      onClick={() =>
+        handleContactStatus(contact.contact_id, "resolved")
+      }
+    >
+      Mark Resolved
+    </button>
+  )}
+
+  {contact.status === "resolved" && (
+    <button
+      className="btn-reopen"
+      onClick={() =>
+        handleContactStatus(contact.contact_id, "pending")
+      }
+    >
+      Reopen
+    </button>
+  )}
+
+  <button
+    className="btn-delete"
+    onClick={() =>
+      handleDeleteContact(contact.contact_id)
+    }
+  >
+    Delete
+  </button>
+
+</div>
                     </div>
                   );
                 })}

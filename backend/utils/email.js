@@ -348,8 +348,82 @@ const sendSellerRejectionEmail = async (email, sellerName, shopName, rejectionRe
   }
 };
 
+// ==================== CONTACT REPLY EMAIL ====================
+const sendContactReplyEmail = async (email, name, subject, userMessage, adminReply) => {
+  const mailOptions = {
+    from: `"HastaKrafts Support" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `Re: ${subject} — HastaKrafts Support`,
+    html: `
+      <html>
+        <head>
+          <style>
+            ${baseStyles}
+
+            .message-box {
+              background: #FFF7ED;
+              border-left: 4px solid #D4813F;
+              padding: 14px 18px;
+              margin: 20px 0;
+              border-radius: 0 8px 8px 0;
+            }
+
+            .reply-box {
+              background: #F0FDF4;
+              border: 2px solid #86EFAC;
+              padding: 18px;
+              border-radius: 10px;
+              margin: 20px 0;
+            }
+          </style>
+        </head>
+
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>HastaKrafts Support</h1>
+              <p>We've replied to your message</p>
+            </div>
+
+            <div class="content">
+              <h2>Hello ${name},</h2>
+
+              <p>Here is our response regarding your message:</p>
+
+              <div class="message-box">
+                <strong>Your Message:</strong>
+                <p>${userMessage}</p>
+              </div>
+
+              <div class="reply-box">
+                <strong>Our Reply:</strong>
+                <p>${adminReply}</p>
+              </div>
+
+              <p>If you need further help, feel free to reply to this email.</p>
+            </div>
+
+            <div class="footer">
+              <p>&copy; 2025 HastaKrafts Nepal</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Contact reply email sent:", info.messageId);
+    return info;
+  } catch (error) {
+    console.error("Contact reply email failed:", error.message);
+  }
+};
+
 module.exports = {
   sendOTPEmail,
   sendSellerApprovalEmail,
   sendSellerRejectionEmail,
+  sendContactReplyEmail,
 };
