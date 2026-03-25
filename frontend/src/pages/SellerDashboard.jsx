@@ -9,7 +9,7 @@ import { productAPI, orderAPI, sellerAPI } from "../api/axios";
 import { useToast } from "../context/ToastContext";
 import { useTranslation } from "react-i18next";
 import ConfirmModal from "../components/ConfirmModal";
-import { Pagination, FilterBar, SearchInput } from "../components/SharedComponents";
+import { Pagination, FilterBar, SearchInput, SortSelect, DateRangePicker, filterByDateRange } from "../components/SharedComponents";
 import "../styles/SellerDashboard.css";
 import SellerMyBlogs from "../components/SellerMyBlogs";
 
@@ -23,21 +23,35 @@ const Icons = {
   shop:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
   add:       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>,
   auction:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2.5l7 7-7 7"/><path d="M9.5 7.5L2.5 14.5"/><path d="M6 21h12"/><path d="M12 17v4"/></svg>,
-  upload:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
   trendUp:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
   trendDown: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>,
-  blog: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-    <polyline points="14 2 14 8 20 8"/>
-    <line x1="16" y1="13" x2="8" y2="13"/>
-    <line x1="16" y1="17" x2="8" y2="17"/>
-    <polyline points="10 9 9 9 8 9"/>
-  </svg>,
+  blog: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
+  reviews: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
   arrow: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
 };
 
 const STATUS_COLORS = { delivered: "#10B981", pending: "#F59E0B", processing: "#3B82F6", shipped: "#8B5CF6", cancelled: "#EF4444" };
 const DONUT_COLORS  = ["#10B981", "#F59E0B", "#3B82F6", "#8B5CF6", "#EF4444"];
+
+// FIXED: parse both createdAt and created_at
+const parseAnyDate = (raw) => {
+  if (!raw) return null;
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? null : d;
+};
+
+const fmtDate = (raw) => {
+  const d = parseAnyDate(raw);
+  if (!d) return "—";
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+};
+
+const fmtAuctionDate = (raw) => {
+  const d = parseAnyDate(raw);
+  if (!d) return "—";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) +
+    " " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+};
 
 const ChartTip = ({ active, payload, label, prefix = "" }) => {
   if (!active || !payload?.length) return null;
@@ -68,6 +82,18 @@ const KpiCard = ({ label, value, meta, color, trend, onClick }) => (
   </div>
 );
 
+const StarRating = ({ rating }) => {
+  const r = parseInt(rating) || 0;
+  return (
+    <div style={{ display: "flex", gap: 1, alignItems: "center" }}>
+      {[1, 2, 3, 4, 5].map((s) => (
+        <span key={s} style={{ fontSize: "0.85rem", color: s <= r ? "#c08830" : "#ddd5c4" }}>★</span>
+      ))}
+      <span style={{ fontSize: "0.72rem", color: "#8B6F5E", marginLeft: 4 }}>{r}/5</span>
+    </div>
+  );
+};
+
 // ══════════════════════════════════════════
 const SellerDashboard = () => {
   const toast = useToast();
@@ -77,6 +103,10 @@ const SellerDashboard = () => {
   const [loading, setLoading]               = useState(true);
   const [products, setProducts]             = useState([]);
   const [orders, setOrders]                 = useState([]);
+  const [reviews, setReviews]               = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [auctions, setAuctions]             = useState([]);
+  const [auctionsLoading, setAuctionsLoading] = useState(false);
   const [stats, setStats]                   = useState({ totalSales: 0, totalOrders: 0, activeProducts: 0, pendingProducts: 0 });
   const [analytics, setAnalytics]           = useState({
     kpis: { totalRevenue: 0, thisMonthRevenue: 0, lastMonthRevenue: 0, momGrowth: 0, aov: 0, fulfillmentRate: 0, cancellationRate: 0, totalOrders: 0, deliveredOrders: 0 },
@@ -89,16 +119,42 @@ const SellerDashboard = () => {
   // Orders tab state
   const [orderSearch, setOrderSearch]       = useState("");
   const [orderFilter, setOrderFilter]       = useState("all");
+  const [orderSort, setOrderSort]           = useState("newest");
+  const [orderDate, setOrderDate]           = useState({ startDate: "", endDate: "" });
   const [orderPage, setOrderPage]           = useState(1);
   const ORDERS_PER_PAGE = 10;
 
   // Products tab state
   const [productSearch, setProductSearch]   = useState("");
   const [productFilter, setProductFilter]   = useState("all");
+  const [productSort, setProductSort]       = useState("newest");
   const [productPage, setProductPage]       = useState(1);
   const PRODUCTS_PER_PAGE = 12;
 
+  // Reviews tab state
+  const [reviewSearch, setReviewSearch]     = useState("");
+  const [reviewRating, setReviewRating]     = useState("all");
+  const [reviewSort, setReviewSort]         = useState("newest");
+  const [reviewPage, setReviewPage]         = useState(1);
+  const REVIEWS_PER_PAGE = 10;
+
+  // Auctions tab state
+  const [auctionSearch, setAuctionSearch]   = useState("");
+  const [auctionFilter, setAuctionFilter]   = useState("all");
+  const [auctionSort, setAuctionSort]       = useState("newest");
+  const [auctionPage, setAuctionPage]       = useState(1);
+  const AUCTIONS_PER_PAGE = 10;
+
   useEffect(() => { fetchAll(); }, []);
+
+  useEffect(() => {
+    if (activeTab === "reviews" && reviews.length === 0 && !reviewsLoading) {
+      fetchReviews();
+    }
+    if (activeTab === "auctions" && auctions.length === 0 && !auctionsLoading) {
+      fetchAuctions();
+    }
+  }, [activeTab]);
 
   const fetchAll = async () => {
     try {
@@ -134,13 +190,39 @@ const SellerDashboard = () => {
         setAnalytics((a) => ({ ...a, ordersByStatus: Object.entries(statusMap).map(([status, count]) => ({ status, count })) }));
       }
 
-      // Reset pages on reload
       setOrderPage(1);
       setProductPage(1);
     } catch (err) {
       console.error("Dashboard fetch error:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchReviews = async () => {
+    try {
+      setReviewsLoading(true);
+      // FIXED: sellerAPI.getMyReviews now points to /reviews/seller/my-reviews
+      const res = await sellerAPI.getMyReviews();
+      if (res.data.success) setReviews(res.data.data || []);
+    } catch (err) {
+      console.warn("Reviews fetch failed:", err.message);
+      setReviews([]);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
+  const fetchAuctions = async () => {
+    try {
+      setAuctionsLoading(true);
+      const res = await sellerAPI.getMyAuctions();
+      if (res.data.success) setAuctions(res.data.data || []);
+    } catch (err) {
+      console.warn("Auctions fetch failed:", err.message);
+      setAuctions([]);
+    } finally {
+      setAuctionsLoading(false);
     }
   };
 
@@ -167,37 +249,118 @@ const SellerDashboard = () => {
   // ── Derived values ──
   const pendingCount = orders.filter((o) => o.order?.order_status === "pending").length;
 
-  // Orders tab — search + filter + pagination
-  const filteredOrders = orders.filter((item) => {
-    const matchFilter = orderFilter === "all" || item.order?.order_status === orderFilter;
-    const q = orderSearch.toLowerCase();
-    const matchSearch =
-      !q ||
-      (item.order?.order_number || "").toLowerCase().includes(q) ||
-      (item.product_name || "").toLowerCase().includes(q) ||
-      (item.order?.user?.full_name || "").toLowerCase().includes(q);
-    return matchFilter && matchSearch;
-  });
+  // Orders tab
+  const filteredOrders = (() => {
+    let list = [...orders];
+    if (orderFilter !== "all") list = list.filter((item) => item.order?.order_status === orderFilter);
+    if (orderSearch.trim()) {
+      const q = orderSearch.toLowerCase();
+      list = list.filter((item) =>
+        (item.order?.order_number || "").toLowerCase().includes(q) ||
+        (item.product_name || "").toLowerCase().includes(q) ||
+        (item.order?.user?.full_name || "").toLowerCase().includes(q)
+      );
+    }
+    list = filterByDateRange(list, "created_at", orderDate.startDate, orderDate.endDate);
+    list.sort((a, b) => {
+      // FIXED: try both createdAt and created_at
+      const da = parseAnyDate(a.order?.createdAt || a.order?.created_at || a.created_at || 0) || new Date(0);
+      const db = parseAnyDate(b.order?.createdAt || b.order?.created_at || b.created_at || 0) || new Date(0);
+      if (orderSort === "newest") return db - da;
+      if (orderSort === "oldest") return da - db;
+      if (orderSort === "highest") return parseFloat(b.subtotal || 0) - parseFloat(a.subtotal || 0);
+      if (orderSort === "lowest")  return parseFloat(a.subtotal || 0) - parseFloat(b.subtotal || 0);
+      return 0;
+    });
+    return list;
+  })();
   const totalOrderPages = Math.ceil(filteredOrders.length / ORDERS_PER_PAGE);
   const pagedOrders     = filteredOrders.slice((orderPage - 1) * ORDERS_PER_PAGE, orderPage * ORDERS_PER_PAGE);
 
-  // Products tab — search + filter + pagination
-  const filteredProducts = products.filter((p) => {
-    const matchStatus = productFilter === "all" || p.status === productFilter;
-    const q = productSearch.toLowerCase();
-    const matchSearch =
-      !q ||
-      (p.name || "").toLowerCase().includes(q) ||
-      (p.category?.name || "").toLowerCase().includes(q);
-    return matchStatus && matchSearch;
-  });
+  // Products tab
+  const filteredProducts = (() => {
+    let list = [...products];
+    if (productFilter !== "all") list = list.filter((p) => p.status === productFilter);
+    if (productSearch.trim()) {
+      const q = productSearch.toLowerCase();
+      list = list.filter((p) =>
+        (p.name || "").toLowerCase().includes(q) ||
+        (p.category?.name || "").toLowerCase().includes(q)
+      );
+    }
+    list.sort((a, b) => {
+      const da = parseAnyDate(a.created_at || a.createdAt || 0) || new Date(0);
+      const db = parseAnyDate(b.created_at || b.createdAt || 0) || new Date(0);
+      if (productSort === "newest")     return db - da;
+      if (productSort === "oldest")     return da - db;
+      if (productSort === "price_asc")  return parseFloat(a.price || 0) - parseFloat(b.price || 0);
+      if (productSort === "price_desc") return parseFloat(b.price || 0) - parseFloat(a.price || 0);
+      if (productSort === "stock_asc")  return (a.stock_quantity || 0) - (b.stock_quantity || 0);
+      if (productSort === "stock_desc") return (b.stock_quantity || 0) - (a.stock_quantity || 0);
+      return 0;
+    });
+    return list;
+  })();
   const totalProductPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
   const pagedProducts     = filteredProducts.slice((productPage - 1) * PRODUCTS_PER_PAGE, productPage * PRODUCTS_PER_PAGE);
+
+  // Reviews tab
+  const filteredReviews = (() => {
+    let list = [...reviews];
+    if (reviewRating !== "all") list = list.filter((r) => String(r.rating) === reviewRating);
+    if (reviewSearch.trim()) {
+      const q = reviewSearch.toLowerCase();
+      list = list.filter((r) =>
+        (r.comment || "").toLowerCase().includes(q) ||
+        (r.user?.full_name || "").toLowerCase().includes(q) ||
+        (r.product?.name || "").toLowerCase().includes(q)
+      );
+    }
+    list.sort((a, b) => {
+      const da = parseAnyDate(a.created_at || a.createdAt || 0) || new Date(0);
+      const db = parseAnyDate(b.created_at || b.createdAt || 0) || new Date(0);
+      if (reviewSort === "newest")  return db - da;
+      if (reviewSort === "oldest")  return da - db;
+      if (reviewSort === "highest") return (b.rating || 0) - (a.rating || 0);
+      if (reviewSort === "lowest")  return (a.rating || 0) - (b.rating || 0);
+      return 0;
+    });
+    return list;
+  })();
+  const totalReviewPages = Math.ceil(filteredReviews.length / REVIEWS_PER_PAGE);
+  const pagedReviews     = filteredReviews.slice((reviewPage - 1) * REVIEWS_PER_PAGE, reviewPage * REVIEWS_PER_PAGE);
+
+  // Auctions tab
+  const filteredAuctions = (() => {
+    let list = [...auctions];
+    if (auctionFilter !== "all") list = list.filter((a) => a.status === auctionFilter);
+    if (auctionSearch.trim()) {
+      const q = auctionSearch.toLowerCase();
+      list = list.filter((a) => (a.title || "").toLowerCase().includes(q));
+    }
+    list.sort((a, b) => {
+      const da = parseAnyDate(a.created_at || a.createdAt || 0) || new Date(0);
+      const db = parseAnyDate(b.created_at || b.createdAt || 0) || new Date(0);
+      if (auctionSort === "newest")    return db - da;
+      if (auctionSort === "oldest")    return da - db;
+      if (auctionSort === "highest")   return parseFloat(b.current_bid || b.starting_bid || 0) - parseFloat(a.current_bid || a.starting_bid || 0);
+      if (auctionSort === "most_bids") return (b.total_bids || 0) - (a.total_bids || 0);
+      if (auctionSort === "ending")    return new Date(a.auction_end) - new Date(b.auction_end);
+      return 0;
+    });
+    return list;
+  })();
+  const totalAuctionPages = Math.ceil(filteredAuctions.length / AUCTIONS_PER_PAGE);
+  const pagedAuctions     = filteredAuctions.slice((auctionPage - 1) * AUCTIONS_PER_PAGE, auctionPage * AUCTIONS_PER_PAGE);
 
   const totalDonut = analytics.ordersByStatus.reduce((s, d) => s + d.count, 0);
   const bestDow    = analytics.revenueByDow?.length
     ? analytics.revenueByDow.reduce((a, b) => b.orders > a.orders ? b : a, analytics.revenueByDow[0])
     : null;
+
+  const avgRating = reviews.length > 0
+    ? (reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length).toFixed(1)
+    : "—";
 
   if (loading) {
     return (
@@ -228,6 +391,8 @@ const SellerDashboard = () => {
               { key: "analytics", label: "Analytics",       icon: Icons.analytics },
               { key: "orders",    label: "All Orders",      icon: Icons.orders, badge: pendingCount },
               { key: "products",  label: "My Products",     icon: Icons.products },
+              { key: "auctions",  label: "My Auctions",     icon: Icons.auction },
+              { key: "reviews",   label: "My Reviews",      icon: Icons.reviews },
               { key: "blogs",     label: "My Blogs",        icon: Icons.blog },
               { key: "shop",      label: "Shop Management", icon: Icons.shop },
             ].map((item) => (
@@ -269,7 +434,7 @@ const SellerDashboard = () => {
                 <KpiCard label="Total Sales"     value={`Rs. ${stats.totalSales.toLocaleString()}`}  trend={analyticsLoaded ? analytics.kpis?.momGrowth : null} color="sales"    onClick={() => setActiveTab("analytics")} />
                 <KpiCard label="Total Orders"    value={stats.totalOrders}  meta={`${pendingCount} pending`}                color="orders"   onClick={() => setActiveTab("orders")} />
                 <KpiCard label="Active Products" value={stats.activeProducts} meta={`${stats.pendingProducts} pending review`} color="products" onClick={() => setActiveTab("products")} />
-                <KpiCard label="Order Items"     value={orders.length}      meta="View order analytics"                      color="items"    onClick={() => setActiveTab("analytics")} />
+                <KpiCard label="My Auctions"     value={auctions.length || "—"} meta={`${auctions.filter(a => a.status === 'live').length} live`} color="items" onClick={() => setActiveTab("auctions")} />
               </div>
 
               {analytics.revenueByMonth.length > 0 && (
@@ -543,21 +708,40 @@ const SellerDashboard = () => {
           {activeTab === "orders" && (
             <div>
               <div className="sd-page-header">
-                <div><h1>All Orders</h1><p>{orders.length} total order items</p></div>
+                <div><h1>All Orders</h1><p>{filteredOrders.length} of {orders.length} order items</p></div>
               </div>
 
-              {/* Search */}
-              <div style={{ marginBottom: "0.75rem" }}>
+              <div style={{ display: "flex", gap: "0.75rem", marginBottom: "0.65rem", flexWrap: "wrap", alignItems: "flex-end" }}>
                 <SearchInput
                   value={orderSearch}
                   onChange={(v) => { setOrderSearch(v); setOrderPage(1); }}
                   placeholder="Search by order #, product or customer…"
                   theme="seller"
-                  style={{ maxWidth: 380 }}
+                  style={{ flex: 1, minWidth: 220, maxWidth: 400 }}
+                />
+                <SortSelect
+                  theme="seller"
+                  value={orderSort}
+                  onChange={(v) => { setOrderSort(v); setOrderPage(1); }}
+                  options={[
+                    { value: "newest",  label: "Newest first" },
+                    { value: "oldest",  label: "Oldest first" },
+                    { value: "highest", label: "Highest amount" },
+                    { value: "lowest",  label: "Lowest amount" },
+                  ]}
                 />
               </div>
 
-              {/* Filter bar */}
+              <div style={{ marginBottom: "0.65rem" }}>
+                <DateRangePicker
+                  theme="seller"
+                  startDate={orderDate.startDate}
+                  endDate={orderDate.endDate}
+                  onChange={(v) => { setOrderDate(v); setOrderPage(1); }}
+                  label="Date:"
+                />
+              </div>
+
               <FilterBar
                 theme="seller"
                 active={orderFilter}
@@ -592,7 +776,8 @@ const SellerDashboard = () => {
                           <div className="sd-order-num">#{item.order?.order_number}</div>
                           <div className="sd-order-product">{item.product_name}</div>
                           <div className="sd-order-meta">Customer: <strong>{item.order?.user?.full_name}</strong> · Qty: {item.quantity} · Rs. {parseFloat(item.subtotal).toLocaleString()}</div>
-                          <div className="sd-order-date">{new Date(item.order?.createdAt || item.created_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</div>
+                          {/* FIXED: try createdAt and created_at */}
+                          <div className="sd-order-date">{fmtDate(item.order?.createdAt || item.order?.created_at || item.created_at)}</div>
                         </div>
                         <div className="sd-order-actions">
                           <span className={`sd-payment-badge ${item.order?.payment_status === "paid" ? "paid" : "unpaid"}`}>
@@ -627,12 +812,11 @@ const SellerDashboard = () => {
           {activeTab === "products" && (
             <div>
               <div className="sd-page-header">
-                <div><h1>{t("seller.your_products")}</h1><p>{products.length} products total · {stats.activeProducts} approved</p></div>
+                <div><h1>{t("seller.your_products")}</h1><p>{filteredProducts.length} of {products.length} products · {stats.activeProducts} approved</p></div>
                 <Link to="/seller/add-product" className="sd-btn-primary">+ {t("seller.add_product")}</Link>
               </div>
 
-              {/* Filter + Search row */}
-              <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.25rem", flexWrap: "wrap", alignItems: "center" }}>
+              <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1rem", flexWrap: "wrap", alignItems: "center" }}>
                 <FilterBar
                   theme="seller"
                   active={productFilter}
@@ -644,12 +828,27 @@ const SellerDashboard = () => {
                     { key: "rejected", label: "Rejected", count: products.filter((p) => p.status === "rejected").length },
                   ]}
                 />
+              </div>
+              <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.25rem", flexWrap: "wrap", alignItems: "flex-end" }}>
                 <SearchInput
                   value={productSearch}
                   onChange={(v) => { setProductSearch(v); setProductPage(1); }}
                   placeholder="Search products…"
                   theme="seller"
-                  style={{ flex: 1, minWidth: 200, maxWidth: 300 }}
+                  style={{ flex: 1, minWidth: 200, maxWidth: 340 }}
+                />
+                <SortSelect
+                  theme="seller"
+                  value={productSort}
+                  onChange={(v) => { setProductSort(v); setProductPage(1); }}
+                  options={[
+                    { value: "newest",     label: "Newest first" },
+                    { value: "oldest",     label: "Oldest first" },
+                    { value: "price_asc",  label: "Price ↑" },
+                    { value: "price_desc", label: "Price ↓" },
+                    { value: "stock_asc",  label: "Stock ↑" },
+                    { value: "stock_desc", label: "Stock ↓" },
+                  ]}
                 />
               </div>
 
@@ -692,7 +891,7 @@ const SellerDashboard = () => {
                           </div>
                           <div className="sd-product-actions">
                             <Link to={`/seller/edit-product/${product.product_id}`} className="sd-btn-icon">{t("seller.edit")}</Link>
-                            <button onClick={() => setConfirmModal({ isOpen: true, productId: product.product_id })} className="sd-btn-icon">{t("seller.delete")}</button>
+                            <button onClick={() => setConfirmModal({ isOpen: true, productId: product.product_id })} className="sd-btn-icon sd-btn-icon-danger">{t("seller.delete")}</button>
                           </div>
                         </div>
                       );
@@ -707,6 +906,265 @@ const SellerDashboard = () => {
                   />
                 </>
               )}
+            </div>
+          )}
+
+          {/* ════════ MY AUCTIONS (NEW TAB) ════════ */}
+          {activeTab === "auctions" && (
+            <div>
+              <div className="sd-page-header">
+                <div>
+                  <h1>My Auctions</h1>
+                  <p>{auctions.length} total · {auctions.filter(a => a.status === "live").length} live · {auctions.filter(a => a.status === "upcoming").length} upcoming</p>
+                </div>
+                <Link to="/seller/create-auction" className="sd-btn-primary">+ Create Auction</Link>
+              </div>
+
+              {/* Auction stats row */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
+                {[
+                  { label: "Live", key: "live", color: "#10B981", bg: "#D1FAE5" },
+                  { label: "Upcoming", key: "upcoming", color: "#3B82F6", bg: "#DBEAFE" },
+                  { label: "Ended", key: "ended", color: "#8B5CF6", bg: "#EDE9FE" },
+                  { label: "Total Bids", key: "_bids", color: "#b86e38", bg: "#FEF3C7" },
+                ].map((s) => (
+                  <div key={s.key} style={{ background: "#fff", border: "1px solid #EDE8E2", borderRadius: 12, padding: "1rem 1.25rem", borderTop: `3px solid ${s.color}` }}>
+                    <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#8B6F5E", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>{s.label}</div>
+                    <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#2C1810" }}>
+                      {s.key === "_bids" ? auctions.reduce((sum, a) => sum + (a.total_bids || 0), 0) : auctions.filter(a => a.status === s.key).length}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: "flex", gap: "0.75rem", marginBottom: "0.65rem", flexWrap: "wrap", alignItems: "flex-end" }}>
+                <SearchInput
+                  value={auctionSearch}
+                  onChange={(v) => { setAuctionSearch(v); setAuctionPage(1); }}
+                  placeholder="Search auctions by title…"
+                  theme="seller"
+                  style={{ flex: 1, minWidth: 220, maxWidth: 400 }}
+                />
+                <SortSelect
+                  theme="seller"
+                  value={auctionSort}
+                  onChange={(v) => { setAuctionSort(v); setAuctionPage(1); }}
+                  options={[
+                    { value: "newest",    label: "Newest first" },
+                    { value: "oldest",    label: "Oldest first" },
+                    { value: "highest",   label: "Highest bid" },
+                    { value: "most_bids", label: "Most bids" },
+                    { value: "ending",    label: "Ending soonest" },
+                  ]}
+                />
+              </div>
+
+              <FilterBar
+                theme="seller"
+                active={auctionFilter}
+                onChange={(f) => { setAuctionFilter(f); setAuctionPage(1); }}
+                filters={[
+                  { key: "all",       label: "All",       count: auctions.length },
+                  { key: "live",      label: "Live",      count: auctions.filter((a) => a.status === "live").length },
+                  { key: "upcoming",  label: "Upcoming",  count: auctions.filter((a) => a.status === "upcoming").length },
+                  { key: "ended",     label: "Ended",     count: auctions.filter((a) => a.status === "ended").length },
+                  { key: "cancelled", label: "Cancelled", count: auctions.filter((a) => a.status === "cancelled").length },
+                ]}
+              />
+
+              <div className="sd-section" style={{ marginTop: "1rem" }}>
+                {auctionsLoading ? (
+                  <div className="sd-loading" style={{ minHeight: 200 }}><div className="sd-spinner" /><p>Loading auctions…</p></div>
+                ) : filteredAuctions.length === 0 ? (
+                  <div className="sd-empty">
+                    <p>{auctions.length === 0 ? "No auctions yet. Create your first auction!" : "No auctions match your search."}</p>
+                    {auctions.length === 0 && (
+                      <Link to="/seller/create-auction" className="sd-btn-primary" style={{ marginTop: "0.75rem" }}>Create Auction</Link>
+                    )}
+                  </div>
+                ) : (
+                  <div className="sd-auctions-list">
+                    {pagedAuctions.map((auction) => {
+                      const statusStyle = {
+                        live:      { bg: "#D1FAE5", color: "#065F46" },
+                        upcoming:  { bg: "#DBEAFE", color: "#1E40AF" },
+                        ended:     { bg: "#EDE9FE", color: "#6B21A8" },
+                        cancelled: { bg: "#FEE2E2", color: "#991B1B" },
+                      }[auction.status] || { bg: "#F1F5F9", color: "#475569" };
+
+                      const isLive = auction.status === "live";
+                      const hasWinner = auction.status === "ended" && auction.winner;
+
+                      return (
+                        <div key={auction.auction_id} className="sd-auction-card">
+                          <div className="sd-auction-img">
+                            {auction.images?.[0] ? (
+                              <img src={`${API_URL}${auction.images[0]}`} alt={auction.title} />
+                            ) : (
+                              <div className="sd-auction-no-img">🔨</div>
+                            )}
+                            <span className="sd-auction-status-badge" style={{ background: statusStyle.bg, color: statusStyle.color }}>
+                              {isLive && "🔴 "}{auction.status?.charAt(0).toUpperCase() + auction.status?.slice(1)}
+                            </span>
+                          </div>
+
+                          <div className="sd-auction-info">
+                            <div className="sd-auction-title">{auction.title}</div>
+                            <div className="sd-auction-bids">
+                              <span>🔨 {auction.total_bids || 0} bids</span>
+                              <span style={{ color: "#8B6F5E" }}>·</span>
+                              <span>Starting: Rs. {parseFloat(auction.starting_bid || 0).toLocaleString()}</span>
+                            </div>
+                            {parseFloat(auction.current_bid || 0) > 0 && (
+                              <div className="sd-auction-current-bid">
+                                Current bid: <strong>Rs. {parseFloat(auction.current_bid).toLocaleString()}</strong>
+                              </div>
+                            )}
+                            {hasWinner && (
+                              <div style={{ fontSize: "0.78rem", color: "#059669", fontWeight: 600, marginTop: 4 }}>
+                                🏆 Winner: {auction.winner?.full_name}
+                              </div>
+                            )}
+                            <div className="sd-auction-dates">
+                              <span>Start: {fmtAuctionDate(auction.auction_start)}</span>
+                              <span>End: {fmtAuctionDate(auction.auction_end)}</span>
+                            </div>
+                          </div>
+
+                          <div className="sd-auction-actions">
+                            <span className="sd-auction-min-inc">Min. increment: Rs. {parseFloat(auction.minimum_increment || 100).toLocaleString()}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <Pagination
+                  currentPage={auctionPage}
+                  totalPages={totalAuctionPages}
+                  onPageChange={setAuctionPage}
+                  theme="seller"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* ════════ MY REVIEWS ════════ */}
+          {activeTab === "reviews" && (
+            <div>
+              <div className="sd-page-header">
+                <div>
+                  <h1>My Reviews</h1>
+                  <p>{reviews.length} total reviews · Avg rating: {avgRating} ★</p>
+                </div>
+              </div>
+
+              {reviews.length > 0 && (
+                <div className="sd-reviews-summary">
+                  {[5, 4, 3, 2, 1].map((star) => {
+                    const count = reviews.filter((r) => r.rating === star).length;
+                    const pct = reviews.length > 0 ? Math.round((count / reviews.length) * 100) : 0;
+                    return (
+                      <div key={star} className="sd-review-bar-row">
+                        <span className="sd-review-star-label">{star} ★</span>
+                        <div className="sd-review-bar-track">
+                          <div className="sd-review-bar-fill" style={{ width: `${pct}%`, background: star >= 4 ? "#10B981" : star === 3 ? "#F59E0B" : "#EF4444" }} />
+                        </div>
+                        <span className="sd-review-bar-count">{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: "0.75rem", marginBottom: "0.65rem", flexWrap: "wrap", alignItems: "flex-end" }}>
+                <SearchInput
+                  value={reviewSearch}
+                  onChange={(v) => { setReviewSearch(v); setReviewPage(1); }}
+                  placeholder="Search by reviewer, product or comment…"
+                  theme="seller"
+                  style={{ flex: 1, minWidth: 220, maxWidth: 400 }}
+                />
+                <SortSelect
+                  theme="seller"
+                  value={reviewSort}
+                  onChange={(v) => { setReviewSort(v); setReviewPage(1); }}
+                  options={[
+                    { value: "newest",  label: "Newest first" },
+                    { value: "oldest",  label: "Oldest first" },
+                    { value: "highest", label: "Highest rating" },
+                    { value: "lowest",  label: "Lowest rating" },
+                  ]}
+                />
+              </div>
+
+              <FilterBar
+                theme="seller"
+                active={reviewRating}
+                onChange={(f) => { setReviewRating(f); setReviewPage(1); }}
+                filters={[
+                  { key: "all", label: "All ratings", count: reviews.length },
+                  { key: "5",   label: "★★★★★",        count: reviews.filter((r) => r.rating === 5).length },
+                  { key: "4",   label: "★★★★",          count: reviews.filter((r) => r.rating === 4).length },
+                  { key: "3",   label: "★★★",            count: reviews.filter((r) => r.rating === 3).length },
+                  { key: "2",   label: "★★",             count: reviews.filter((r) => r.rating === 2).length },
+                  { key: "1",   label: "★",              count: reviews.filter((r) => r.rating === 1).length },
+                ]}
+              />
+
+              <div className="sd-section" style={{ marginTop: "1rem" }}>
+                {reviewsLoading ? (
+                  <div className="sd-loading" style={{ minHeight: 200 }}><div className="sd-spinner" /><p>Loading reviews…</p></div>
+                ) : filteredReviews.length === 0 ? (
+                  <div className="sd-empty">
+                    <p>{reviews.length === 0 ? "No reviews yet. Reviews appear after customers purchase your products." : "No reviews match your search."}</p>
+                  </div>
+                ) : (
+                  <div className="sd-reviews-list">
+                    {pagedReviews.map((review) => (
+                      <div key={review.review_id} className="sd-review-card">
+                        <div className="sd-review-header">
+                          <div className="sd-review-product-info">
+                            {review.product?.images?.[0] && (
+                              <img src={`${API_URL}${review.product.images[0]}`} alt={review.product?.name} className="sd-review-product-img" />
+                            )}
+                            <div>
+                              <div className="sd-review-product-name">{review.product?.name || "—"}</div>
+                              <div className="sd-review-reviewer">by <strong>{review.user?.full_name || "Anonymous"}</strong></div>
+                            </div>
+                          </div>
+                          <div className="sd-review-meta">
+                            <StarRating rating={review.rating} />
+                            {/* FIXED: try createdAt and created_at */}
+                            <div className="sd-review-date">{fmtDate(review.created_at || review.createdAt)}</div>
+                            {review.verified_purchase && (
+                              <span className="sd-verified-badge">✓ Verified Purchase</span>
+                            )}
+                          </div>
+                        </div>
+                        {review.comment && (
+                          <p className="sd-review-comment">{review.comment}</p>
+                        )}
+                        {review.images?.length > 0 && (
+                          <div className="sd-review-images">
+                            {review.images.slice(0, 4).map((img, i) => (
+                              <img key={i} src={`${API_URL}${img}`} alt="" className="sd-review-thumb" />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <Pagination
+                  currentPage={reviewPage}
+                  totalPages={totalReviewPages}
+                  onPageChange={setReviewPage}
+                  theme="seller"
+                />
+              </div>
             </div>
           )}
 

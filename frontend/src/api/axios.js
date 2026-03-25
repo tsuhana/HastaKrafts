@@ -80,10 +80,12 @@ export const adminAPI = {
   updateBanner: (id, formData) => API.put(`/banners/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   deleteBanner: (id) => API.delete(`/banners/${id}`),
   toggleBannerStatus: (id) => API.put(`/banners/${id}/toggle`),
-  // C3 NEW
   getAllOrders: () => API.get('/admin/orders'),
   getAllReviews: () => API.get('/admin/reviews'),
   deleteReview: (id) => API.delete(`/admin/reviews/${id}`),
+  // Auction management (admin can view all & delete/cancel)
+  getAllAuctions: () => API.get('/auctions'),
+  deleteAuction: (id) => API.delete(`/auctions/${id}`),
 };
 
 // USER
@@ -103,6 +105,8 @@ export const sellerAPI = {
   uploadLogo: (formData) => API.post('/sellers/upload-logo', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   uploadCitizenship: (formData) => API.post('/sellers/upload-citizenship', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   getAnalytics: () => API.get('/sellers/analytics'),
+  getMyReviews: () => API.get('/reviews/seller/my-reviews'),
+  getMyAuctions: () => API.get('/auctions/seller/my-auctions'),
 };
 
 // CART

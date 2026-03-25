@@ -1,21 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { userAPI, orderAPI, sellerAPI } from '../api/axios';
 import { useToast } from '../context/ToastContext';
 import { useTranslation } from 'react-i18next';
+import {
+  Pagination,
+  FilterBar,
+  SearchInput,
+  DateRangePicker,
+  SortSelect,
+  filterByDateRange,
+} from '../components/SharedComponents';
 import '../styles/UserProfile.css';
 
 const API_URL = 'http://localhost:5000';
+const ORDERS_PER_PAGE = 5;
 
 const UserProfile = () => {
-  const navigate = useNavigate();
-  const toast = useToast();
-  const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState('profile');
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [user, setUser] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const navigate       = useNavigate();
+  const toast          = useToast();
+  const { t }          = useTranslation();
+  const [activeTab, setActiveTab]       = useState('profile');
+  const [loading, setLoading]           = useState(true);
+  const [saving, setSaving]             = useState(false);
+  const [user, setUser]                 = useState(null);
+  const [isEditing, setIsEditing]       = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -28,7 +37,11 @@ const UserProfile = () => {
   });
 
   const [errors, setErrors] = useState({});
-  const provinces = ['Bagmati', 'Gandaki', 'Lumbini', 'Koshi', 'Madhesh', 'Karnali', 'Sudurpashchim'];
+
+  const provinces = [
+    'Bagmati', 'Gandaki', 'Lumbini', 'Koshi',
+    'Madhesh', 'Karnali', 'Sudurpashchim',
+  ];
 
   useEffect(() => { fetchUserProfile(); }, []);
 
@@ -37,21 +50,20 @@ const UserProfile = () => {
       setLoading(true);
       const res = await userAPI.getProfile();
       if (res.data.success) {
-        const userData = res.data.data;
-        setUser(userData);
+        const u = res.data.data;
+        setUser(u);
         setFormData({
-          full_name: userData.full_name || '',
-          email: userData.email || '',
-          phone: userData.phone || '',
-          address: userData.address || '',
-          city: userData.city || '',
-          state: userData.state || '',
-          postal_code: userData.postal_code || '',
-          landmark: userData.landmark || '',
+          full_name:   u.full_name   || '',
+          email:       u.email       || '',
+          phone:       u.phone       || '',
+          address:     u.address     || '',
+          city:        u.city        || '',
+          state:       u.state       || '',
+          postal_code: u.postal_code || '',
+          landmark:    u.landmark    || '',
         });
       }
     } catch (err) {
-      console.error('Error fetching profile:', err);
       toast.error('Failed to load profile. Please login again.');
       if (err.response?.status === 401) navigate('/login');
     } finally {
@@ -72,9 +84,9 @@ const UserProfile = () => {
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) { toast.error('Please upload a valid image (JPG, PNG, WEBP)'); return; }
-    if (file.size > 2 * 1024 * 1024) { toast.error('Image size must be less than 2MB'); return; }
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowed.includes(file.type)) { toast.error('Please upload JPG, PNG or WEBP'); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error('Image must be under 2MB'); return; }
     setUploadingImage(true);
     try {
       const fd = new FormData();
@@ -89,23 +101,26 @@ const UserProfile = () => {
   };
 
   const validateProfileForm = () => {
-    const newErrors = {};
-    if (!formData.full_name.trim()) newErrors.full_name = 'Name is required';
-    if (!formData.email.trim()) newErrors.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid';
-    if (formData.phone && !/^\d{10}$/.test(formData.phone.replace(/\D/g, ''))) newErrors.phone = 'Phone must be 10 digits';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const e = {};
+    if (!formData.full_name.trim()) e.full_name = 'Name is required';
+    if (!formData.email.trim())     e.email     = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) e.email = 'Email is invalid';
+    if (formData.phone && !/^\d{10}$/.test(formData.phone.replace(/\D/g, '')))
+      e.phone = 'Phone must be 10 digits';
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
   const validatePasswordForm = () => {
-    const newErrors = {};
-    if (!passwordData.currentPassword) newErrors.currentPassword = 'Current password is required';
-    if (!passwordData.newPassword) newErrors.newPassword = 'New password is required';
-    else if (passwordData.newPassword.length < 6) newErrors.newPassword = 'Password must be at least 6 characters';
-    if (passwordData.newPassword !== passwordData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const e = {};
+    if (!passwordData.currentPassword) e.currentPassword = 'Current password is required';
+    if (!passwordData.newPassword)     e.newPassword     = 'New password is required';
+    else if (passwordData.newPassword.length < 6)
+      e.newPassword = 'Password must be at least 6 characters';
+    if (passwordData.newPassword !== passwordData.confirmPassword)
+      e.confirmPassword = 'Passwords do not match';
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
   const handleUpdateProfile = async (e) => {
@@ -134,7 +149,7 @@ const UserProfile = () => {
     try {
       const res = await userAPI.changePassword({
         currentPassword: passwordData.currentPassword,
-        newPassword: passwordData.newPassword,
+        newPassword:     passwordData.newPassword,
       });
       if (res.data.success) {
         toast.success('Password changed successfully!');
@@ -151,16 +166,22 @@ const UserProfile = () => {
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return 'N/A';
-      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      const d = new Date(dateString);
+      if (isNaN(d.getTime())) return 'N/A';
+      return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     } catch { return 'N/A'; }
   };
 
-  const getProfileImageUrl = () => user?.profile_image ? `${API_URL}${user.profile_image}` : null;
+  const getProfileImageUrl = () =>
+    user?.profile_image ? `${API_URL}${user.profile_image}` : null;
 
   if (loading) {
-    return <div className="profile-loading"><div className="spinner"></div><p>{t('common.loading')}</p></div>;
+    return (
+      <div className="profile-loading">
+        <div className="spinner" />
+        <p>{t('common.loading')}</p>
+      </div>
+    );
   }
 
   if (!user) {
@@ -173,7 +194,7 @@ const UserProfile = () => {
   }
 
   const isSeller = user.role === 'seller';
-  const isBuyer = user.role === 'buyer';
+  const isBuyer  = user.role === 'buyer';
 
   return (
     <div className="user-profile-page">
@@ -186,19 +207,28 @@ const UserProfile = () => {
               {getProfileImageUrl() ? (
                 <img src={getProfileImageUrl()} alt={user.full_name} className="avatar-image" />
               ) : (
-                <div className="avatar-circle">{user.full_name?.substring(0, 2).toUpperCase() || 'U'}</div>
+                <div className="avatar-circle">
+                  {user.full_name?.substring(0, 2).toUpperCase() || 'U'}
+                </div>
               )}
               <label className="avatar-upload-btn" htmlFor="avatar-input">
-                {uploadingImage ? '...' : '📷'}
+                {uploadingImage ? '…' : '📷'}
               </label>
-              <input type="file" id="avatar-input" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} disabled={uploadingImage} />
+              <input
+                type="file" id="avatar-input" accept="image/*"
+                onChange={handleImageUpload}
+                style={{ display: 'none' }}
+                disabled={uploadingImage}
+              />
             </div>
             <div className="profile-info">
               <h1>{user.full_name || 'User'}</h1>
               <p className="user-email">{user.email}</p>
               <div className="user-badges">
                 <span className={`role-badge role-${user.role}`}>
-                  {user.role === 'seller' ? t('profile.seller') : user.role === 'admin' ? t('profile.admin') : t('profile.buyer')}
+                  {user.role === 'seller' ? t('profile.seller')
+                    : user.role === 'admin' ? t('profile.admin')
+                    : t('profile.buyer')}
                 </span>
                 <span className="member-badge">
                   {t('profile.member_since')} {formatDate(user.createdAt || user.created_at)}
@@ -215,19 +245,31 @@ const UserProfile = () => {
 
         {/* ── Tabs ── */}
         <div className="profile-tabs">
-          <button className={`tab-btn ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>
+          <button
+            className={`tab-btn ${activeTab === 'profile' ? 'active' : ''}`}
+            onClick={() => setActiveTab('profile')}
+          >
             {isBuyer ? `${t('profile.title')} & ${t('profile.delivery')}` : t('profile.title')}
           </button>
-          <button className={`tab-btn ${activeTab === 'password' ? 'active' : ''}`} onClick={() => setActiveTab('password')}>
+          <button
+            className={`tab-btn ${activeTab === 'password' ? 'active' : ''}`}
+            onClick={() => setActiveTab('password')}
+          >
             {t('profile.change_password')}
           </button>
           {isBuyer && (
-            <button className={`tab-btn ${activeTab === 'orders' ? 'active' : ''}`} onClick={() => setActiveTab('orders')}>
+            <button
+              className={`tab-btn ${activeTab === 'orders' ? 'active' : ''}`}
+              onClick={() => setActiveTab('orders')}
+            >
               {t('profile.order_history')}
             </button>
           )}
           {isSeller && (
-            <button className={`tab-btn ${activeTab === 'shop' ? 'active' : ''}`} onClick={() => setActiveTab('shop')}>
+            <button
+              className={`tab-btn ${activeTab === 'shop' ? 'active' : ''}`}
+              onClick={() => setActiveTab('shop')}
+            >
               🏪 Shop Info
             </button>
           )}
@@ -239,11 +281,22 @@ const UserProfile = () => {
           {activeTab === 'profile' && (
             <div className="tab-content">
               <div className="content-header">
-                <h2>{isBuyer ? `${t('profile.personal_info')} & ${t('profile.delivery_address')}` : t('profile.personal_info')}</h2>
+                <h2>
+                  {isBuyer
+                    ? `${t('profile.personal_info')} & ${t('profile.delivery_address')}`
+                    : t('profile.personal_info')}
+                </h2>
                 {!isEditing ? (
-                  <button onClick={() => setIsEditing(true)} className="btn-edit">{t('profile.edit_profile')}</button>
+                  <button onClick={() => setIsEditing(true)} className="btn-edit">
+                    {t('profile.edit_profile')}
+                  </button>
                 ) : (
-                  <button onClick={() => { setIsEditing(false); setErrors({}); }} className="btn-cancel-edit">{t('profile.cancel')}</button>
+                  <button
+                    onClick={() => { setIsEditing(false); setErrors({}); }}
+                    className="btn-cancel-edit"
+                  >
+                    {t('profile.cancel')}
+                  </button>
                 )}
               </div>
 
@@ -272,10 +325,22 @@ const UserProfile = () => {
                           <label>{t('checkout.address')}</label>
                           <p>{user.address || t('profile.not_provided')}</p>
                         </div>
-                        <div className="info-item"><label>{t('checkout.city')}</label><p>{user.city || t('profile.not_provided')}</p></div>
-                        <div className="info-item"><label>{t('checkout.province')}</label><p>{user.state || t('profile.not_provided')}</p></div>
-                        <div className="info-item"><label>{t('checkout.postal_code')}</label><p>{user.postal_code || t('profile.not_provided')}</p></div>
-                        <div className="info-item"><label>{t('checkout.landmark')}</label><p>{user.landmark || t('profile.not_provided')}</p></div>
+                        <div className="info-item">
+                          <label>{t('checkout.city')}</label>
+                          <p>{user.city || t('profile.not_provided')}</p>
+                        </div>
+                        <div className="info-item">
+                          <label>{t('checkout.province')}</label>
+                          <p>{user.state || t('profile.not_provided')}</p>
+                        </div>
+                        <div className="info-item">
+                          <label>{t('checkout.postal_code')}</label>
+                          <p>{user.postal_code || t('profile.not_provided')}</p>
+                        </div>
+                        <div className="info-item">
+                          <label>{t('checkout.landmark')}</label>
+                          <p>{user.landmark || t('profile.not_provided')}</p>
+                        </div>
                       </div>
                     </>
                   )}
@@ -287,17 +352,29 @@ const UserProfile = () => {
                     <div className="form-grid">
                       <div className="form-field">
                         <label>{t('auth.full_name')} *</label>
-                        <input type="text" name="full_name" value={formData.full_name} onChange={handleChange} className={errors.full_name ? 'error' : ''} />
+                        <input
+                          type="text" name="full_name" value={formData.full_name}
+                          onChange={handleChange}
+                          className={errors.full_name ? 'error' : ''}
+                        />
                         {errors.full_name && <span className="error-msg">{errors.full_name}</span>}
                       </div>
                       <div className="form-field">
                         <label>{t('auth.email')} *</label>
-                        <input type="email" name="email" value={formData.email} onChange={handleChange} className={errors.email ? 'error' : ''} />
+                        <input
+                          type="email" name="email" value={formData.email}
+                          onChange={handleChange}
+                          className={errors.email ? 'error' : ''}
+                        />
                         {errors.email && <span className="error-msg">{errors.email}</span>}
                       </div>
                       <div className="form-field">
                         <label>{t('auth.phone')}</label>
-                        <input type="tel" name="phone" value={formData.phone} onChange={handleChange} className={errors.phone ? 'error' : ''} />
+                        <input
+                          type="tel" name="phone" value={formData.phone}
+                          onChange={handleChange}
+                          className={errors.phone ? 'error' : ''}
+                        />
                         {errors.phone && <span className="error-msg">{errors.phone}</span>}
                       </div>
                     </div>
@@ -333,6 +410,7 @@ const UserProfile = () => {
                       </div>
                     </div>
                   )}
+
                   <button type="submit" disabled={saving} className="btn-save">
                     {saving ? t('profile.saving') : t('profile.save_changes')}
                   </button>
@@ -348,17 +426,32 @@ const UserProfile = () => {
               <form onSubmit={handleChangePassword} className="password-form">
                 <div className="form-field">
                   <label>{t('profile.current_password')} *</label>
-                  <input type="password" name="currentPassword" value={passwordData.currentPassword} onChange={handlePasswordChange} className={errors.currentPassword ? 'error' : ''} />
+                  <input
+                    type="password" name="currentPassword"
+                    value={passwordData.currentPassword}
+                    onChange={handlePasswordChange}
+                    className={errors.currentPassword ? 'error' : ''}
+                  />
                   {errors.currentPassword && <span className="error-msg">{errors.currentPassword}</span>}
                 </div>
                 <div className="form-field">
                   <label>{t('profile.new_password')} *</label>
-                  <input type="password" name="newPassword" value={passwordData.newPassword} onChange={handlePasswordChange} className={errors.newPassword ? 'error' : ''} />
+                  <input
+                    type="password" name="newPassword"
+                    value={passwordData.newPassword}
+                    onChange={handlePasswordChange}
+                    className={errors.newPassword ? 'error' : ''}
+                  />
                   {errors.newPassword && <span className="error-msg">{errors.newPassword}</span>}
                 </div>
                 <div className="form-field">
                   <label>{t('profile.confirm_password')} *</label>
-                  <input type="password" name="confirmPassword" value={passwordData.confirmPassword} onChange={handlePasswordChange} className={errors.confirmPassword ? 'error' : ''} />
+                  <input
+                    type="password" name="confirmPassword"
+                    value={passwordData.confirmPassword}
+                    onChange={handlePasswordChange}
+                    className={errors.confirmPassword ? 'error' : ''}
+                  />
                   {errors.confirmPassword && <span className="error-msg">{errors.confirmPassword}</span>}
                 </div>
                 <button type="submit" disabled={saving} className="btn-save">
@@ -368,27 +461,338 @@ const UserProfile = () => {
             </div>
           )}
 
-          {/* ── Order History — buyers only ── */}
+          {/* ── Order History (buyers only) ── */}
           {activeTab === 'orders' && isBuyer && (
-            <div className="tab-content"><OrderHistory t={t} /></div>
+            <div className="tab-content">
+              <OrderHistory t={t} />
+            </div>
           )}
 
-          {/* ── Shop Info — sellers only ── */}
+          {/* ── Shop Info (sellers only) ── */}
           {activeTab === 'shop' && isSeller && (
-            <div className="tab-content"><SellerShopInfo t={t} navigate={navigate} /></div>
+            <div className="tab-content">
+              <SellerShopInfo t={t} navigate={navigate} />
+            </div>
           )}
-
         </div>
       </div>
     </div>
   );
 };
 
+// ══════════════════════════════════════════════════════════════
+// ORDER HISTORY — full filter + search + date + sort + pagination
+// ══════════════════════════════════════════════════════════════
+const OrderHistory = ({ t }) => {
+  const [orders, setOrders]     = useState([]);
+  const [loading, setLoading]   = useState(true);
+
+  // ── filter / search / date / sort / page state ──
+  const [statusFilter, setStatusFilter]   = useState('all');
+  const [paymentFilter, setPaymentFilter] = useState('all');
+  const [search, setSearch]               = useState('');
+  const [dateRange, setDateRange]         = useState({ startDate: '', endDate: '' });
+  const [sort, setSort]                   = useState('newest');
+  const [page, setPage]                   = useState(1);
+
+  useEffect(() => {
+    orderAPI.getMyOrders()
+      .then((res) => { if (res.data.success) setOrders(res.data.data || []); })
+      .catch((err) => console.error('Orders error:', err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Reset page when any filter changes
+  useEffect(() => { setPage(1); }, [statusFilter, paymentFilter, search, dateRange, sort]);
+
+  // ── derive counts for filter chips ──
+  const statusCounts = useMemo(() => {
+    const c = { all: orders.length };
+    orders.forEach((o) => {
+      const s = o.order_status;
+      c[s] = (c[s] || 0) + 1;
+    });
+    return c;
+  }, [orders]);
+
+  // ── apply all filters ──
+  const filtered = useMemo(() => {
+    let list = [...orders];
+
+    // status filter
+    if (statusFilter !== 'all') list = list.filter((o) => o.order_status === statusFilter);
+
+    // payment filter
+    if (paymentFilter !== 'all') list = list.filter((o) => o.payment_status === paymentFilter);
+
+    // search by order number or product name
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((o) =>
+        (o.order_number || '').toLowerCase().includes(q) ||
+        o.items?.some((i) => (i.product_name || '').toLowerCase().includes(q))
+      );
+    }
+
+    // date range
+    list = filterByDateRange(list, 'created_at', dateRange.startDate, dateRange.endDate);
+
+    // sort
+    list.sort((a, b) => {
+      const da = new Date(a.created_at || a.createdAt);
+      const db = new Date(b.created_at || b.createdAt);
+      if (sort === 'newest') return db - da;
+      if (sort === 'oldest') return da - db;
+      if (sort === 'highest') return parseFloat(b.total) - parseFloat(a.total);
+      if (sort === 'lowest')  return parseFloat(a.total) - parseFloat(b.total);
+      return 0;
+    });
+
+    return list;
+  }, [orders, statusFilter, paymentFilter, search, dateRange, sort]);
+
+  const totalPages = Math.ceil(filtered.length / ORDERS_PER_PAGE);
+  const paged      = filtered.slice((page - 1) * ORDERS_PER_PAGE, page * ORDERS_PER_PAGE);
+
+  const getStatusColor = (status) => ({
+    pending:    '#F59E0B',
+    processing: '#3B82F6',
+    shipped:    '#8B5CF6',
+    delivered:  '#10B981',
+    cancelled:  '#EF4444',
+  }[status] || '#6B7280');
+
+  const clearAll = () => {
+    setStatusFilter('all');
+    setPaymentFilter('all');
+    setSearch('');
+    setDateRange({ startDate: '', endDate: '' });
+    setSort('newest');
+    setPage(1);
+  };
+
+  const hasActiveFilters =
+    statusFilter !== 'all' || paymentFilter !== 'all' ||
+    search || dateRange.startDate || dateRange.endDate;
+
+  if (loading) return <div className="loading">{t('common.loading')}</div>;
+
+  if (orders.length === 0) {
+    return (
+      <div className="empty-state">
+        <p>{t('orders.no_orders')}</p>
+        <button onClick={() => (window.location.href = '/products')} className="btn-primary">
+          {t('orders.start_shopping')}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="oh-wrap">
+      {/* ── Header row ── */}
+      <div className="oh-header">
+        <div>
+          <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#2C1810' }}>
+            Order History
+          </h2>
+          <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#8B6F5E' }}>
+            {filtered.length} of {orders.length} orders
+          </p>
+        </div>
+        {hasActiveFilters && (
+          <button onClick={clearAll} className="oh-clear-btn">✕ Clear filters</button>
+        )}
+      </div>
+
+      {/* ── Toolbar ── */}
+      <div className="oh-toolbar">
+        {/* Search */}
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search by order # or product…"
+          theme="seller"
+          style={{ flex: 1, minWidth: 200 }}
+        />
+
+        {/* Sort */}
+        <SortSelect
+          theme="seller"
+          value={sort}
+          onChange={setSort}
+          options={[
+            { value: 'newest',  label: 'Newest first' },
+            { value: 'oldest',  label: 'Oldest first' },
+            { value: 'highest', label: 'Highest amount' },
+            { value: 'lowest',  label: 'Lowest amount' },
+          ]}
+        />
+      </div>
+
+      {/* ── Date range ── */}
+      <div style={{ marginBottom: '0.85rem' }}>
+        <DateRangePicker
+          theme="seller"
+          startDate={dateRange.startDate}
+          endDate={dateRange.endDate}
+          onChange={setDateRange}
+          label="Date:"
+        />
+      </div>
+
+      {/* ── Status filter chips ── */}
+      <div style={{ marginBottom: '0.5rem' }}>
+        <FilterBar
+          theme="seller"
+          active={statusFilter}
+          onChange={setStatusFilter}
+          filters={[
+            { key: 'all',        label: 'All',        count: statusCounts.all || 0 },
+            { key: 'pending',    label: 'Pending',    count: statusCounts.pending    || 0 },
+            { key: 'processing', label: 'Processing', count: statusCounts.processing || 0 },
+            { key: 'shipped',    label: 'Shipped',    count: statusCounts.shipped    || 0 },
+            { key: 'delivered',  label: 'Delivered',  count: statusCounts.delivered  || 0 },
+            { key: 'cancelled',  label: 'Cancelled',  count: statusCounts.cancelled  || 0 },
+          ]}
+        />
+      </div>
+
+      {/* ── Payment filter chips ── */}
+      <div style={{ marginBottom: '1rem' }}>
+        <FilterBar
+          theme="seller"
+          active={paymentFilter}
+          onChange={setPaymentFilter}
+          filters={[
+            { key: 'all',     label: 'All payments' },
+            { key: 'paid',    label: 'Paid' },
+            { key: 'pending', label: 'Unpaid' },
+          ]}
+        />
+      </div>
+
+      {/* ── No results ── */}
+      {paged.length === 0 ? (
+        <div className="oh-no-results">
+          <p>No orders match your filters.</p>
+          <button onClick={clearAll} className="oh-clear-btn">Clear all filters</button>
+        </div>
+      ) : (
+        <>
+          {/* ── Order cards ── */}
+          <div className="orders-list">
+            {paged.map((order) => (
+              <div key={order.order_id} className="order-card">
+                <div className="order-header">
+                  <div>
+                    <h3>Order #{order.order_number}</h3>
+                    <p className="order-date">
+                      {new Date(order.created_at || order.createdAt).toLocaleDateString('en-US', {
+                        year: 'numeric', month: 'long', day: 'numeric',
+                      })}
+                    </p>
+                  </div>
+                  <div className="order-status-badges">
+                    <span
+                      className="status-badge"
+                      style={{
+                        background: `${getStatusColor(order.order_status)}20`,
+                        color: getStatusColor(order.order_status),
+                      }}
+                    >
+                      {order.order_status?.charAt(0).toUpperCase() + order.order_status?.slice(1)}
+                    </span>
+                    <span
+                      className="payment-badge"
+                      style={{
+                        background: order.payment_status === 'paid' ? '#10B98120' : '#F59E0B20',
+                        color:      order.payment_status === 'paid' ? '#10B981'   : '#F59E0B',
+                      }}
+                    >
+                      {order.payment_status === 'paid'
+                        ? (order.payment_method === 'khalti' ? '✓ Paid (Khalti)' : '✓ Paid (COD)')
+                        : '⏳ Unpaid'}
+                    </span>
+                    <span
+                      className="payment-badge"
+                      style={{ background: '#EFF6FF', color: '#1D4ED8' }}
+                    >
+                      {order.payment_method?.toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Items preview */}
+                <div className="order-items">
+                  {order.items?.slice(0, 3).map((item) => (
+                    <div key={item.order_item_id} className="order-item-preview">
+                      <img
+                        src={item.product_image ? `${API_URL}${item.product_image}` : '/placeholder.png'}
+                        alt={item.product_name}
+                      />
+                      <div>
+                        <p className="item-name">{item.product_name}</p>
+                        <p className="item-qty">
+                          Qty: {item.quantity} × Rs. {parseFloat(item.product_price).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  {(order.items?.length || 0) > 3 && (
+                    <p className="more-items">+{order.items.length - 3} more item(s)</p>
+                  )}
+                </div>
+
+                {/* Delivery info row */}
+                <div className="oh-delivery-row">
+                  <span>📍 {order.delivery_city}{order.delivery_state ? `, ${order.delivery_state}` : ''}</span>
+                  {order.delivery_fee > 0
+                    ? <span>Delivery: Rs. {parseFloat(order.delivery_fee).toLocaleString()}</span>
+                    : <span style={{ color: '#10B981' }}>Free delivery</span>}
+                  {order.points_earned > 0 && (
+                    <span style={{ color: '#b86e38' }}>🏆 +{order.points_earned} pts earned</span>
+                  )}
+                </div>
+
+                <div className="order-footer">
+                  <div className="order-total">
+                    <span>Total:</span>
+                    <span className="amount">Rs. {parseFloat(order.total).toLocaleString()}</span>
+                  </div>
+                  <button
+                    onClick={() => (window.location.href = `/order-confirmation/${order.order_id}`)}
+                    className="btn-view-order"
+                  >
+                    View Details →
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* ── Pagination ── */}
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            theme="seller"
+          />
+
+          <p style={{ textAlign: 'center', fontSize: '0.72rem', color: '#B09070', marginTop: '0.5rem' }}>
+            Showing {(page - 1) * ORDERS_PER_PAGE + 1}–{Math.min(page * ORDERS_PER_PAGE, filtered.length)} of {filtered.length}
+          </p>
+        </>
+      )}
+    </div>
+  );
+};
+
 // ══════════════════════════════════════════
-//  SELLER SHOP INFO (read-only in profile)
+// SELLER SHOP INFO (read-only in profile)
 // ══════════════════════════════════════════
 const SellerShopInfo = ({ t, navigate }) => {
-  const [seller, setSeller] = useState(null);
+  const [seller, setSeller]   = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -408,7 +812,9 @@ const SellerShopInfo = ({ t, navigate }) => {
           {seller.shop_logo ? (
             <img src={`${API_URL}${seller.shop_logo}`} alt={seller.shop_name} className="shop-logo-img" />
           ) : (
-            <div className="shop-logo-placeholder">{seller.shop_name?.[0]?.toUpperCase() || 'S'}</div>
+            <div className="shop-logo-placeholder">
+              {seller.shop_name?.[0]?.toUpperCase() || 'S'}
+            </div>
           )}
         </div>
         <div className="shop-header-info">
@@ -460,88 +866,6 @@ const SellerShopInfo = ({ t, navigate }) => {
           🏪 Manage Shop in Dashboard →
         </button>
       </div>
-    </div>
-  );
-};
-
-// ══════════════════════════════════════════
-//  ORDER HISTORY — buyers only
-// ══════════════════════════════════════════
-const OrderHistory = ({ t }) => {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    orderAPI.getMyOrders()
-      .then((res) => { if (res.data.success) setOrders(res.data.data); })
-      .catch((err) => console.error('Orders error:', err))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const getStatusColor = (status) => {
-    const colors = { pending: '#F59E0B', processing: '#3B82F6', shipped: '#8B5CF6', delivered: '#10B981', cancelled: '#EF4444' };
-    return colors[status] || '#6B7280';
-  };
-
-  const getPaymentLabel = (payment_status, payment_method) => {
-    if (payment_method === 'khalti') return t('orders.paid_khalti');
-    return payment_status === 'paid' ? t('orders.paid_cod') : t('orders.unpaid');
-  };
-
-  if (loading) return <div className="loading">{t('common.loading')}</div>;
-
-  if (orders.length === 0) {
-    return (
-      <div className="empty-state">
-        <p>{t('orders.no_orders')}</p>
-        <button onClick={() => window.location.href = '/products'} className="btn-primary">{t('orders.start_shopping')}</button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="orders-list">
-      {orders.map((order) => (
-        <div key={order.order_id} className="order-card">
-          <div className="order-header">
-            <div>
-              <h3>{t('orders.order_number')} #{order.order_number}</h3>
-              <p className="order-date">
-                {new Date(order.createdAt || order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-              </p>
-            </div>
-            <div className="order-status-badges">
-              <span className="status-badge" style={{ background: `${getStatusColor(order.order_status)}20`, color: getStatusColor(order.order_status) }}>
-                {t(`orders.${order.order_status}`) || order.order_status}
-              </span>
-              <span className="payment-badge" style={{ background: order.payment_status === 'paid' ? '#10B98120' : '#F59E0B20', color: order.payment_status === 'paid' ? '#10B981' : '#F59E0B' }}>
-                {getPaymentLabel(order.payment_status, order.payment_method)}
-              </span>
-            </div>
-          </div>
-          <div className="order-items">
-            {order.items?.slice(0, 3).map((item) => (
-              <div key={item.order_item_id} className="order-item-preview">
-                <img src={item.product_image ? `${API_URL}${item.product_image}` : '/placeholder.png'} alt={item.product_name} />
-                <div>
-                  <p className="item-name">{item.product_name}</p>
-                  <p className="item-qty">{t('common.qty')}: {item.quantity}</p>
-                </div>
-              </div>
-            ))}
-            {order.items?.length > 3 && <p className="more-items">+{order.items.length - 3} {t('orders.more_items')}</p>}
-          </div>
-          <div className="order-footer">
-            <div className="order-total">
-              <span>{t('orders.total')}:</span>
-              <span className="amount">Rs. {parseFloat(order.total).toLocaleString()}</span>
-            </div>
-            <button onClick={() => window.location.href = `/order-confirmation/${order.order_id}`} className="btn-view-order">
-              {t('orders.view_details')}
-            </button>
-          </div>
-        </div>
-      ))}
     </div>
   );
 };

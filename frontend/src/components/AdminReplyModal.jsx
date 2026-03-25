@@ -1,42 +1,4 @@
-// AdminReplyModal.jsx
-// ─────────────────────────────────────────────────────────────────
-// HOW TO INTEGRATE into AdminDashboard.jsx:
-//
-//  1. Import:
-//       import AdminReplyModal from "./AdminReplyModal";
-//
-//  2. Add state near your other modals:
-//       const [replyModal, setReplyModal] = useState({ isOpen: false, contact: null });
-//
-//  3. Add handlers (near handleContactStatus):
-//       const handleOpenReply  = (contact) => setReplyModal({ isOpen: true, contact });
-//       const handleCloseReply = () => setReplyModal({ isOpen: false, contact: null });
-//       const handleSendReply  = async (contactId, reply) => {
-//         try {
-//           const res = await adminAPI.updateContactStatus(contactId, {
-//             status: "in_progress",
-//             admin_reply: reply,
-//           });
-//           if (res.data.success) {
-//             toast.success("Reply sent and email delivered!");
-//             fetchContactMessages();
-//           }
-//         } catch { toast.error("Failed to send reply"); }
-//       };
-//
-//  4. Render (alongside your other modals near the top of the return):
-//       <AdminReplyModal
-//         isOpen={replyModal.isOpen}
-//         contact={replyModal.contact}
-//         onClose={handleCloseReply}
-//         onSend={handleSendReply}
-//       />
-//
-//  5. Add a Reply button inside the contacts tab msg-actions div:
-//       <button className="btn-inprogress" onClick={() => handleOpenReply(contact)}>
-//         Reply
-//       </button>
-// ─────────────────────────────────────────────────────────────────
+
 
 import React, { useState, useEffect, useRef } from "react";
 import "./AdminReplyModal.css";

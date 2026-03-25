@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -7,31 +7,34 @@ import { adminAPI, productAPI } from "../api/axios";
 import { useToast } from "../context/ToastContext";
 import ConfirmModal from "../components/ConfirmModal";
 import AdminReplyModal from "../components/AdminReplyModal";
-import { Pagination, FilterBar, SearchInput } from "../components/SharedComponents";
+import {
+  Pagination, FilterBar, SearchInput, DateRangePicker, SortSelect, filterByDateRange,
+} from "../components/SharedComponents";
 import "../styles/AdminDashboard.css";
 
-const API_URL = "http://localhost:5000";
-
-/* ── SVG icons ── */
+/* ─── Icons ─── */
 const Icons = {
-  grid: (<svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>),
-  shield: (<svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7l-9-5z"/></svg>),
-  box: (<svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>),
-  star: (<svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>),
-  image: (<svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>),
-  mail: (<svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>),
-  refresh: (<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>),
-  users: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>),
-  store: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>),
-  pkg: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>),
-  rupee: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="4" x2="18" y2="4"/><line x1="6" y1="9" x2="18" y2="9"/><path d="M6 14l6 6 6-6"/><path d="M6 9c0 3.314 2.686 5 6 5s6-1.686 6-5"/></svg>),
-  orders: (<svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>),
-  allUsers: (<svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>),
-  allSellers: (<svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>),
-  reviews: (<svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>),
+  grid:     <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
+  shield:   <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7l-9-5z"/></svg>,
+  box:      <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>,
+  star:     <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+  image:    <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>,
+  mail:     <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
+  users:    <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,
+  store:    <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+  orders:   <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>,
+  products: <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>,
+  reviews:  <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+  refresh:  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>,
+  trending: <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
+  rupee:    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="4" x2="18" y2="4"/><line x1="6" y1="9" x2="18" y2="9"/><path d="M6 14l6 6 6-6"/><path d="M6 9c0 3.314 2.686 5 6 5s6-1.686 6-5"/></svg>,
+  pkg:      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>,
+  usersLg:  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,
+  storeLg:  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+  auction:  <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2.5l7 7-7 7"/><path d="M9.5 7.5L2.5 14.5"/><path d="M6 21h12"/><path d="M12 17v4"/></svg>,
 };
 
-/* ── Donut chart center label ── */
+/* ─── Small helpers ─── */
 const DonutLabel = ({ cx, cy, value, label }) => (
   <g>
     <text x={cx} y={cy - 8} textAnchor="middle" fill="var(--text-1)" fontSize="1.5rem" fontWeight="800" fontFamily="inherit">{value}</text>
@@ -39,7 +42,6 @@ const DonutLabel = ({ cx, cy, value, label }) => (
   </g>
 );
 
-/* ── Custom tooltip ── */
 const ChartTooltip = ({ active, payload, label, prefix = "" }) => {
   if (!active || !payload?.length) return null;
   return (
@@ -54,7 +56,6 @@ const ChartTooltip = ({ active, payload, label, prefix = "" }) => {
   );
 };
 
-/* ── KPI Card ── */
 const KpiCard = ({ icon, label, value, sub, accent, trend }) => (
   <div className="kpi-card" style={{ "--kpi-accent": accent }}>
     <div className="kpi-icon-wrap">{icon}</div>
@@ -71,7 +72,6 @@ const KpiCard = ({ icon, label, value, sub, accent, trend }) => (
   </div>
 );
 
-/* ── Price cell ── */
 const PriceCell = ({ product }) => {
   const hasDiscount = product.has_discount === true || product.has_discount === "true";
   const pct = parseInt(product.discount_percentage) || 0;
@@ -100,17 +100,18 @@ const ProductImg = ({ src, alt }) => {
   return <div className="td-img-placeholder">No img</div>;
 };
 
-/* ── Star Rating ── */
 const StarRating = ({ rating }) => {
-  const r = Math.round(rating || 0);
+  const r = parseInt(rating) || 0;
   return (
-    <span style={{ color: "#c08830", fontSize: "0.85rem", letterSpacing: 1 }}>
-      {"★".repeat(r)}{"☆".repeat(5 - r)}
-    </span>
+    <div style={{ display: "flex", gap: 1, alignItems: "center" }}>
+      {[1, 2, 3, 4, 5].map((s) => (
+        <span key={s} style={{ fontSize: "0.75rem", color: s <= r ? "#c08830" : "#ddd5c4" }}>★</span>
+      ))}
+      <span style={{ fontSize: "0.68rem", color: "var(--text-3)", marginLeft: 3 }}>{r}/5</span>
+    </div>
   );
 };
 
-/* ── Reject Modal ── */
 const RejectModal = ({ isOpen, title, onConfirm, onCancel }) => {
   const [reason, setReason] = useState("");
   useEffect(() => { if (isOpen) setReason(""); }, [isOpen]);
@@ -126,9 +127,9 @@ const RejectModal = ({ isOpen, title, onConfirm, onCancel }) => {
         <textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="Enter rejection reason..."
+          placeholder="Enter rejection reason…"
           rows={3}
-          style={{ width: "100%", padding: "0.6rem 0.75rem", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "0.875rem", resize: "vertical", marginBottom: "1.2rem", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+          style={{ width: "100%", padding: "0.6rem 0.75rem", borderRadius: 10, border: "1.5px solid #e5e7eb", fontSize: "0.875rem", resize: "vertical", marginBottom: "1.2rem", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
           onFocus={(e) => (e.target.style.borderColor = "#f59e0b")}
           onBlur={(e) => (e.target.style.borderColor = "#e5e7eb")}
           autoFocus
@@ -140,119 +141,138 @@ const RejectModal = ({ isOpen, title, onConfirm, onCancel }) => {
             onClick={() => { if (reason.trim()) onConfirm(reason.trim()); }}
             disabled={!reason.trim()}
             style={{ opacity: reason.trim() ? 1 : 0.5, cursor: reason.trim() ? "pointer" : "not-allowed" }}
-          >
-            Reject
-          </button>
+          >Reject</button>
         </div>
       </div>
     </div>
   );
 };
 
+/* ─── Constants ─── */
+const API_URL = "http://localhost:5000";
+const PER_PAGE = 15;
+const DONUT_COLORS_PRODUCT = ["#2a9e6a", "#c08830", "#aa2c1c"];
+const DONUT_COLORS_ORDER   = ["#c08830", "#1a509a", "#2a9e6a", "#aa2c1c", "#b86e38"];
+const AUCTION_STATUS_COLORS = { live: "#10B981", upcoming: "#3B82F6", ended: "#8B5CF6", cancelled: "#EF4444" };
+
 /* ════════════════════ MAIN COMPONENT ════════════════════ */
 const AdminDashboard = () => {
   const toast = useToast();
-  const [activeTab, setActiveTab] = useState("overview");
-  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab]         = useState("overview");
+  const [loading, setLoading]             = useState(true);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
-  const [revenueView, setRevenueView] = useState("weekly");
-  const [replyModal, setReplyModal] = useState({ isOpen: false, contact: null });
+  const [msgFilter, setMsgFilter]         = useState("all");
   const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [revenueView, setRevenueView]     = useState("weekly");
 
-  // Core data
-  const [stats, setStats] = useState({
-    totalUsers: 0, totalSellersUsers: 0, totalBuyers: 0,
-    totalSellerProfiles: 0, pendingSellers: 0, approvedSellers: 0,
-    totalProducts: 0, pendingProducts: 0, approvedProducts: 0, rejectedProducts: 0,
-  });
-  const [analytics, setAnalytics] = useState({
-    dailySales: [], monthlySales: [], productDonut: [], orderDonut: [],
-    topCategories: [], topSellers: [], summary: { totalRevenue: 0, thisMonthRevenue: 0, totalOrders: 0 },
-  });
-  const [pendingSellers, setPendingSellers] = useState([]);
+  /* ── Data states ── */
+  const [stats, setStats]                 = useState({ totalUsers: 0, totalSellersUsers: 0, totalBuyers: 0, totalSellerProfiles: 0, pendingSellers: 0, approvedSellers: 0, totalProducts: 0, pendingProducts: 0, approvedProducts: 0, rejectedProducts: 0 });
+  const [analytics, setAnalytics]         = useState({ dailySales: [], monthlySales: [], productDonut: [], orderDonut: [], topCategories: [], topSellers: [], summary: { totalRevenue: 0, thisMonthRevenue: 0, totalOrders: 0 } });
+  const [pendingSellers, setPendingSellers]   = useState([]);
   const [pendingProducts, setPendingProducts] = useState([]);
-  const [allProducts, setAllProducts] = useState([]);
-  const [banners, setBanners] = useState([]);
+  const [allProducts, setAllProducts]     = useState([]);
+  const [allOrders, setAllOrders]         = useState([]);
+  const [allUsers, setAllUsers]           = useState([]);
+  const [allSellers, setAllSellers]       = useState([]);
+  const [allReviews, setAllReviews]       = useState([]);
+  const [allAuctions, setAllAuctions]     = useState([]);
+  const [banners, setBanners]             = useState([]);
   const [contactMessages, setContactMessages] = useState([]);
 
-  // New tab data
-  const [allOrders, setAllOrders] = useState([]);
-  const [allUsers, setAllUsers] = useState([]);
-  const [allSellers, setAllSellers] = useState([]);
-  const [allReviews, setAllReviews] = useState([]);
-  const [ordersLoading, setOrdersLoading] = useState(false);
-  const [usersLoading, setUsersLoading] = useState(false);
-  const [sellersLoading, setSellersLoading] = useState(false);
-  const [reviewsLoading, setReviewsLoading] = useState(false);
+  /* ── Modal states ── */
+  const [confirmModal, setConfirmModal]   = useState({ isOpen: false, type: null, id: null });
+  const [rejectModal, setRejectModal]     = useState({ isOpen: false, type: null, id: null });
+  const [replyModal, setReplyModal]       = useState({ isOpen: false, contact: null });
 
-  // Orders tab state
-  const [orderSearch, setOrderSearch] = useState("");
-  const [orderFilter, setOrderFilter] = useState("all");
-  const [orderPage, setOrderPage] = useState(1);
-  const [orderSort, setOrderSort] = useState("newest");
-  const ORDERS_PER_PAGE = 12;
+  /* ── Orders tab state ── */
+  const [orderSearch, setOrderSearch]     = useState("");
+  const [orderFilter, setOrderFilter]     = useState("all");
+  const [orderPayFilter, setOrderPayFilter] = useState("all");
+  const [orderDate, setOrderDate]         = useState({ startDate: "", endDate: "" });
+  const [orderSort, setOrderSort]         = useState("newest");
+  const [orderPage, setOrderPage]         = useState(1);
 
-  // Users tab state
-  const [userSearch, setUserSearch] = useState("");
-  const [userFilter, setUserFilter] = useState("all");
-  const [userPage, setUserPage] = useState(1);
-  const USERS_PER_PAGE = 15;
+  /* ── All Products tab state ── */
+  const [prodSearch, setProdSearch]       = useState("");
+  const [prodFilter, setProdFilter]       = useState("all");
+  const [prodSort, setProdSort]           = useState("newest");
+  const [prodPage, setProdPage]           = useState(1);
 
-  // Sellers tab state
-  const [sellerSearch, setSellerSearch] = useState("");
-  const [sellerFilter, setSellerFilter] = useState("all");
-  const [sellerPage, setSellerPage] = useState(1);
-  const SELLERS_PER_PAGE = 12;
+  /* ── Featured Products tab state ── */
+  const [featSearch, setFeatSearch]       = useState("");
+  const [featFilter, setFeatFilter]       = useState("all");
+  const [featSort, setFeatSort]           = useState("newest");
+  const [featPage, setFeatPage]           = useState(1);
 
-  // Reviews tab state
-  const [reviewSearch, setReviewSearch] = useState("");
-  const [reviewFilter, setReviewFilter] = useState("all");
-  const [reviewPage, setReviewPage] = useState(1);
-  const REVIEWS_PER_PAGE = 12;
+  /* ── Users tab state ── */
+  const [userSearch, setUserSearch]       = useState("");
+  const [userFilter, setUserFilter]       = useState("all");
+  const [userSort, setUserSort]           = useState("newest");
+  const [userPage, setUserPage]           = useState(1);
 
-  // Contacts tab state
-  const [msgFilter, setMsgFilter] = useState("all");
+  /* ── Sellers tab state ── */
+  const [sellerSearch, setSellerSearch]   = useState("");
+  const [sellerFilter, setSellerFilter]   = useState("all");
+  const [sellerSort, setSellerSort]       = useState("newest");
+  const [sellerPage, setSellerPage]       = useState(1);
 
-  // Modals
-  const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: null, id: null });
-  const [rejectModal, setRejectModal] = useState({ isOpen: false, type: null, id: null });
+  /* ── Reviews tab state ── */
+  const [reviewSearch, setReviewSearch]   = useState("");
+  const [reviewSort, setReviewSort]       = useState("newest");
+  const [reviewRating, setReviewRating]   = useState("all");
+  const [reviewPage, setReviewPage]       = useState(1);
 
-  const parseDate = (raw) => { if (!raw) return null; const d = new Date(raw); return isNaN(d.getTime()) ? null : d; };
-  const safe = (v) => { if (v == null) return "—"; const s = String(v).trim(); return s || "—"; };
-  const timeAgo = (seller) => {
-    const d = parseDate(seller?.created_at || seller?.createdAt);
-    if (!d) return "—";
-    const days = Math.floor((Date.now() - d) / 86_400_000);
-    if (days <= 0) return "Today"; if (days === 1) return "1 day ago"; return `${days} days ago`;
-  };
-  const initials = (name) => {
-    const parts = (name || "").trim().split(" ").filter(Boolean);
-    if (!parts.length) return "?";
-    const a = parts[0][0] || ""; const b = parts.length > 1 ? parts[parts.length - 1][0] : parts[0][1] || "";
-    return (a + b).toUpperCase() || "?";
-  };
-  const fmtDate = (raw) => {
-    const d = parseDate(raw);
-    return d ? d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "—";
-  };
+  /* ── Auctions tab state ── */
+  const [auctionSearch, setAuctionSearch] = useState("");
+  const [auctionFilter, setAuctionFilter] = useState("all");
+  const [auctionSort, setAuctionSort]     = useState("newest");
+  const [auctionPage, setAuctionPage]     = useState(1);
 
-  const DONUT_COLORS_PRODUCT = ["#2a9e6a", "#c08830", "#aa2c1c"];
-  const DONUT_COLORS_ORDER   = ["#c08830", "#1a509a", "#2a9e6a", "#aa2c1c", "#b86e38"];
-
+  /* ── Fetch functions ── */
   useEffect(() => {
     fetchDashboardData();
     fetchAnalytics();
     fetchBanners();
     fetchContactMessages();
+    fetchAllOrders();
+    fetchAllUsers();
+    fetchAllSellers();
+    fetchAllReviews();
+    fetchAllAuctions();
   }, []);
 
-  // Lazy-load new tabs on first visit
-  useEffect(() => {
-    if (activeTab === "allOrders"  && allOrders.length  === 0 && !ordersLoading)  fetchAllOrders();
-    if (activeTab === "allUsers"   && allUsers.length   === 0 && !usersLoading)   fetchAllUsers();
-    if (activeTab === "allSellers" && allSellers.length === 0 && !sellersLoading) fetchAllSellers();
-    if (activeTab === "reviews"    && allReviews.length === 0 && !reviewsLoading) fetchAllReviews();
-  }, [activeTab]);
+  /* ─── FIXED: fmtDate tries both createdAt and created_at ─── */
+  const parseAnyDate = (raw) => {
+    if (!raw) return null;
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  const safe      = (v) => { if (v == null) return "—"; const s = String(v).trim(); return s || "—"; };
+  const timeAgo   = (seller) => {
+    const d = parseAnyDate(seller?.created_at || seller?.createdAt);
+    if (!d) return "—";
+    const days = Math.floor((Date.now() - d) / 86_400_000);
+    if (days <= 0) return "Today"; if (days === 1) return "1 day ago"; return `${days} days ago`;
+  };
+  const initials  = (name) => {
+    const parts = (name || "").trim().split(" ").filter(Boolean);
+    if (!parts.length) return "?";
+    return ((parts[0][0] || "") + (parts.length > 1 ? parts[parts.length - 1][0] : parts[0][1] || "")).toUpperCase() || "?";
+  };
+  // FIXED: handles createdAt, created_at, and nested variants
+  const fmtDate   = (raw) => {
+    const d = parseAnyDate(raw);
+    if (!d) return "—";
+    return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  };
+  const fmtAmount = (v) => `Rs. ${Math.round(parseFloat(v) || 0).toLocaleString()}`;
+
+  const fmtAuctionDate = (raw) => {
+    const d = parseAnyDate(raw);
+    if (!d) return "—";
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + " " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -271,189 +291,230 @@ const AdminDashboard = () => {
           totalSellerProfiles: d?.sellers?.total    || 0,
           pendingSellers:      d?.sellers?.pending  || 0,
           approvedSellers:     d?.sellers?.approved || 0,
-          totalProducts:       d?.products?.total   || 0,
-          pendingProducts:     d?.products?.pending || 0,
-          approvedProducts:    d?.products?.approved|| 0,
-          rejectedProducts:    d?.products?.rejected|| 0,
+          totalProducts:       d?.products?.total    || 0,
+          pendingProducts:     d?.products?.pending  || 0,
+          approvedProducts:    d?.products?.approved || 0,
+          rejectedProducts:    d?.products?.rejected || 0,
         });
       }
-      if (sellersRes?.data?.success) setPendingSellers(sellersRes.data.data || []);
+      if (sellersRes?.data?.success)  setPendingSellers(sellersRes.data.data || []);
       if (productsRes?.data?.success) setPendingProducts(productsRes.data.data || []);
+
+      // FIXED: fetch ALL products (all statuses) for the All Products tab
       try {
-        const r = await productAPI.getAllProducts({ status: "approved" });
+        const r = await productAPI.getAllProducts();
         setAllProducts(r.data.data.products || []);
-      } catch (err) { console.error("Fetch approved products error:", err); }
-    } catch (err) { console.error("fetchDashboardData error:", err); }
+      } catch {}
+    } catch (err) { console.error("fetchDashboardData:", err); }
     finally { setLoading(false); }
   };
 
-  const fetchAnalytics = async () => {
-    try {
-      setAnalyticsLoading(true);
-      const res = await adminAPI.getAnalytics();
-      if (res?.data?.success) setAnalytics(res.data.data);
-    } catch (err) { console.error("fetchAnalytics error:", err); }
+  const fetchAnalytics    = async () => {
+    try { setAnalyticsLoading(true); const res = await adminAPI.getAnalytics(); if (res?.data?.success) setAnalytics(res.data.data); }
+    catch (err) { console.error("fetchAnalytics:", err); }
     finally { setAnalyticsLoading(false); }
   };
-
-  const fetchBanners = async () => {
-    try { const res = await adminAPI.getAllBanners(); if (res.data.success) setBanners(res.data.data || []); }
-    catch (err) { console.error("Fetch banners error:", err); }
+  const fetchBanners      = async () => {
+    try { const res = await adminAPI.getAllBanners(); if (res.data.success) setBanners(res.data.data || []); } catch {}
   };
-
   const fetchContactMessages = async () => {
-    try { const res = await adminAPI.getAllContactMessages(); if (res.data.success) setContactMessages(res.data.data || []); }
-    catch (err) { console.error("Fetch contact messages error:", err); }
+    try { const res = await adminAPI.getAllContactMessages(); if (res.data.success) setContactMessages(res.data.data || []); } catch {}
   };
-
-  const fetchAllOrders = async () => {
-    try { setOrdersLoading(true); const res = await adminAPI.getAllOrders(); if (res.data.success) setAllOrders(res.data.data || []); }
-    catch (err) { console.error("Fetch all orders error:", err); toast.error("Failed to load orders"); }
-    finally { setOrdersLoading(false); }
+  const fetchAllOrders    = async () => {
+    try { const res = await adminAPI.getAllOrders(); if (res.data.success) setAllOrders(res.data.data || []); } catch (err) { console.error("fetchAllOrders:", err); }
   };
-
-  const fetchAllUsers = async () => {
-    try { setUsersLoading(true); const res = await adminAPI.getAllUsers(); if (res.data.success) setAllUsers(res.data.data || []); }
-    catch (err) { console.error("Fetch all users error:", err); toast.error("Failed to load users"); }
-    finally { setUsersLoading(false); }
+  const fetchAllUsers     = async () => {
+    try { const res = await adminAPI.getAllUsers(); if (res.data.success) setAllUsers(res.data.data || []); } catch {}
   };
-
-  const fetchAllSellers = async () => {
-    try { setSellersLoading(true); const res = await adminAPI.getAllSellers(); if (res.data.success) setAllSellers(res.data.data || []); }
-    catch (err) { console.error("Fetch all sellers error:", err); toast.error("Failed to load sellers"); }
-    finally { setSellersLoading(false); }
+  const fetchAllSellers   = async () => {
+    try { const res = await adminAPI.getAllSellers(); if (res.data.success) setAllSellers(res.data.data || []); } catch {}
   };
-
-  const fetchAllReviews = async () => {
-    try { setReviewsLoading(true); const res = await adminAPI.getAllReviews(); if (res.data.success) setAllReviews(res.data.data || []); }
-    catch (err) { console.error("Fetch all reviews error:", err); toast.error("Failed to load reviews"); }
-    finally { setReviewsLoading(false); }
+  const fetchAllReviews   = async () => {
+    try { const res = await adminAPI.getAllReviews(); if (res.data.success) setAllReviews(res.data.data || []); } catch {}
+  };
+  const fetchAllAuctions  = async () => {
+    try { const res = await adminAPI.getAllAuctions(); if (res.data.success) setAllAuctions(res.data.data || []); } catch (err) { console.error("fetchAllAuctions:", err); }
   };
 
   const handleRefresh = () => {
-    fetchDashboardData();
-    fetchAnalytics();
-    if (activeTab === "allOrders")  fetchAllOrders();
-    if (activeTab === "allUsers")   fetchAllUsers();
-    if (activeTab === "allSellers") fetchAllSellers();
-    if (activeTab === "reviews")    fetchAllReviews();
+    fetchDashboardData(); fetchAnalytics(); fetchAllOrders();
+    fetchAllUsers(); fetchAllSellers(); fetchAllReviews(); fetchAllAuctions();
   };
 
+  /* ── Banner handlers ── */
   const handleUploadBanner = async (e) => {
     e.preventDefault(); setUploadingBanner(true);
-    try {
-      const res = await adminAPI.createBanner(new FormData(e.target));
-      if (res.data.success) { toast.success("Banner uploaded!"); fetchBanners(); e.target.reset(); }
-    } catch (err) { toast.error(err.response?.data?.message || "Failed to upload banner"); }
+    try { const res = await adminAPI.createBanner(new FormData(e.target)); if (res.data.success) { toast.success("Banner uploaded!"); fetchBanners(); e.target.reset(); } }
+    catch (err) { toast.error(err.response?.data?.message || "Failed to upload banner"); }
     finally { setUploadingBanner(false); }
   };
-
-  const handleToggleBanner = async (bannerId) => {
-    try { const res = await adminAPI.toggleBannerStatus(bannerId); if (res.data.success) { toast.info(res.data.message); fetchBanners(); } }
-    catch { toast.error("Failed to toggle banner status"); }
+  const handleToggleBanner = async (id) => {
+    try { const res = await adminAPI.toggleBannerStatus(id); if (res.data.success) { toast.info(res.data.message); fetchBanners(); } } catch { toast.error("Failed to toggle banner"); }
   };
 
-  const handleToggleBlock = async (userId) => {
-    try {
-      const res = await adminAPI.toggleBlockUser(userId);
-      if (res.data.success) {
-        toast.success(res.data.message);
-        setAllUsers((prev) => prev.map((u) =>
-          u.user_id === userId ? { ...u, is_active: res.data.data.is_active } : u
-        ));
-      }
-    } catch (err) { toast.error(err.response?.data?.message || "Failed to update user status"); }
-  };
-
-  const handleDeleteBanner     = (id) => setConfirmModal({ isOpen: true, type: "deleteBanner",   id });
-  const handleDeleteContact    = (id) => setConfirmModal({ isOpen: true, type: "deleteContact",  id });
-  const handleApproveSeller    = (id) => setConfirmModal({ isOpen: true, type: "approveSeller",  id });
-  const handleRejectSeller     = (id) => setRejectModal({ isOpen: true, type: "rejectSeller",   id });
-  const handleApproveProduct   = (id) => setConfirmModal({ isOpen: true, type: "approveProduct", id });
-  const handleRejectProduct    = (id) => setRejectModal({ isOpen: true, type: "rejectProduct",  id });
-  const handleDeleteReview     = (id) => setConfirmModal({ isOpen: true, type: "deleteReview",   id });
-
-  const handleContactStatus = async (contactId, status) => {
-    try { const res = await adminAPI.updateContactStatus(contactId, { status }); if (res.data.success) { toast.success("Status updated"); fetchContactMessages(); } }
-    catch { toast.error("Failed to update status"); }
+  /* ── Contact handlers ── */
+  const handleContactStatus = async (id, status) => {
+    try { const res = await adminAPI.updateContactStatus(id, { status }); if (res.data.success) { toast.success("Status updated"); fetchContactMessages(); } } catch { toast.error("Failed to update status"); }
   };
 
   const handleOpenReply  = (contact) => setReplyModal({ isOpen: true, contact });
   const handleCloseReply = () => setReplyModal({ isOpen: false, contact: null });
   const handleSendReply  = async (contactId, reply) => {
     try {
-      const res = await adminAPI.updateContactStatus(contactId, { status: "in_progress", admin_reply: reply });
-      if (res.data.success) { toast.success("Reply sent and email delivered!"); fetchContactMessages(); }
+      const res = await adminAPI.updateContactStatus(contactId, {
+        status: "in_progress",
+        admin_reply: reply,
+      });
+      if (res.data.success) {
+        toast.success("Reply sent! Email delivered to user.");
+        fetchContactMessages();
+      }
     } catch { toast.error("Failed to send reply"); }
   };
 
-  const handleToggleFeatured = async (productId) => {
-    try { const res = await adminAPI.toggleFeatured(productId); if (res.data.success) { toast.info(res.data.message); fetchDashboardData(); } }
-    catch (err) { toast.error(err.response?.data?.message || "Failed to update featured status"); }
+  /* ── User block ── */
+  const handleToggleBlock = async (userId) => {
+    try {
+      const res = await adminAPI.toggleBlockUser(userId);
+      if (res.data.success) {
+        toast.success(res.data.message);
+        setAllUsers((prev) => prev.map((u) => u.user_id === userId ? { ...u, is_active: !u.is_active } : u));
+      }
+    } catch { toast.error("Failed to update user"); }
   };
 
+  /* ── Confirm/reject handlers ── */
   const handleConfirmAction = async () => {
     const { type, id } = confirmModal;
     setConfirmModal({ isOpen: false, type: null, id: null });
     try {
       if (type === "deleteBanner")   { const r = await adminAPI.deleteBanner(id);        if (r.data.success) { toast.success("Banner deleted");   fetchBanners(); } }
       if (type === "deleteContact")  { const r = await adminAPI.deleteContactMessage(id); if (r.data.success) { toast.success("Message deleted");  fetchContactMessages(); } }
-      if (type === "approveSeller")  { const r = await adminAPI.approveSeller(id);        if (r.data.success) { toast.success("Seller approved");  fetchDashboardData(); fetchAnalytics(); } }
-      if (type === "approveProduct") { const r = await adminAPI.approveProduct(id);       if (r.data.success) { toast.success("Product approved"); fetchDashboardData(); fetchAnalytics(); } }
-      if (type === "deleteReview")   { const r = await adminAPI.deleteReview(id);         if (r.data.success) { toast.success("Review deleted");   setAllReviews((prev) => prev.filter((rv) => rv.review_id !== id)); } }
-    } catch {
-      const labels = { deleteBanner: "Failed to delete banner", deleteContact: "Failed to delete message", approveSeller: "Failed to approve seller", approveProduct: "Failed to approve product", deleteReview: "Failed to delete review" };
-      toast.error(labels[type] || "Action failed");
-    }
+      if (type === "deleteReview")   { const r = await adminAPI.deleteReview(id);         if (r.data.success) { toast.success("Review deleted");   fetchAllReviews(); } }
+      if (type === "approveSeller")  { const r = await adminAPI.approveSeller(id);        if (r.data.success) { toast.success("Seller approved");  fetchDashboardData(); fetchAllSellers(); } }
+      if (type === "approveProduct") { const r = await adminAPI.approveProduct(id);       if (r.data.success) { toast.success("Product approved"); fetchDashboardData(); } }
+      if (type === "toggleFeatured") { const r = await adminAPI.toggleFeatured(id);       if (r.data.success) { toast.info(r.data.message);       fetchDashboardData(); } }
+      if (type === "deleteAuction")  { const r = await adminAPI.deleteAuction(id);        if (r.data.success) { toast.success("Auction removed");  fetchAllAuctions(); } }
+    } catch { toast.error("Action failed"); }
   };
 
   const handleRejectAction = async (reason) => {
     const { type, id } = rejectModal;
     setRejectModal({ isOpen: false, type: null, id: null });
     try {
-      if (type === "rejectSeller")  { const r = await adminAPI.rejectSeller(id, { rejection_reason: reason });  if (r.data.success) { toast.success("Seller rejected");  fetchDashboardData(); } }
+      if (type === "rejectSeller")  { const r = await adminAPI.rejectSeller(id, { rejection_reason: reason });  if (r.data.success) { toast.success("Seller rejected");  fetchDashboardData(); fetchAllSellers(); } }
       if (type === "rejectProduct") { const r = await adminAPI.rejectProduct(id, { rejection_reason: reason }); if (r.data.success) { toast.success("Product rejected"); fetchDashboardData(); } }
     } catch { toast.error("Failed to reject"); }
   };
 
   const confirmConfig = {
-    deleteBanner:   { title: "Delete this banner?",   message: "This action cannot be undone.",                          confirmText: "Delete",  confirmVariant: "danger"  },
-    deleteContact:  { title: "Delete this message?",  message: "The message will be permanently removed.",               confirmText: "Delete",  confirmVariant: "danger"  },
-    approveSeller:  { title: "Approve this seller?",  message: "They will be able to list products on the marketplace.", confirmText: "Approve", confirmVariant: "warning" },
-    approveProduct: { title: "Approve this product?", message: "It will be visible to buyers on the marketplace.",       confirmText: "Approve", confirmVariant: "warning" },
-    deleteReview:   { title: "Delete this review?",   message: "This review will be permanently removed.",               confirmText: "Delete",  confirmVariant: "danger"  },
+    deleteBanner:   { title: "Delete this banner?",       message: "This cannot be undone.",                                  confirmText: "Delete",  confirmVariant: "danger"  },
+    deleteContact:  { title: "Delete this message?",      message: "The message will be permanently removed.",                confirmText: "Delete",  confirmVariant: "danger"  },
+    deleteReview:   { title: "Delete this review?",       message: "The review will be permanently removed.",                 confirmText: "Delete",  confirmVariant: "danger"  },
+    approveSeller:  { title: "Approve this seller?",      message: "They will be able to list products on the marketplace.",  confirmText: "Approve", confirmVariant: "warning" },
+    approveProduct: { title: "Approve this product?",     message: "It will be visible to buyers on the marketplace.",        confirmText: "Approve", confirmVariant: "warning" },
+    toggleFeatured: { title: "Toggle featured status?",   message: "This will update the product's featured status.",         confirmText: "Confirm", confirmVariant: "warning" },
+    deleteAuction:  { title: "Remove this auction?",      message: "This auction will be permanently removed.",               confirmText: "Remove",  confirmVariant: "danger"  },
   };
   const rejectConfig = { rejectSeller: { title: "Reject this seller?" }, rejectProduct: { title: "Reject this product?" } };
 
-  // ── Derived: Orders tab ──
+  /* ─────────────────────────────────────────
+     DERIVED / FILTERED DATA  (useMemo)
+  ───────────────────────────────────────── */
+
+  /* Orders */
   const filteredOrders = useMemo(() => {
     let list = [...allOrders];
     if (orderFilter !== "all") list = list.filter((o) => o.order_status === orderFilter);
+    if (orderPayFilter !== "all") list = list.filter((o) => o.payment_status === orderPayFilter);
     if (orderSearch.trim()) {
       const q = orderSearch.toLowerCase();
       list = list.filter((o) =>
         (o.order_number || "").toLowerCase().includes(q) ||
         (o.user?.full_name || "").toLowerCase().includes(q) ||
-        (o.user?.email || "").toLowerCase().includes(q)
+        (o.user?.email || "").toLowerCase().includes(q) ||
+        (o.delivery_city || "").toLowerCase().includes(q)
       );
     }
-    if (orderSort === "newest")  list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    if (orderSort === "oldest")  list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    if (orderSort === "highest") list.sort((a, b) => parseFloat(b.total) - parseFloat(a.total));
-    if (orderSort === "lowest")  list.sort((a, b) => parseFloat(a.total) - parseFloat(b.total));
+    list = filterByDateRange(list, "created_at", orderDate.startDate, orderDate.endDate);
+    list.sort((a, b) => {
+      const da = new Date(a.created_at || a.createdAt || 0);
+      const db2 = new Date(b.created_at || b.createdAt || 0);
+      if (orderSort === "newest")  return db2 - da;
+      if (orderSort === "oldest")  return da - db2;
+      if (orderSort === "highest") return parseFloat(b.total) - parseFloat(a.total);
+      if (orderSort === "lowest")  return parseFloat(a.total) - parseFloat(b.total);
+      return 0;
+    });
     return list;
-  }, [allOrders, orderFilter, orderSearch, orderSort]);
-  const totalOrderPages = Math.ceil(filteredOrders.length / ORDERS_PER_PAGE);
-  const pagedOrders = filteredOrders.slice((orderPage - 1) * ORDERS_PER_PAGE, orderPage * ORDERS_PER_PAGE);
+  }, [allOrders, orderFilter, orderPayFilter, orderSearch, orderDate, orderSort]);
 
-  // ── Derived: Users tab ──
+  const orderPages  = Math.ceil(filteredOrders.length / PER_PAGE);
+  const pagedOrders = filteredOrders.slice((orderPage - 1) * PER_PAGE, orderPage * PER_PAGE);
+
+  /* All Products */
+  const filteredAllProds = useMemo(() => {
+    let list = [...allProducts];
+    if (prodFilter !== "all") list = list.filter((p) => p.status === prodFilter);
+    if (prodSearch.trim()) {
+      const q = prodSearch.toLowerCase();
+      list = list.filter((p) =>
+        (p.name || "").toLowerCase().includes(q) ||
+        (p.category?.name || "").toLowerCase().includes(q) ||
+        (p.seller?.shop_name || "").toLowerCase().includes(q)
+      );
+    }
+    list.sort((a, b) => {
+      const da = new Date(a.created_at || a.createdAt || 0);
+      const db2 = new Date(b.created_at || b.createdAt || 0);
+      if (prodSort === "newest")    return db2 - da;
+      if (prodSort === "oldest")    return da - db2;
+      if (prodSort === "price_asc") return parseFloat(a.price) - parseFloat(b.price);
+      if (prodSort === "price_desc")return parseFloat(b.price) - parseFloat(a.price);
+      return 0;
+    });
+    return list;
+  }, [allProducts, prodFilter, prodSearch, prodSort]);
+
+  const prodPages  = Math.ceil(filteredAllProds.length / PER_PAGE);
+  const pagedProds = filteredAllProds.slice((prodPage - 1) * PER_PAGE, prodPage * PER_PAGE);
+
+  /* Featured Products (pagination added) */
+  const approvedProducts = useMemo(() => allProducts.filter((p) => p.status === "approved"), [allProducts]);
+  const filteredFeatProds = useMemo(() => {
+    let list = featFilter === "featured" ? approvedProducts.filter((p) => p.is_featured) :
+               featFilter === "unfeatured" ? approvedProducts.filter((p) => !p.is_featured) :
+               [...approvedProducts];
+    if (featSearch.trim()) {
+      const q = featSearch.toLowerCase();
+      list = list.filter((p) =>
+        (p.name || "").toLowerCase().includes(q) ||
+        (p.category?.name || "").toLowerCase().includes(q) ||
+        (p.seller?.shop_name || "").toLowerCase().includes(q)
+      );
+    }
+    list.sort((a, b) => {
+      const da = new Date(a.created_at || a.createdAt || 0);
+      const db2 = new Date(b.created_at || b.createdAt || 0);
+      if (featSort === "newest")    return db2 - da;
+      if (featSort === "oldest")    return da - db2;
+      if (featSort === "price_asc") return parseFloat(a.price) - parseFloat(b.price);
+      if (featSort === "price_desc")return parseFloat(b.price) - parseFloat(a.price);
+      return 0;
+    });
+    return list;
+  }, [approvedProducts, featFilter, featSearch, featSort]);
+
+  const featPages  = Math.ceil(filteredFeatProds.length / PER_PAGE);
+  const pagedFeats = filteredFeatProds.slice((featPage - 1) * PER_PAGE, featPage * PER_PAGE);
+
+  /* Users */
   const filteredUsers = useMemo(() => {
     let list = [...allUsers];
-    if (userFilter === "buyers")   list = list.filter((u) => u.role === "buyer");
-    if (userFilter === "sellers")  list = list.filter((u) => u.role === "seller");
-    if (userFilter === "admins")   list = list.filter((u) => u.role === "admin");
-    if (userFilter === "blocked")  list = list.filter((u) => !u.is_active);
-    if (userFilter === "active")   list = list.filter((u) => u.is_active);
+    if (userFilter === "buyer")   list = list.filter((u) => u.role === "buyer");
+    if (userFilter === "seller")  list = list.filter((u) => u.role === "seller");
+    if (userFilter === "active")  list = list.filter((u) => u.is_active);
+    if (userFilter === "blocked") list = list.filter((u) => !u.is_active);
     if (userSearch.trim()) {
       const q = userSearch.toLowerCase();
       list = list.filter((u) =>
@@ -462,12 +523,21 @@ const AdminDashboard = () => {
         (u.phone || "").toLowerCase().includes(q)
       );
     }
+    list.sort((a, b) => {
+      const da = new Date(a.created_at || a.createdAt || 0);
+      const db2 = new Date(b.created_at || b.createdAt || 0);
+      if (userSort === "newest") return db2 - da;
+      if (userSort === "oldest") return da - db2;
+      if (userSort === "name")   return (a.full_name || "").localeCompare(b.full_name || "");
+      return 0;
+    });
     return list;
-  }, [allUsers, userFilter, userSearch]);
-  const totalUserPages = Math.ceil(filteredUsers.length / USERS_PER_PAGE);
-  const pagedUsers = filteredUsers.slice((userPage - 1) * USERS_PER_PAGE, userPage * USERS_PER_PAGE);
+  }, [allUsers, userFilter, userSearch, userSort]);
 
-  // ── Derived: Sellers tab ──
+  const userPages  = Math.ceil(filteredUsers.length / PER_PAGE);
+  const pagedUsers = filteredUsers.slice((userPage - 1) * PER_PAGE, userPage * PER_PAGE);
+
+  /* Sellers */
   const filteredSellers = useMemo(() => {
     let list = [...allSellers];
     if (sellerFilter !== "all") list = list.filter((s) => s.approval_status === sellerFilter);
@@ -480,15 +550,24 @@ const AdminDashboard = () => {
         (s.city || "").toLowerCase().includes(q)
       );
     }
+    list.sort((a, b) => {
+      const da = new Date(a.created_at || a.createdAt || 0);
+      const db2 = new Date(b.created_at || b.createdAt || 0);
+      if (sellerSort === "newest") return db2 - da;
+      if (sellerSort === "oldest") return da - db2;
+      if (sellerSort === "name")   return (a.shop_name || "").localeCompare(b.shop_name || "");
+      return 0;
+    });
     return list;
-  }, [allSellers, sellerFilter, sellerSearch]);
-  const totalSellerPages = Math.ceil(filteredSellers.length / SELLERS_PER_PAGE);
-  const pagedSellers = filteredSellers.slice((sellerPage - 1) * SELLERS_PER_PAGE, sellerPage * SELLERS_PER_PAGE);
+  }, [allSellers, sellerFilter, sellerSearch, sellerSort]);
 
-  // ── Derived: Reviews tab ──
+  const sellerPages  = Math.ceil(filteredSellers.length / PER_PAGE);
+  const pagedSellers = filteredSellers.slice((sellerPage - 1) * PER_PAGE, sellerPage * PER_PAGE);
+
+  /* Reviews */
   const filteredReviews = useMemo(() => {
-    let list = [...allReviews];
-    if (reviewFilter !== "all") list = list.filter((r) => String(r.rating) === reviewFilter);
+    let list = [...allReviews].filter((r) => !r.parent_id);
+    if (reviewRating !== "all") list = list.filter((r) => String(r.rating) === reviewRating);
     if (reviewSearch.trim()) {
       const q = reviewSearch.toLowerCase();
       list = list.filter((r) =>
@@ -497,61 +576,89 @@ const AdminDashboard = () => {
         (r.product?.name || "").toLowerCase().includes(q)
       );
     }
+    list.sort((a, b) => {
+      const da = new Date(a.created_at || a.createdAt || 0);
+      const db2 = new Date(b.created_at || b.createdAt || 0);
+      if (reviewSort === "newest")  return db2 - da;
+      if (reviewSort === "oldest")  return da - db2;
+      if (reviewSort === "highest") return (b.rating || 0) - (a.rating || 0);
+      if (reviewSort === "lowest")  return (a.rating || 0) - (b.rating || 0);
+      return 0;
+    });
     return list;
-  }, [allReviews, reviewFilter, reviewSearch]);
-  const totalReviewPages = Math.ceil(filteredReviews.length / REVIEWS_PER_PAGE);
-  const pagedReviews = filteredReviews.slice((reviewPage - 1) * REVIEWS_PER_PAGE, reviewPage * REVIEWS_PER_PAGE);
+  }, [allReviews, reviewRating, reviewSearch, reviewSort]);
 
+  const reviewPages  = Math.ceil(filteredReviews.length / PER_PAGE);
+  const pagedReviews = filteredReviews.slice((reviewPage - 1) * PER_PAGE, reviewPage * PER_PAGE);
+
+  /* Auctions */
+  const filteredAuctions = useMemo(() => {
+    let list = [...allAuctions];
+    if (auctionFilter !== "all") list = list.filter((a) => a.status === auctionFilter);
+    if (auctionSearch.trim()) {
+      const q = auctionSearch.toLowerCase();
+      list = list.filter((a) =>
+        (a.title || "").toLowerCase().includes(q) ||
+        (a.seller?.shop_name || "").toLowerCase().includes(q) ||
+        (a.seller?.user?.full_name || "").toLowerCase().includes(q)
+      );
+    }
+    list.sort((a, b) => {
+      const da = new Date(a.created_at || a.createdAt || 0);
+      const db2 = new Date(b.created_at || b.createdAt || 0);
+      if (auctionSort === "newest")   return db2 - da;
+      if (auctionSort === "oldest")   return da - db2;
+      if (auctionSort === "highest")  return parseFloat(b.current_bid || b.starting_bid || 0) - parseFloat(a.current_bid || a.starting_bid || 0);
+      if (auctionSort === "most_bids")return (b.total_bids || 0) - (a.total_bids || 0);
+      return 0;
+    });
+    return list;
+  }, [allAuctions, auctionFilter, auctionSearch, auctionSort]);
+
+  const auctionPages  = Math.ceil(filteredAuctions.length / PER_PAGE);
+  const pagedAuctions = filteredAuctions.slice((auctionPage - 1) * PER_PAGE, auctionPage * PER_PAGE);
+
+  /* ─── Sidebar nav ─── */
   const nav = useMemo(() => [
-    { key: "overview",    label: "Overview",             icon: Icons.grid,       badge: 0 },
-    { key: "sellers",     label: "Artisan Verification", icon: Icons.shield,     badge: pendingSellers.length },
-    { key: "products",    label: "Product Approvals",    icon: Icons.box,        badge: pendingProducts.length },
-    { key: "featured",    label: "Featured Products",    icon: Icons.star,       badge: 0 },
-    { key: "banners",     label: "Festival Banners",     icon: Icons.image,      badge: 0 },
-    { key: "contacts",    label: "Contact Messages",     icon: Icons.mail,       badge: 0 },
-    { key: "allOrders",   label: "All Orders",           icon: Icons.orders,     badge: 0 },
-    { key: "allUsers",    label: "All Users",            icon: Icons.allUsers,   badge: 0 },
-    { key: "allSellers",  label: "All Sellers",          icon: Icons.allSellers, badge: 0 },
-    { key: "reviews",     label: "Reviews",              icon: Icons.reviews,    badge: 0 },
+    { key: "overview",   label: "Overview",             icon: Icons.grid,     badge: 0 },
+    { key: "sellers",    label: "Artisan Verification", icon: Icons.shield,   badge: pendingSellers.length },
+    { key: "products",   label: "Product Approvals",    icon: Icons.box,      badge: pendingProducts.length },
+    { key: "featured",   label: "Featured Products",    icon: Icons.star,     badge: 0 },
+    { key: "allorders",  label: "All Orders",           icon: Icons.orders,   badge: 0 },
+    { key: "allprods",   label: "All Products",         icon: Icons.products, badge: 0 },
+    { key: "allusers",   label: "All Users",            icon: Icons.users,    badge: 0 },
+    { key: "allsellers", label: "All Sellers",          icon: Icons.store,    badge: 0 },
+    { key: "auctions",   label: "Auctions",             icon: Icons.auction,  badge: 0 },
+    { key: "reviews",    label: "Reviews",              icon: Icons.reviews,  badge: 0 },
+    { key: "banners",    label: "Festival Banners",     icon: Icons.image,    badge: 0 },
+    { key: "contacts",   label: "Contact Messages",     icon: Icons.mail,     badge: 0 },
   ], [pendingSellers.length, pendingProducts.length]);
-
-  if (loading) {
-    return (
-      <div className="admin-loading">
-        <div className="spinner" />
-        <p>Loading dashboard…</p>
-      </div>
-    );
-  }
 
   const sellerRate  = stats.totalSellerProfiles > 0 ? Math.round((stats.approvedSellers / stats.totalSellerProfiles) * 100) : 0;
   const productRate = stats.totalProducts > 0 ? Math.round((stats.approvedProducts / stats.totalProducts) * 100) : 0;
   const filteredMsgs = msgFilter === "all" ? contactMessages : contactMessages.filter((m) => m.status === msgFilter);
-  const activeCfg    = confirmConfig[confirmModal.type] || {};
-  const activeRejCfg = rejectConfig[rejectModal.type]   || {};
-  const chartData    = revenueView === "weekly" ? analytics.dailySales : analytics.monthlySales;
-  const chartXKey    = revenueView === "weekly" ? "date" : "month";
+  const activeCfg   = confirmConfig[confirmModal.type] || {};
+  const activeRejCfg = rejectConfig[rejectModal.type] || {};
+  const chartData   = revenueView === "weekly" ? analytics.dailySales : analytics.monthlySales;
+  const chartXKey   = revenueView === "weekly" ? "date" : "month";
   const totalProductsDonut = analytics.productDonut.reduce((s, d) => s + d.value, 0);
   const totalOrdersDonut   = analytics.orderDonut.reduce((s, d) => s + d.value, 0);
 
+  if (loading) {
+    return <div className="admin-loading"><div className="spinner" /><p>Loading dashboard…</p></div>;
+  }
+
+  /* ════════════════════ RENDER ════════════════════ */
   return (
     <div className="admin-dashboard-container">
-
       <ConfirmModal
-        isOpen={confirmModal.isOpen}
-        title={activeCfg.title}
-        message={activeCfg.message}
-        confirmText={activeCfg.confirmText}
-        cancelText="Cancel"
-        confirmVariant={activeCfg.confirmVariant}
-        onConfirm={handleConfirmAction}
-        onCancel={() => setConfirmModal({ isOpen: false, type: null, id: null })}
+        isOpen={confirmModal.isOpen} title={activeCfg.title} message={activeCfg.message}
+        confirmText={activeCfg.confirmText} cancelText="Cancel" confirmVariant={activeCfg.confirmVariant}
+        onConfirm={handleConfirmAction} onCancel={() => setConfirmModal({ isOpen: false, type: null, id: null })}
       />
       <RejectModal
-        isOpen={rejectModal.isOpen}
-        title={activeRejCfg.title}
-        onConfirm={handleRejectAction}
-        onCancel={() => setRejectModal({ isOpen: false, type: null, id: null })}
+        isOpen={rejectModal.isOpen} title={activeRejCfg.title}
+        onConfirm={handleRejectAction} onCancel={() => setRejectModal({ isOpen: false, type: null, id: null })}
       />
       <AdminReplyModal
         isOpen={replyModal.isOpen}
@@ -601,10 +708,7 @@ const AdminDashboard = () => {
         {activeTab === "overview" && (
           <div>
             <div className="page-header">
-              <div>
-                <h1>Dashboard Overview</h1>
-                <p>Real-time platform metrics and activity</p>
-              </div>
+              <div><h1>Dashboard Overview</h1><p>Real-time platform metrics and activity</p></div>
               <button className="btn-refresh" onClick={handleRefresh}>{Icons.refresh} Refresh</button>
             </div>
 
@@ -622,45 +726,39 @@ const AdminDashboard = () => {
             )}
 
             <div className="kpi-grid">
-              <KpiCard icon={Icons.users}  label="Total Users"    value={stats.totalUsers}         sub={`${stats.totalBuyers} buyers · ${stats.totalSellersUsers} sellers`} accent="#b86e38" />
-              <KpiCard icon={Icons.store}  label="Active Sellers" value={stats.approvedSellers}    sub={`${stats.pendingSellers} pending verification`}                     accent="#2a9e6a" />
-              <KpiCard icon={Icons.pkg}    label="Total Products" value={stats.totalProducts}      sub={`${stats.approvedProducts} live · ${stats.pendingProducts} pending`}accent="#1a509a" />
-              <KpiCard icon={Icons.rupee}  label="Total Revenue"  value={`Rs. ${(analytics.summary.totalRevenue || 0).toLocaleString()}`} sub={`Rs. ${(analytics.summary.thisMonthRevenue || 0).toLocaleString()} this month`} accent="#c08830" />
+              <KpiCard icon={Icons.usersLg} label="Total Users"    value={stats.totalUsers}         sub={`${stats.totalBuyers} buyers · ${stats.totalSellersUsers} sellers`} accent="#b86e38" />
+              <KpiCard icon={Icons.storeLg} label="Active Sellers" value={stats.approvedSellers}    sub={`${stats.pendingSellers} pending verification`}                      accent="#2a9e6a" />
+              <KpiCard icon={Icons.pkg}     label="Total Products" value={stats.totalProducts}      sub={`${stats.approvedProducts} live · ${stats.pendingProducts} pending`} accent="#1a509a" />
+              <KpiCard icon={Icons.rupee}   label="Total Revenue"  value={fmtAmount(analytics.summary.totalRevenue)} sub={`${fmtAmount(analytics.summary.thisMonthRevenue)} this month`} accent="#c08830" />
             </div>
 
             <div className="charts-row">
               <div className="chart-card chart-card-wide">
                 <div className="chart-card-header">
-                  <div>
-                    <div className="chart-card-title">Revenue & Orders</div>
-                    <div className="chart-card-sub">Paid orders over time</div>
-                  </div>
+                  <div><div className="chart-card-title">Revenue & Orders</div><div className="chart-card-sub">Paid orders over time</div></div>
                   <div className="chart-toggle">
                     <button className={revenueView === "weekly" ? "active" : ""} onClick={() => setRevenueView("weekly")}>7 Days</button>
                     <button className={revenueView === "monthly" ? "active" : ""} onClick={() => setRevenueView("monthly")}>6 Months</button>
                   </div>
                 </div>
-                {analyticsLoading ? (
-                  <div className="chart-loading"><div className="spinner" /></div>
-                ) : chartData.length === 0 ? (
-                  <div className="chart-empty">No order data yet</div>
-                ) : (
+                {analyticsLoading ? <div className="chart-loading"><div className="spinner" /></div> :
+                  chartData.length === 0 ? <div className="chart-empty">No order data yet</div> : (
                   <ResponsiveContainer width="100%" height={220}>
                     <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
                       <defs>
                         <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor="#b86e38" stopOpacity={0.22} />
+                          <stop offset="5%" stopColor="#b86e38" stopOpacity={0.22} />
                           <stop offset="95%" stopColor="#b86e38" stopOpacity={0} />
                         </linearGradient>
                         <linearGradient id="ordersGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor="#2a9e6a" stopOpacity={0.18} />
+                          <stop offset="5%" stopColor="#2a9e6a" stopOpacity={0.18} />
                           <stop offset="95%" stopColor="#2a9e6a" stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" />
                       <XAxis dataKey={chartXKey} tick={{ fontSize: 11, fill: "var(--text-3)", fontFamily: "inherit" }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fontSize: 11, fill: "var(--text-3)", fontFamily: "inherit" }} axisLine={false} tickLine={false} />
-                      <Tooltip content={<ChartTooltip prefix="" />} />
+                      <Tooltip content={<ChartTooltip />} />
                       <Legend wrapperStyle={{ fontSize: "0.72rem", fontFamily: "inherit" }} />
                       <Area type="monotone" dataKey="revenue" name="Revenue (Rs.)" stroke="#b86e38" strokeWidth={2.5} fill="url(#revenueGrad)" dot={false} activeDot={{ r: 5, fill: "#b86e38" }} />
                       <Area type="monotone" dataKey="orders"  name="Orders"        stroke="#2a9e6a" strokeWidth={2}   fill="url(#ordersGrad)"  dot={false} activeDot={{ r: 4, fill: "#2a9e6a" }} />
@@ -670,17 +768,9 @@ const AdminDashboard = () => {
               </div>
 
               <div className="chart-card chart-card-narrow">
-                <div className="chart-card-header">
-                  <div>
-                    <div className="chart-card-title">Product Status</div>
-                    <div className="chart-card-sub">Approval breakdown</div>
-                  </div>
-                </div>
-                {analyticsLoading ? (
-                  <div className="chart-loading"><div className="spinner" /></div>
-                ) : totalProductsDonut === 0 ? (
-                  <div className="chart-empty">No products yet</div>
-                ) : (
+                <div className="chart-card-header"><div><div className="chart-card-title">Product Status</div><div className="chart-card-sub">Approval breakdown</div></div></div>
+                {analyticsLoading ? <div className="chart-loading"><div className="spinner" /></div> :
+                  totalProductsDonut === 0 ? <div className="chart-empty">No products yet</div> : (
                   <>
                     <ResponsiveContainer width="100%" height={180}>
                       <PieChart>
@@ -707,17 +797,9 @@ const AdminDashboard = () => {
 
             <div className="charts-row charts-row-3">
               <div className="chart-card">
-                <div className="chart-card-header">
-                  <div>
-                    <div className="chart-card-title">Top Categories</div>
-                    <div className="chart-card-sub">By approved products</div>
-                  </div>
-                </div>
-                {analyticsLoading ? (
-                  <div className="chart-loading"><div className="spinner" /></div>
-                ) : analytics.topCategories.length === 0 ? (
-                  <div className="chart-empty">No data</div>
-                ) : (
+                <div className="chart-card-header"><div><div className="chart-card-title">Top Categories</div><div className="chart-card-sub">By approved products</div></div></div>
+                {analyticsLoading ? <div className="chart-loading"><div className="spinner" /></div> :
+                  analytics.topCategories.length === 0 ? <div className="chart-empty">No data</div> : (
                   <ResponsiveContainer width="100%" height={190}>
                     <BarChart data={analytics.topCategories} layout="vertical" margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border-light)" horizontal={false} />
@@ -731,17 +813,9 @@ const AdminDashboard = () => {
               </div>
 
               <div className="chart-card">
-                <div className="chart-card-header">
-                  <div>
-                    <div className="chart-card-title">Order Status</div>
-                    <div className="chart-card-sub">{analytics.summary.totalOrders} total orders</div>
-                  </div>
-                </div>
-                {analyticsLoading ? (
-                  <div className="chart-loading"><div className="spinner" /></div>
-                ) : totalOrdersDonut === 0 ? (
-                  <div className="chart-empty">No orders yet</div>
-                ) : (
+                <div className="chart-card-header"><div><div className="chart-card-title">Order Status</div><div className="chart-card-sub">{analytics.summary.totalOrders} total orders</div></div></div>
+                {analyticsLoading ? <div className="chart-loading"><div className="spinner" /></div> :
+                  totalOrdersDonut === 0 ? <div className="chart-empty">No orders yet</div> : (
                   <>
                     <ResponsiveContainer width="100%" height={155}>
                       <PieChart>
@@ -766,17 +840,9 @@ const AdminDashboard = () => {
               </div>
 
               <div className="chart-card">
-                <div className="chart-card-header">
-                  <div>
-                    <div className="chart-card-title">Top Sellers</div>
-                    <div className="chart-card-sub">By total sales</div>
-                  </div>
-                </div>
-                {analyticsLoading ? (
-                  <div className="chart-loading"><div className="spinner" /></div>
-                ) : analytics.topSellers.length === 0 ? (
-                  <div className="chart-empty">No sales data</div>
-                ) : (
+                <div className="chart-card-header"><div><div className="chart-card-title">Top Sellers</div><div className="chart-card-sub">By total sales</div></div></div>
+                {analyticsLoading ? <div className="chart-loading"><div className="spinner" /></div> :
+                  analytics.topSellers.length === 0 ? <div className="chart-empty">No sales data</div> : (
                   <div className="top-sellers-list">
                     {analytics.topSellers.map((s, i) => {
                       const maxSales = analytics.topSellers[0]?.sales || 1;
@@ -823,13 +889,14 @@ const AdminDashboard = () => {
                   <div className="summary-item"><span>Approved Products</span><strong>{stats.approvedProducts}</strong></div>
                   <div className="summary-item"><span>Total Orders</span><strong>{analytics.summary.totalOrders}</strong></div>
                   <div className="summary-item"><span>Pending Reviews</span><strong>{stats.pendingSellers + stats.pendingProducts}</strong></div>
+                  <div className="summary-item"><span>Total Auctions</span><strong>{allAuctions.length}</strong></div>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* ══ SELLERS (pending verification) ══ */}
+        {/* ══ ARTISAN VERIFICATION ══ */}
         {activeTab === "sellers" && (
           <div>
             <div className="page-header">
@@ -842,14 +909,13 @@ const AdminDashboard = () => {
                 {pendingSellers.map((seller) => {
                   const u = seller?.user || {};
                   const fullName = u.full_name || u.name || "";
-                  const shopName = seller?.shop_name || "—";
                   return (
                     <div key={seller.seller_id} className="verification-card">
                       <div className="v-left">
-                        <div className="v-avatar">{initials(fullName || shopName)}</div>
+                        <div className="v-avatar">{initials(fullName || seller.shop_name)}</div>
                         <div>
-                          <div className="v-name">{fullName?.trim() || "No name provided"}</div>
-                          <div className="v-shop">{shopName}</div>
+                          <div className="v-name">{fullName?.trim() || "No name"}</div>
+                          <div className="v-shop">{seller.shop_name || "—"}</div>
                           <div className="v-time">Applied {timeAgo(seller)}</div>
                         </div>
                       </div>
@@ -865,8 +931,8 @@ const AdminDashboard = () => {
                         </div>
                       </div>
                       <div className="v-right">
-                        <button className="btn-approve" onClick={() => handleApproveSeller(seller.seller_id)}>Approve</button>
-                        <button className="btn-reject"  onClick={() => handleRejectSeller(seller.seller_id)}>Reject</button>
+                        <button className="btn-approve" onClick={() => setConfirmModal({ isOpen: true, type: "approveSeller", id: seller.seller_id })}>Approve</button>
+                        <button className="btn-reject"  onClick={() => setRejectModal({ isOpen: true, type: "rejectSeller", id: seller.seller_id })}>Reject</button>
                       </div>
                     </div>
                   );
@@ -880,68 +946,31 @@ const AdminDashboard = () => {
         {activeTab === "products" && (
           <div>
             <div className="page-header">
-              <div><h1>Pending Product Approvals</h1><p>{pendingProducts.length} product{pendingProducts.length !== 1 ? "s" : ""} waiting for review</p></div>
+              <div><h1>Pending Product Approvals</h1><p>{pendingProducts.length} product{pendingProducts.length !== 1 ? "s" : ""} waiting</p></div>
             </div>
             {pendingProducts.length === 0 ? (
               <div className="empty-state"><p>No pending products</p></div>
             ) : (
               <div className="table-wrap">
                 <table className="admin-table">
-                  <thead>
-                    <tr><th>Image</th><th>Product Name</th><th>Seller</th><th>Category</th><th>Price</th><th>Discount</th><th>Stock</th><th>Submitted</th><th>Actions</th></tr>
-                  </thead>
+                  <thead><tr><th>Image</th><th>Product Name</th><th>Seller</th><th>Category</th><th>Price</th><th>Discount</th><th>Stock</th><th>Submitted</th><th>Actions</th></tr></thead>
                   <tbody>
-                    {pendingProducts.map((product) => {
-                      const d = parseDate(product.created_at || product.createdAt);
-                      return (
-                        <tr key={product.product_id}>
-                          <td><ProductImg src={product.images?.length > 0 ? `${API_URL}${product.images[0]}` : null} alt={product.name} /></td>
-                          <td className="td-name">{product.name || "—"}</td>
-                          <td>{product?.seller?.user?.full_name || "—"}</td>
-                          <td>{product?.category?.name || "—"}</td>
-                          <td><PriceCell product={product} /></td>
-                          <td><DiscountCell product={product} /></td>
-                          <td><span className={product.stock_quantity > 10 ? "stock-good" : product.stock_quantity > 0 ? "stock-low" : "stock-out"}>{product.stock_quantity || 0} units</span></td>
-                          <td style={{ color: "var(--text-3)", fontSize: "0.72rem" }}>{d ? d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "—"}</td>
-                          <td>
-                            <div className="actions-cell">
-                              <button className="btn-approve" onClick={() => handleApproveProduct(product.product_id)}>Approve</button>
-                              <button className="btn-reject"  onClick={() => handleRejectProduct(product.product_id)}>Reject</button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ══ FEATURED PRODUCTS ══ */}
-        {activeTab === "featured" && (
-          <div>
-            <div className="page-header">
-              <div><h1>Manage Featured Products</h1><p>Featured products are highlighted on the homepage</p></div>
-            </div>
-            {allProducts.length === 0 ? (
-              <div className="empty-state"><p>No approved products available</p></div>
-            ) : (
-              <div className="table-wrap">
-                <table className="admin-table">
-                  <thead><tr><th>Image</th><th>Product Name</th><th>Shop</th><th>Category</th><th>Price</th><th>Discount</th><th>Featured</th><th>Action</th></tr></thead>
-                  <tbody>
-                    {allProducts.map((product) => (
+                    {pendingProducts.map((product) => (
                       <tr key={product.product_id}>
-                        <td><ProductImg src={product.images?.length > 0 ? `${API_URL}${product.images[0]}` : null} alt={product.name} /></td>
+                        <td><ProductImg src={product.images?.[0] ? `${API_URL}${product.images[0]}` : null} alt={product.name} /></td>
                         <td className="td-name">{product.name || "—"}</td>
-                        <td>{product?.seller?.shop_name || "—"}</td>
+                        <td>{product?.seller?.user?.full_name || "—"}</td>
                         <td>{product?.category?.name || "—"}</td>
                         <td><PriceCell product={product} /></td>
                         <td><DiscountCell product={product} /></td>
-                        <td>{product.is_featured ? <span className="featured-tag">★ Featured</span> : <span style={{ color: "var(--text-3)", fontSize: "0.72rem" }}>Not featured</span>}</td>
-                        <td><button className={product.is_featured ? "btn-reject" : "btn-approve"} onClick={() => handleToggleFeatured(product.product_id)}>{product.is_featured ? "Remove" : "Feature"}</button></td>
+                        <td><span className={product.stock_quantity > 10 ? "stock-good" : product.stock_quantity > 0 ? "stock-low" : "stock-out"}>{product.stock_quantity || 0} units</span></td>
+                        <td style={{ color: "var(--text-3)", fontSize: "0.72rem" }}>{fmtDate(product.created_at || product.createdAt)}</td>
+                        <td>
+                          <div className="actions-cell">
+                            <button className="btn-approve" onClick={() => setConfirmModal({ isOpen: true, type: "approveProduct", id: product.product_id })}>Approve</button>
+                            <button className="btn-reject"  onClick={() => setRejectModal({ isOpen: true, type: "rejectProduct", id: product.product_id })}>Reject</button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -951,30 +980,563 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* ══ BANNERS ══ */}
+        {/* ══ FEATURED PRODUCTS (now with search + filter + pagination) ══ */}
+        {activeTab === "featured" && (
+          <div>
+            <div className="page-header">
+              <div><h1>Manage Featured Products</h1><p>{filteredFeatProds.length} of {approvedProducts.length} approved products</p></div>
+            </div>
+            <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap", alignItems: "flex-end", marginBottom: "0.75rem" }}>
+              <SearchInput value={featSearch} onChange={(v) => { setFeatSearch(v); setFeatPage(1); }} placeholder="Search by name, category, shop…" theme="admin" style={{ flex: 1, minWidth: 220 }} />
+              <SortSelect theme="admin" value={featSort} onChange={(v) => { setFeatSort(v); setFeatPage(1); }}
+                options={[{ value: "newest", label: "Newest first" }, { value: "oldest", label: "Oldest first" }, { value: "price_asc", label: "Price ↑" }, { value: "price_desc", label: "Price ↓" }]} />
+            </div>
+            <div style={{ marginBottom: "1rem" }}>
+              <FilterBar theme="admin" active={featFilter} onChange={(f) => { setFeatFilter(f); setFeatPage(1); }}
+                filters={[
+                  { key: "all",        label: "All",        count: approvedProducts.length },
+                  { key: "featured",   label: "Featured",   count: approvedProducts.filter((p) => p.is_featured).length },
+                  { key: "unfeatured", label: "Not Featured", count: approvedProducts.filter((p) => !p.is_featured).length },
+                ]}
+              />
+            </div>
+            {filteredFeatProds.length === 0 ? (
+              <div className="empty-state"><p>No approved products available</p></div>
+            ) : (
+              <>
+                <div className="table-wrap">
+                  <table className="admin-table">
+                    <thead><tr><th>Image</th><th>Product Name</th><th>Shop</th><th>Category</th><th>Price</th><th>Discount</th><th>Featured</th><th>Action</th></tr></thead>
+                    <tbody>
+                      {pagedFeats.map((product) => (
+                        <tr key={product.product_id}>
+                          <td><ProductImg src={product.images?.[0] ? `${API_URL}${product.images[0]}` : null} alt={product.name} /></td>
+                          <td className="td-name">{product.name || "—"}</td>
+                          <td>{product?.seller?.shop_name || "—"}</td>
+                          <td>{product?.category?.name || "—"}</td>
+                          <td><PriceCell product={product} /></td>
+                          <td><DiscountCell product={product} /></td>
+                          <td>{product.is_featured ? <span className="featured-tag">★ Featured</span> : <span style={{ color: "var(--text-3)", fontSize: "0.72rem" }}>Not featured</span>}</td>
+                          <td><button className={product.is_featured ? "btn-reject" : "btn-approve"} onClick={() => setConfirmModal({ isOpen: true, type: "toggleFeatured", id: product.product_id })}>{product.is_featured ? "Remove" : "Feature"}</button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination currentPage={featPage} totalPages={featPages} onPageChange={setFeatPage} theme="admin" />
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ══ ALL ORDERS ══ */}
+        {activeTab === "allorders" && (
+          <div>
+            <div className="page-header">
+              <div><h1>All Orders</h1><p>{filteredOrders.length} of {allOrders.length} orders</p></div>
+            </div>
+
+            <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap", alignItems: "flex-end", marginBottom: "0.75rem" }}>
+              <SearchInput value={orderSearch} onChange={(v) => { setOrderSearch(v); setOrderPage(1); }} placeholder="Search by order #, customer, city…" theme="admin" style={{ flex: 1, minWidth: 220 }} />
+              <SortSelect theme="admin" value={orderSort} onChange={(v) => { setOrderSort(v); setOrderPage(1); }}
+                options={[{ value: "newest", label: "Newest first" }, { value: "oldest", label: "Oldest first" }, { value: "highest", label: "Highest amount" }, { value: "lowest", label: "Lowest amount" }]} />
+            </div>
+            <div style={{ marginBottom: "0.75rem" }}>
+              <DateRangePicker theme="admin" startDate={orderDate.startDate} endDate={orderDate.endDate} onChange={(v) => { setOrderDate(v); setOrderPage(1); }} label="Date:" />
+            </div>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+              <FilterBar theme="admin" active={orderFilter} onChange={(f) => { setOrderFilter(f); setOrderPage(1); }}
+                filters={[
+                  { key: "all",        label: "All",        count: allOrders.length },
+                  { key: "pending",    label: "Pending",    count: allOrders.filter((o) => o.order_status === "pending").length },
+                  { key: "processing", label: "Processing", count: allOrders.filter((o) => o.order_status === "processing").length },
+                  { key: "shipped",    label: "Shipped",    count: allOrders.filter((o) => o.order_status === "shipped").length },
+                  { key: "delivered",  label: "Delivered",  count: allOrders.filter((o) => o.order_status === "delivered").length },
+                  { key: "cancelled",  label: "Cancelled",  count: allOrders.filter((o) => o.order_status === "cancelled").length },
+                ]}
+              />
+              <FilterBar theme="admin" active={orderPayFilter} onChange={(f) => { setOrderPayFilter(f); setOrderPage(1); }}
+                filters={[{ key: "all", label: "All payments" }, { key: "paid", label: "Paid" }, { key: "pending", label: "Unpaid" }]}
+              />
+            </div>
+
+            {filteredOrders.length === 0 ? (
+              <div className="empty-state"><p>No orders match your filters.</p></div>
+            ) : (
+              <>
+                <div className="table-wrap">
+                  <table className="admin-table">
+                    <thead>
+                      <tr><th>Order #</th><th>Customer</th><th>Items</th><th>Delivery</th><th>Status</th><th>Payment</th><th>Total</th><th>Date</th></tr>
+                    </thead>
+                    <tbody>
+                      {pagedOrders.map((order) => (
+                        <tr key={order.order_id}>
+                          <td style={{ fontWeight: 700, color: "var(--accent)", fontSize: "0.78rem" }}>#{order.order_number}</td>
+                          <td>
+                            <div style={{ fontWeight: 600, color: "var(--text-1)", fontSize: "0.8rem" }}>{order.user?.full_name || "—"}</div>
+                            <div style={{ fontSize: "0.68rem", color: "var(--text-3)" }}>{order.user?.email || "—"}</div>
+                            <div style={{ fontSize: "0.68rem", color: "var(--text-3)" }}>{order.user?.phone || ""}</div>
+                          </td>
+                          <td>
+                            <div style={{ fontSize: "0.75rem", color: "var(--text-2)" }}>{order.items?.length || 0} item{(order.items?.length || 0) !== 1 ? "s" : ""}</div>
+                            {order.items?.slice(0, 2).map((item) => (
+                              <div key={item.order_item_id} style={{ fontSize: "0.67rem", color: "var(--text-3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 140 }}>
+                                {item.product_name} ×{item.quantity}
+                              </div>
+                            ))}
+                          </td>
+                          <td>
+                            <div style={{ fontSize: "0.75rem", color: "var(--text-2)" }}>{order.delivery_name}</div>
+                            <div style={{ fontSize: "0.68rem", color: "var(--text-3)" }}>{order.delivery_city}{order.delivery_state ? `, ${order.delivery_state}` : ""}</div>
+                            <div style={{ fontSize: "0.68rem", color: "var(--text-3)" }}>{order.delivery_phone}</div>
+                          </td>
+                          <td>
+                            <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: "0.65rem", fontWeight: 700, background: { pending: "#FEF3C7", processing: "#DBEAFE", shipped: "#E9D5FF", delivered: "#D1FAE5", cancelled: "#FEE2E2" }[order.order_status] || "#F1F5F9", color: { pending: "#92400E", processing: "#1E40AF", shipped: "#6B21A8", delivered: "#065F46", cancelled: "#991B1B" }[order.order_status] || "#475569" }}>
+                              {order.order_status?.charAt(0).toUpperCase() + order.order_status?.slice(1)}
+                            </span>
+                          </td>
+                          <td>
+                            <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: "0.65rem", fontWeight: 700, background: order.payment_status === "paid" ? "#D1FAE5" : "#FEF3C7", color: order.payment_status === "paid" ? "#065F46" : "#92400E" }}>
+                              {order.payment_status === "paid" ? "Paid" : "Unpaid"}
+                            </span>
+                            <div style={{ fontSize: "0.65rem", color: "var(--text-3)", marginTop: 2 }}>{order.payment_method?.toUpperCase()}</div>
+                          </td>
+                          <td style={{ fontWeight: 700, color: "var(--text-1)", fontSize: "0.8rem", fontVariantNumeric: "tabular-nums" }}>{fmtAmount(order.total)}</td>
+                          <td style={{ color: "var(--text-3)", fontSize: "0.68rem" }}>{fmtDate(order.created_at || order.createdAt)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination currentPage={orderPage} totalPages={orderPages} onPageChange={setOrderPage} theme="admin" />
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ══ ALL PRODUCTS (now fetches all statuses) ══ */}
+        {activeTab === "allprods" && (
+          <div>
+            <div className="page-header">
+              <div><h1>All Products</h1><p>{filteredAllProds.length} of {allProducts.length} products</p></div>
+            </div>
+            <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap", alignItems: "flex-end", marginBottom: "0.75rem" }}>
+              <SearchInput value={prodSearch} onChange={(v) => { setProdSearch(v); setProdPage(1); }} placeholder="Search by name, category, shop…" theme="admin" style={{ flex: 1, minWidth: 220 }} />
+              <SortSelect theme="admin" value={prodSort} onChange={(v) => { setProdSort(v); setProdPage(1); }}
+                options={[{ value: "newest", label: "Newest first" }, { value: "oldest", label: "Oldest first" }, { value: "price_asc", label: "Price ↑" }, { value: "price_desc", label: "Price ↓" }]} />
+            </div>
+            <div style={{ marginBottom: "1rem" }}>
+              <FilterBar theme="admin" active={prodFilter} onChange={(f) => { setProdFilter(f); setProdPage(1); }}
+                filters={[
+                  { key: "all",      label: "All",      count: allProducts.length },
+                  { key: "approved", label: "Approved", count: allProducts.filter((p) => p.status === "approved").length },
+                  { key: "pending",  label: "Pending",  count: allProducts.filter((p) => p.status === "pending").length },
+                  { key: "rejected", label: "Rejected", count: allProducts.filter((p) => p.status === "rejected").length },
+                ]}
+              />
+            </div>
+            {filteredAllProds.length === 0 ? (
+              <div className="empty-state"><p>No products match your filters.</p></div>
+            ) : (
+              <>
+                <div className="table-wrap">
+                  <table className="admin-table">
+                    <thead><tr><th>Image</th><th>Product</th><th>Seller</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th>Featured</th><th>Date</th></tr></thead>
+                    <tbody>
+                      {pagedProds.map((product) => (
+                        <tr key={product.product_id}>
+                          <td><ProductImg src={product.images?.[0] ? `${API_URL}${product.images[0]}` : null} alt={product.name} /></td>
+                          <td>
+                            <div className="td-name">{product.name || "—"}</div>
+                            {product.sku && <div style={{ fontSize: "0.65rem", color: "var(--text-3)" }}>SKU: {product.sku}</div>}
+                          </td>
+                          <td style={{ fontSize: "0.78rem" }}>{product?.seller?.shop_name || "—"}</td>
+                          <td style={{ fontSize: "0.78rem" }}>{product?.category?.name || "—"}</td>
+                          <td><PriceCell product={product} /></td>
+                          <td><span className={product.stock_quantity > 10 ? "stock-good" : product.stock_quantity > 0 ? "stock-low" : "stock-out"}>{product.stock_quantity || 0}</span></td>
+                          <td>
+                            <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: "0.63rem", fontWeight: 700, background: { approved: "var(--green-bg)", pending: "var(--amber-bg)", rejected: "var(--red-bg)" }[product.status], color: { approved: "var(--green)", pending: "var(--amber)", rejected: "var(--red)" }[product.status] }}>
+                              {product.status?.charAt(0).toUpperCase() + product.status?.slice(1)}
+                            </span>
+                          </td>
+                          <td>{product.is_featured ? <span className="featured-tag">★ Featured</span> : <span style={{ color: "var(--text-3)", fontSize: "0.7rem" }}>—</span>}</td>
+                          <td style={{ color: "var(--text-3)", fontSize: "0.68rem" }}>{fmtDate(product.created_at || product.createdAt)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination currentPage={prodPage} totalPages={prodPages} onPageChange={setProdPage} theme="admin" />
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ══ ALL USERS ══ */}
+        {activeTab === "allusers" && (
+          <div>
+            <div className="page-header">
+              <div><h1>All Users</h1><p>{filteredUsers.length} of {allUsers.length} registered users</p></div>
+              <button className="btn-refresh" onClick={fetchAllUsers}>{Icons.refresh} Refresh</button>
+            </div>
+            <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap", alignItems: "flex-end", marginBottom: "0.75rem" }}>
+              <SearchInput value={userSearch} onChange={(v) => { setUserSearch(v); setUserPage(1); }} placeholder="Search by name, email or phone…" theme="admin" style={{ flex: 1, minWidth: 220 }} />
+              <SortSelect theme="admin" value={userSort} onChange={(v) => { setUserSort(v); setUserPage(1); }}
+                options={[{ value: "newest", label: "Newest first" }, { value: "oldest", label: "Oldest first" }, { value: "name", label: "Name A→Z" }]} />
+            </div>
+            <div style={{ marginBottom: "1rem" }}>
+              <FilterBar theme="admin" active={userFilter} onChange={(f) => { setUserFilter(f); setUserPage(1); }}
+                filters={[
+                  { key: "all",     label: "All",     count: allUsers.length },
+                  { key: "buyer",   label: "Buyers",  count: allUsers.filter((u) => u.role === "buyer").length },
+                  { key: "seller",  label: "Sellers", count: allUsers.filter((u) => u.role === "seller").length },
+                  { key: "active",  label: "Active",  count: allUsers.filter((u) => u.is_active).length },
+                  { key: "blocked", label: "Blocked", count: allUsers.filter((u) => !u.is_active).length },
+                ]}
+              />
+            </div>
+            {filteredUsers.length === 0 ? (
+              <div className="empty-state"><p>No users match your filters.</p></div>
+            ) : (
+              <>
+                <div className="table-wrap">
+                  <table className="admin-table">
+                    <thead><tr><th>User</th><th>Email</th><th>Phone</th><th>Role</th><th>Status</th><th>Joined</th><th>Action</th></tr></thead>
+                    <tbody>
+                      {pagedUsers.map((user) => (
+                        <tr key={user.user_id}>
+                          <td>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              {user.profile_image ? (
+                                <img src={`${API_URL}${user.profile_image}`} alt={user.full_name} style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover", border: "1px solid var(--border)" }} />
+                              ) : (
+                                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--accent-bg)", border: "1px solid var(--accent-border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 800, color: "var(--accent)" }}>
+                                  {initials(user.full_name)}
+                                </div>
+                              )}
+                              <span style={{ fontWeight: 600, fontSize: "0.8rem", color: "var(--text-1)" }}>{user.full_name || "—"}</span>
+                            </div>
+                          </td>
+                          <td style={{ fontSize: "0.78rem", color: "var(--text-2)" }}>{user.email}</td>
+                          <td style={{ fontSize: "0.78rem", color: "var(--text-3)" }}>{user.phone || "—"}</td>
+                          <td>
+                            <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: "0.63rem", fontWeight: 700, background: user.role === "seller" ? "var(--amber-bg)" : user.role === "admin" ? "var(--blue-bg)" : "var(--green-bg)", color: user.role === "seller" ? "var(--amber)" : user.role === "admin" ? "var(--blue)" : "var(--green)" }}>
+                              {user.role}
+                            </span>
+                          </td>
+                          <td>
+                            <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: "0.63rem", fontWeight: 700, background: user.is_active ? "var(--green-bg)" : "var(--red-bg)", color: user.is_active ? "var(--green)" : "var(--red)" }}>
+                              {user.is_active ? "Active" : "Blocked"}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: "0.68rem", color: "var(--text-3)" }}>{fmtDate(user.created_at || user.createdAt)}</td>
+                          <td>
+                            {user.role !== "admin" && (
+                              <button className={user.is_active ? "btn-reject" : "btn-approve"} onClick={() => handleToggleBlock(user.user_id)}>{user.is_active ? "Block" : "Unblock"}</button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination currentPage={userPage} totalPages={userPages} onPageChange={setUserPage} theme="admin" />
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ══ ALL SELLERS ══ */}
+        {activeTab === "allsellers" && (
+          <div>
+            <div className="page-header">
+              <div><h1>All Sellers</h1><p>{filteredSellers.length} of {allSellers.length} sellers</p></div>
+              <button className="btn-refresh" onClick={fetchAllSellers}>{Icons.refresh} Refresh</button>
+            </div>
+            <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap", alignItems: "flex-end", marginBottom: "0.75rem" }}>
+              <SearchInput value={sellerSearch} onChange={(v) => { setSellerSearch(v); setSellerPage(1); }} placeholder="Search by shop, name, email, city…" theme="admin" style={{ flex: 1, minWidth: 220 }} />
+              <SortSelect theme="admin" value={sellerSort} onChange={(v) => { setSellerSort(v); setSellerPage(1); }}
+                options={[{ value: "newest", label: "Newest first" }, { value: "oldest", label: "Oldest first" }, { value: "name", label: "Shop A→Z" }]} />
+            </div>
+            <div style={{ marginBottom: "1rem" }}>
+              <FilterBar theme="admin" active={sellerFilter} onChange={(f) => { setSellerFilter(f); setSellerPage(1); }}
+                filters={[
+                  { key: "all",      label: "All",      count: allSellers.length },
+                  { key: "approved", label: "Approved", count: allSellers.filter((s) => s.approval_status === "approved").length },
+                  { key: "pending",  label: "Pending",  count: allSellers.filter((s) => s.approval_status === "pending").length },
+                  { key: "rejected", label: "Rejected", count: allSellers.filter((s) => s.approval_status === "rejected").length },
+                ]}
+              />
+            </div>
+            {filteredSellers.length === 0 ? (
+              <div className="empty-state"><p>No sellers match your filters.</p></div>
+            ) : (
+              <>
+                <div className="table-wrap">
+                  <table className="admin-table">
+                    <thead><tr><th>Shop</th><th>Owner</th><th>Contact</th><th>Location</th><th>Bank</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+                    <tbody>
+                      {pagedSellers.map((seller) => {
+                        const u = seller.user || {};
+                        return (
+                          <tr key={seller.seller_id}>
+                            <td>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                {seller.shop_logo ? (
+                                  <img src={`${API_URL}${seller.shop_logo}`} alt={seller.shop_name} style={{ width: 32, height: 32, borderRadius: 7, objectFit: "cover", border: "1px solid var(--border)" }} />
+                                ) : (
+                                  <div style={{ width: 32, height: 32, borderRadius: 7, background: "var(--accent-bg)", border: "1px solid var(--accent-border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 800, color: "var(--accent)" }}>
+                                    {(seller.shop_name?.[0] || "S").toUpperCase()}
+                                  </div>
+                                )}
+                                <div>
+                                  <div style={{ fontWeight: 700, fontSize: "0.8rem", color: "var(--text-1)" }}>{seller.shop_name}</div>
+                                  <div style={{ fontSize: "0.65rem", color: "var(--text-3)" }}>ID #{seller.seller_id}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td style={{ fontSize: "0.78rem", color: "var(--text-2)" }}>{u.full_name || "—"}</td>
+                            <td>
+                              <div style={{ fontSize: "0.75rem", color: "var(--text-2)" }}>{u.email || "—"}</div>
+                              <div style={{ fontSize: "0.68rem", color: "var(--text-3)" }}>{u.phone || "—"}</div>
+                            </td>
+                            <td style={{ fontSize: "0.78rem", color: "var(--text-2)" }}>{seller.city || "—"}</td>
+                            <td>
+                              <div style={{ fontSize: "0.72rem", color: "var(--text-2)" }}>{seller.bank_name || "—"}</div>
+                              <div style={{ fontSize: "0.65rem", color: "var(--text-3)" }}>{seller.bank_account_number || "—"}</div>
+                            </td>
+                            <td>
+                              <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: "0.63rem", fontWeight: 700, background: { approved: "var(--green-bg)", pending: "var(--amber-bg)", rejected: "var(--red-bg)" }[seller.approval_status], color: { approved: "var(--green)", pending: "var(--amber)", rejected: "var(--red)" }[seller.approval_status] }}>
+                                {seller.approval_status?.charAt(0).toUpperCase() + seller.approval_status?.slice(1)}
+                              </span>
+                            </td>
+                            <td style={{ fontSize: "0.68rem", color: "var(--text-3)" }}>{fmtDate(seller.created_at || seller.createdAt)}</td>
+                            <td>
+                              {seller.approval_status === "pending" && (
+                                <div className="actions-cell">
+                                  <button className="btn-approve" onClick={() => setConfirmModal({ isOpen: true, type: "approveSeller", id: seller.seller_id })}>Approve</button>
+                                  <button className="btn-reject"  onClick={() => setRejectModal({ isOpen: true, type: "rejectSeller", id: seller.seller_id })}>Reject</button>
+                                </div>
+                              )}
+                              {seller.approval_status !== "pending" && (
+                                <span style={{ fontSize: "0.7rem", color: "var(--text-3)" }}>—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination currentPage={sellerPage} totalPages={sellerPages} onPageChange={setSellerPage} theme="admin" />
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ══ AUCTIONS (NEW TAB) ══ */}
+        {activeTab === "auctions" && (
+          <div>
+            <div className="page-header">
+              <div><h1>Auctions</h1><p>{filteredAuctions.length} of {allAuctions.length} auctions</p></div>
+              <button className="btn-refresh" onClick={fetchAllAuctions}>{Icons.refresh} Refresh</button>
+            </div>
+
+            {/* Stats row */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
+              {["live", "upcoming", "ended", "cancelled"].map((s) => {
+                const count = allAuctions.filter((a) => a.status === s).length;
+                const colors = { live: "#10B981", upcoming: "#3B82F6", ended: "#8B5CF6", cancelled: "#EF4444" };
+                const bgs    = { live: "#D1FAE5", upcoming: "#DBEAFE", ended: "#EDE9FE", cancelled: "#FEE2E2" };
+                return (
+                  <div key={s} style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px 16px", borderTop: `3px solid ${colors[s]}` }}>
+                    <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>{s}</div>
+                    <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--text-1)" }}>{count}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap", alignItems: "flex-end", marginBottom: "0.75rem" }}>
+              <SearchInput value={auctionSearch} onChange={(v) => { setAuctionSearch(v); setAuctionPage(1); }} placeholder="Search by title, seller…" theme="admin" style={{ flex: 1, minWidth: 220 }} />
+              <SortSelect theme="admin" value={auctionSort} onChange={(v) => { setAuctionSort(v); setAuctionPage(1); }}
+                options={[{ value: "newest", label: "Newest first" }, { value: "oldest", label: "Oldest first" }, { value: "highest", label: "Highest bid" }, { value: "most_bids", label: "Most bids" }]} />
+            </div>
+            <div style={{ marginBottom: "1rem" }}>
+              <FilterBar theme="admin" active={auctionFilter} onChange={(f) => { setAuctionFilter(f); setAuctionPage(1); }}
+                filters={[
+                  { key: "all",       label: "All",       count: allAuctions.length },
+                  { key: "live",      label: "Live",      count: allAuctions.filter((a) => a.status === "live").length },
+                  { key: "upcoming",  label: "Upcoming",  count: allAuctions.filter((a) => a.status === "upcoming").length },
+                  { key: "ended",     label: "Ended",     count: allAuctions.filter((a) => a.status === "ended").length },
+                  { key: "cancelled", label: "Cancelled", count: allAuctions.filter((a) => a.status === "cancelled").length },
+                ]}
+              />
+            </div>
+
+            {filteredAuctions.length === 0 ? (
+              <div className="empty-state"><p>No auctions found.</p></div>
+            ) : (
+              <>
+                <div className="table-wrap">
+                  <table className="admin-table">
+                    <thead>
+                      <tr><th>Image</th><th>Title</th><th>Seller</th><th>Starting Bid</th><th>Current Bid</th><th>Total Bids</th><th>Status</th><th>Start</th><th>End</th><th>Action</th></tr>
+                    </thead>
+                    <tbody>
+                      {pagedAuctions.map((auction) => {
+                        const statusColor = { live: { bg: "#D1FAE5", color: "#065F46" }, upcoming: { bg: "#DBEAFE", color: "#1E40AF" }, ended: { bg: "#EDE9FE", color: "#6B21A8" }, cancelled: { bg: "#FEE2E2", color: "#991B1B" } }[auction.status] || { bg: "#F1F5F9", color: "#475569" };
+                        return (
+                          <tr key={auction.auction_id}>
+                            <td>
+                              {auction.images?.[0] ? (
+                                <img className="td-img" src={`${API_URL}${auction.images[0]}`} alt={auction.title} />
+                              ) : (
+                                <div className="td-img-placeholder">🔨</div>
+                              )}
+                            </td>
+                            <td>
+                              <div className="td-name">{auction.title || "—"}</div>
+                              {auction.winner && (
+                                <div style={{ fontSize: "0.65rem", color: "var(--green)", marginTop: 2 }}>
+                                  🏆 {auction.winner.full_name}
+                                </div>
+                              )}
+                            </td>
+                            <td>
+                              <div style={{ fontSize: "0.78rem", fontWeight: 600 }}>{auction.seller?.shop_name || "—"}</div>
+                              <div style={{ fontSize: "0.65rem", color: "var(--text-3)" }}>{auction.seller?.user?.full_name || ""}</div>
+                            </td>
+                            <td style={{ fontSize: "0.78rem", fontWeight: 600 }}>Rs. {parseFloat(auction.starting_bid || 0).toLocaleString()}</td>
+                            <td style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--accent)" }}>
+                              {parseFloat(auction.current_bid || 0) > 0 ? `Rs. ${parseFloat(auction.current_bid).toLocaleString()}` : "—"}
+                            </td>
+                            <td style={{ textAlign: "center", fontWeight: 700, fontSize: "0.82rem" }}>{auction.total_bids || 0}</td>
+                            <td>
+                              <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: "0.65rem", fontWeight: 700, background: statusColor.bg, color: statusColor.color }}>
+                                {auction.status?.charAt(0).toUpperCase() + auction.status?.slice(1)}
+                              </span>
+                            </td>
+                            <td style={{ fontSize: "0.68rem", color: "var(--text-3)", whiteSpace: "nowrap" }}>{fmtAuctionDate(auction.auction_start)}</td>
+                            <td style={{ fontSize: "0.68rem", color: "var(--text-3)", whiteSpace: "nowrap" }}>{fmtAuctionDate(auction.auction_end)}</td>
+                            <td>
+                              <button className="btn-reject" onClick={() => setConfirmModal({ isOpen: true, type: "deleteAuction", id: auction.auction_id })}>Remove</button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination currentPage={auctionPage} totalPages={auctionPages} onPageChange={setAuctionPage} theme="admin" />
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ══ REVIEWS ══ */}
+        {activeTab === "reviews" && (
+          <div>
+            <div className="page-header">
+              <div><h1>Reviews Moderation</h1><p>{filteredReviews.length} of {allReviews.filter((r) => !r.parent_id).length} reviews</p></div>
+              <button className="btn-refresh" onClick={fetchAllReviews}>{Icons.refresh} Refresh</button>
+            </div>
+            <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap", alignItems: "flex-end", marginBottom: "0.75rem" }}>
+              <SearchInput value={reviewSearch} onChange={(v) => { setReviewSearch(v); setReviewPage(1); }} placeholder="Search by reviewer, product, or comment…" theme="admin" style={{ flex: 1, minWidth: 220 }} />
+              <SortSelect theme="admin" value={reviewSort} onChange={(v) => { setReviewSort(v); setReviewPage(1); }}
+                options={[{ value: "newest", label: "Newest first" }, { value: "oldest", label: "Oldest first" }, { value: "highest", label: "Highest rating" }, { value: "lowest", label: "Lowest rating" }]} />
+            </div>
+            <div style={{ marginBottom: "1rem" }}>
+              <FilterBar theme="admin" active={reviewRating} onChange={(f) => { setReviewRating(f); setReviewPage(1); }}
+                filters={[
+                  { key: "all", label: "All ratings" },
+                  { key: "5",   label: "★★★★★ 5" },
+                  { key: "4",   label: "★★★★ 4" },
+                  { key: "3",   label: "★★★ 3" },
+                  { key: "2",   label: "★★ 2" },
+                  { key: "1",   label: "★ 1" },
+                ]}
+              />
+            </div>
+            {filteredReviews.length === 0 ? (
+              <div className="empty-state"><p>No reviews found.</p></div>
+            ) : (
+              <>
+                <div className="table-wrap">
+                  <table className="admin-table">
+                    <thead><tr><th>Product</th><th>Reviewer</th><th>Rating</th><th>Comment</th><th>Helpful</th><th>Verified</th><th>Date</th><th>Action</th></tr></thead>
+                    <tbody>
+                      {pagedReviews.map((review) => (
+                        <tr key={review.review_id}>
+                          <td>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              {review.product?.images?.[0] && (
+                                <img src={`${API_URL}${review.product.images[0]}`} alt={review.product.name} style={{ width: 32, height: 32, borderRadius: 6, objectFit: "cover", border: "1px solid var(--border)", flexShrink: 0 }} />
+                              )}
+                              <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 130 }}>{review.product?.name || "—"}</span>
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-1)" }}>{review.user?.full_name || "—"}</div>
+                            <div style={{ fontSize: "0.66rem", color: "var(--text-3)" }}>{review.user?.email || ""}</div>
+                          </td>
+                          <td><StarRating rating={review.rating} /></td>
+                          <td>
+                            <p style={{ fontSize: "0.75rem", color: "var(--text-2)", lineHeight: 1.5, margin: 0, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                              {review.comment || "—"}
+                            </p>
+                            {review.images?.length > 0 && (
+                              <div style={{ display: "flex", gap: 3, marginTop: 3 }}>
+                                {review.images.slice(0, 3).map((img, i) => (
+                                  <img key={i} src={`${API_URL}${img}`} alt="" style={{ width: 22, height: 22, borderRadius: 3, objectFit: "cover", border: "1px solid var(--border)" }} />
+                                ))}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ fontSize: "0.75rem", color: "var(--text-3)", textAlign: "center" }}>{review.helpful_count || 0}</td>
+                          <td>
+                            <span style={{ fontSize: "0.65rem", fontWeight: 700, padding: "2px 6px", borderRadius: 999, background: review.verified_purchase ? "var(--green-bg)" : "var(--bg-muted)", color: review.verified_purchase ? "var(--green)" : "var(--text-3)" }}>
+                              {review.verified_purchase ? "✓ Verified" : "Unverified"}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: "0.68rem", color: "var(--text-3)" }}>{fmtDate(review.created_at || review.createdAt)}</td>
+                          <td>
+                            <button className="btn-reject" onClick={() => setConfirmModal({ isOpen: true, type: "deleteReview", id: review.review_id })}>Delete</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination currentPage={reviewPage} totalPages={reviewPages} onPageChange={setReviewPage} theme="admin" />
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ══ FESTIVAL BANNERS ══ */}
         {activeTab === "banners" && (
           <div>
-            <div className="page-header"><div><h1>Manage Festival Banners</h1><p>Upload banners to display on homepage — recommended 1920×600px</p></div></div>
+            <div className="page-header"><div><h1>Manage Festival Banners</h1><p>Recommended 1920×600px</p></div></div>
             <div className="section-card">
               <div className="section-title">Upload New Banner</div>
               <form onSubmit={handleUploadBanner} className="banner-form">
                 <div className="form-row">
                   <div className="form-group"><label>Title *</label><input type="text" name="title" required placeholder="e.g. Dashain Festival Sale" /></div>
-                  <div className="form-group"><label>Banner Image * (1920×600px recommended)</label><input type="file" name="image" accept="image/*" required /></div>
+                  <div className="form-group"><label>Banner Image *</label><input type="file" name="image" accept="image/*" required /></div>
                 </div>
                 <div className="form-row">
-                  <div className="form-group"><label>Link URL (optional)</label><input type="text" name="link_url" placeholder="/products?category=1 or external URL" /></div>
+                  <div className="form-group"><label>Link URL (optional)</label><input type="text" name="link_url" placeholder="/products?category=1" /></div>
                   <div className="form-group"><label>Link Type</label><select name="link_type"><option value="none">No Link</option><option value="category">Category</option><option value="product">Product</option><option value="external">External</option></select></div>
                 </div>
-                <div className="form-group"><label>Description (optional)</label><textarea name="description" rows="3" placeholder="Brief description..." /></div>
+                <div className="form-group"><label>Description (optional)</label><textarea name="description" rows="3" placeholder="Brief description…" /></div>
                 <button type="submit" className="btn-approve" disabled={uploadingBanner} style={{ width: "fit-content", padding: "7px 18px" }}>{uploadingBanner ? "Uploading…" : "Upload Banner"}</button>
               </form>
             </div>
             <div className="section-card">
               <div className="section-title">Existing Banners ({banners.length})</div>
-              {banners.length === 0 ? (
-                <div className="empty-state" style={{ border: "none", padding: "24px 0 0" }}><p>No banners uploaded yet</p></div>
-              ) : (
+              {banners.length === 0 ? <div className="empty-state" style={{ border: "none", padding: "24px 0 0" }}><p>No banners yet</p></div> : (
                 <div className="banners-grid">
                   {banners.map((banner) => (
                     <div key={banner.banner_id} className="banner-card">
@@ -988,7 +1550,7 @@ const AdminDashboard = () => {
                         {banner.link_url && <p className="banner-link">{banner.link_type}: {banner.link_url}</p>}
                         <div className="banner-actions">
                           <button className={banner.is_active ? "btn-reject" : "btn-approve"} onClick={() => handleToggleBanner(banner.banner_id)}>{banner.is_active ? "Deactivate" : "Activate"}</button>
-                          <button className="btn-reject" onClick={() => handleDeleteBanner(banner.banner_id)}>Delete</button>
+                          <button className="btn-reject" onClick={() => setConfirmModal({ isOpen: true, type: "deleteBanner", id: banner.banner_id })}>Delete</button>
                         </div>
                       </div>
                     </div>
@@ -1002,380 +1564,79 @@ const AdminDashboard = () => {
         {/* ══ CONTACT MESSAGES ══ */}
         {activeTab === "contacts" && (
           <div>
-            <div className="page-header"><div><h1>Contact Messages</h1><p>{contactMessages.length} message{contactMessages.length !== 1 ? "s" : ""} from users</p></div></div>
-            <div className="filter-bar">
+            <div className="page-header"><div><h1>Contact Messages</h1><p>{contactMessages.length} message{contactMessages.length !== 1 ? "s" : ""}</p></div></div>
+            <div className="filter-bar" style={{ marginBottom: "1rem" }}>
               {["all", "pending", "in_progress", "resolved"].map((f) => (
                 <button key={f} className={`filter-chip ${msgFilter === f ? "active" : ""}`} onClick={() => setMsgFilter(f)}>
-                  {f === "all" ? `All (${contactMessages.length})` : `${f === "in_progress" ? "In Progress" : f.charAt(0).toUpperCase() + f.slice(1)} (${contactMessages.filter((m) => m.status === f).length})`}
+                  {f === "all"         ? `All (${contactMessages.length})`
+                  : f === "in_progress" ? `In Progress (${contactMessages.filter((m) => m.status === "in_progress").length})`
+                  : f === "pending"     ? `Pending (${contactMessages.filter((m) => m.status === "pending").length})`
+                  :                       `Resolved (${contactMessages.filter((m) => m.status === "resolved").length})`}
                 </button>
               ))}
             </div>
-            {filteredMsgs.length === 0 ? (
-              <div className="no-messages">No {msgFilter !== "all" ? msgFilter.replace("_", " ") : ""} messages found.</div>
-            ) : (
+            {filteredMsgs.length === 0 ? <div className="no-messages">No messages found.</div> : (
               <div className="msg-list">
-                {filteredMsgs.map((contact) => {
-                  const created = parseDate(contact.created_at);
-                  return (
-                    <div key={contact.contact_id} className="msg-card">
-                      <div className="msg-head">
-                        <div>
-                          <div className="msg-name">{contact.name}</div>
-                          <div className="msg-email">{contact.email}</div>
-                          {contact.phone && <div className="msg-phone">{contact.phone}</div>}
-                        </div>
-                        <div className="msg-meta">
-                          <span className={`status-pill s-${contact.status}`}>{contact.status === "in_progress" ? "In Progress" : contact.status}</span>
-                          {created && <span className="msg-date">{created.toLocaleDateString()}</span>}
-                        </div>
+                {filteredMsgs.map((contact) => (
+                  <div key={contact.contact_id} className="msg-card">
+                    <div className="msg-head">
+                      <div>
+                        <div className="msg-name">{contact.name}</div>
+                        <div className="msg-email">{contact.email}</div>
+                        {contact.phone && <div className="msg-phone">{contact.phone}</div>}
                       </div>
-                      <div className="msg-body">
-                        <div className="msg-subject"><strong>Subject:</strong> {contact.subject}</div>
-                        <div className="msg-text">{contact.message}</div>
-                      </div>
-                      <div className="msg-actions">
-                        <button className="btn-inprogress" onClick={() => handleOpenReply(contact)}>Reply</button>
-                        {contact.status === "pending" && (
-                          <button className="btn-inprogress" onClick={() => handleContactStatus(contact.contact_id, "in_progress")}>Mark In Progress</button>
+                      <div className="msg-meta">
+                        <span className={`status-pill s-${contact.status}`}>
+                          {contact.status === "in_progress" ? "In Progress"
+                          : contact.status === "pending"     ? "Pending"
+                          :                                    "Resolved"}
+                        </span>
+                        {contact.created_at && <span className="msg-date">{fmtDate(contact.created_at || contact.createdAt)}</span>}
+                        {contact.replied_at && (
+                          <span className="msg-date" style={{ color: "var(--green)" }}>
+                            Replied {fmtDate(contact.replied_at)}
+                          </span>
                         )}
-                        {(contact.status === "pending" || contact.status === "in_progress") && (
-                          <button className="btn-resolve" onClick={() => handleContactStatus(contact.contact_id, "resolved")}>Mark Resolved</button>
-                        )}
-                        {contact.status === "resolved" && (
-                          <button className="btn-reopen" onClick={() => handleContactStatus(contact.contact_id, "pending")}>Reopen</button>
-                        )}
-                        <button className="btn-delete" onClick={() => handleDeleteContact(contact.contact_id)}>Delete</button>
                       </div>
                     </div>
-                  );
-                })}
+                    <div className="msg-body">
+                      <div className="msg-subject"><strong>Subject:</strong> {contact.subject}</div>
+                      <div className="msg-text">{contact.message}</div>
+                      {contact.admin_reply && (
+                        <div style={{ marginTop: 8, padding: "8px 12px", background: "var(--accent-bg)", border: "1px solid var(--accent-border)", borderRadius: 6, fontSize: "0.78rem" }}>
+                          <strong style={{ color: "var(--accent)" }}>Your reply:</strong>
+                          <p style={{ margin: "4px 0 0", color: "var(--text-2)", lineHeight: 1.5 }}>{contact.admin_reply}</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="msg-actions">
+                      {/* ── Reply button (always visible) ── */}
+                      <button className="btn-inprogress" onClick={() => handleOpenReply(contact)}>
+                        {contact.admin_reply ? "Edit Reply" : "Reply"}
+                      </button>
+                      {/* ── Status buttons ── */}
+                      {contact.status === "pending" && (
+                        <button className="btn-inprogress" onClick={() => handleContactStatus(contact.contact_id, "in_progress")}>
+                          Mark In Progress
+                        </button>
+                      )}
+                      {(contact.status === "pending" || contact.status === "in_progress") && (
+                        <button className="btn-resolve" onClick={() => handleContactStatus(contact.contact_id, "resolved")}>
+                          Mark Resolved
+                        </button>
+                      )}
+                      {contact.status === "resolved" && (
+                        <button className="btn-reopen" onClick={() => handleContactStatus(contact.contact_id, "pending")}>
+                          Reopen
+                        </button>
+                      )}
+                      <button className="btn-delete" onClick={() => setConfirmModal({ isOpen: true, type: "deleteContact", id: contact.contact_id })}>
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            )}
-          </div>
-        )}
-
-        {/* ══ ALL ORDERS (C4 NEW) ══ */}
-        {activeTab === "allOrders" && (
-          <div>
-            <div className="page-header">
-              <div><h1>All Orders</h1><p>{allOrders.length} total orders on the platform</p></div>
-              <button className="btn-refresh" onClick={fetchAllOrders}>{Icons.refresh} Refresh</button>
-            </div>
-
-            <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1rem", flexWrap: "wrap", alignItems: "center" }}>
-              <SearchInput
-                value={orderSearch}
-                onChange={(v) => { setOrderSearch(v); setOrderPage(1); }}
-                placeholder="Search by order #, customer name or email…"
-                theme="admin"
-                style={{ flex: 1, minWidth: 260, maxWidth: 400 }}
-              />
-              <select
-                value={orderSort}
-                onChange={(e) => { setOrderSort(e.target.value); setOrderPage(1); }}
-                style={{ padding: "0.4rem 0.75rem", border: "1.5px solid var(--border, #ddd5c4)", borderRadius: 8, fontSize: "0.8rem", color: "var(--text-2)", background: "var(--bg-card, #fff)", fontFamily: "inherit", cursor: "pointer" }}
-              >
-                <option value="newest">Newest first</option>
-                <option value="oldest">Oldest first</option>
-                <option value="highest">Highest amount</option>
-                <option value="lowest">Lowest amount</option>
-              </select>
-            </div>
-
-            <FilterBar
-              theme="admin"
-              active={orderFilter}
-              onChange={(f) => { setOrderFilter(f); setOrderPage(1); }}
-              filters={[
-                { key: "all",        label: "All",        count: allOrders.length },
-                { key: "pending",    label: "Pending",    count: allOrders.filter((o) => o.order_status === "pending").length },
-                { key: "processing", label: "Processing", count: allOrders.filter((o) => o.order_status === "processing").length },
-                { key: "shipped",    label: "Shipped",    count: allOrders.filter((o) => o.order_status === "shipped").length },
-                { key: "delivered",  label: "Delivered",  count: allOrders.filter((o) => o.order_status === "delivered").length },
-                { key: "cancelled",  label: "Cancelled",  count: allOrders.filter((o) => o.order_status === "cancelled").length },
-              ]}
-            />
-
-            {ordersLoading ? (
-              <div className="chart-loading"><div className="spinner" /></div>
-            ) : pagedOrders.length === 0 ? (
-              <div className="empty-state"><p>No orders found</p></div>
-            ) : (
-              <>
-                <div className="table-wrap">
-                  <table className="admin-table">
-                    <thead>
-                      <tr><th>Order #</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th>Date</th></tr>
-                    </thead>
-                    <tbody>
-                      {pagedOrders.map((order) => (
-                        <tr key={order.order_id}>
-                          <td style={{ fontWeight: 700, color: "var(--accent, #b86e38)", fontSize: "0.8rem" }}>#{order.order_number}</td>
-                          <td>
-                            <div style={{ fontWeight: 600, fontSize: "0.82rem" }}>{order.user?.full_name || "—"}</div>
-                            <div style={{ fontSize: "0.72rem", color: "var(--text-3)" }}>{order.user?.email || ""}</div>
-                          </td>
-                          <td style={{ fontSize: "0.78rem", color: "var(--text-2)" }}>{order.items?.length || 0} item{order.items?.length !== 1 ? "s" : ""}</td>
-                          <td style={{ fontWeight: 700, fontSize: "0.82rem" }}>Rs. {parseFloat(order.total || 0).toLocaleString()}</td>
-                          <td>
-                            <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: "0.72rem", fontWeight: 600, background: order.payment_status === "paid" ? "#d1fae5" : "#fef3c7", color: order.payment_status === "paid" ? "#065f46" : "#92400e" }}>
-                              {order.payment_status === "paid" ? "Paid" : "Unpaid"}
-                            </span>
-                          </td>
-                          <td>
-                            <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: "0.72rem", fontWeight: 600, background: order.order_status === "delivered" ? "#d1fae5" : order.order_status === "cancelled" ? "#fee2e2" : order.order_status === "shipped" ? "#ede9fe" : "#fef3c7", color: order.order_status === "delivered" ? "#065f46" : order.order_status === "cancelled" ? "#991b1b" : order.order_status === "shipped" ? "#5b21b6" : "#92400e" }}>
-                              {order.order_status ? order.order_status.charAt(0).toUpperCase() + order.order_status.slice(1) : "—"}
-                            </span>
-                          </td>
-                          <td style={{ color: "var(--text-3)", fontSize: "0.72rem" }}>{fmtDate(order.created_at)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <Pagination currentPage={orderPage} totalPages={totalOrderPages} onPageChange={setOrderPage} theme="admin" />
-              </>
-            )}
-          </div>
-        )}
-
-        {/* ══ ALL USERS (C4 NEW) ══ */}
-        {activeTab === "allUsers" && (
-          <div>
-            <div className="page-header">
-              <div><h1>All Users</h1><p>{allUsers.length} registered users</p></div>
-              <button className="btn-refresh" onClick={fetchAllUsers}>{Icons.refresh} Refresh</button>
-            </div>
-
-            <div style={{ marginBottom: "0.75rem" }}>
-              <SearchInput
-                value={userSearch}
-                onChange={(v) => { setUserSearch(v); setUserPage(1); }}
-                placeholder="Search by name, email or phone…"
-                theme="admin"
-                style={{ maxWidth: 400 }}
-              />
-            </div>
-
-            <FilterBar
-              theme="admin"
-              active={userFilter}
-              onChange={(f) => { setUserFilter(f); setUserPage(1); }}
-              filters={[
-                { key: "all",     label: "All",     count: allUsers.length },
-                { key: "buyers",  label: "Buyers",  count: allUsers.filter((u) => u.role === "buyer").length },
-                { key: "sellers", label: "Sellers", count: allUsers.filter((u) => u.role === "seller").length },
-                { key: "active",  label: "Active",  count: allUsers.filter((u) => u.is_active).length },
-                { key: "blocked", label: "Blocked", count: allUsers.filter((u) => !u.is_active).length },
-              ]}
-            />
-
-            {usersLoading ? (
-              <div className="chart-loading"><div className="spinner" /></div>
-            ) : pagedUsers.length === 0 ? (
-              <div className="empty-state"><p>No users found</p></div>
-            ) : (
-              <>
-                <div className="table-wrap">
-                  <table className="admin-table">
-                    <thead>
-                      <tr><th>User</th><th>Email</th><th>Phone</th><th>Role</th><th>Status</th><th>Joined</th><th>Action</th></tr>
-                    </thead>
-                    <tbody>
-                      {pagedUsers.map((user) => (
-                        <tr key={user.user_id}>
-                          <td>
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--accent-light, #f5ede4)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: "0.75rem", color: "var(--accent, #b86e38)", flexShrink: 0 }}>
-                                {initials(user.full_name)}
-                              </div>
-                              <span style={{ fontWeight: 600, fontSize: "0.82rem" }}>{user.full_name || "—"}</span>
-                            </div>
-                          </td>
-                          <td style={{ fontSize: "0.78rem", color: "var(--text-2)" }}>{user.email}</td>
-                          <td style={{ fontSize: "0.78rem", color: "var(--text-3)" }}>{user.phone || "—"}</td>
-                          <td>
-                            <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: "0.72rem", fontWeight: 600, background: user.role === "admin" ? "#ede9fe" : user.role === "seller" ? "#fef3c7" : "#d1fae5", color: user.role === "admin" ? "#5b21b6" : user.role === "seller" ? "#92400e" : "#065f46" }}>
-                              {user.role}
-                            </span>
-                          </td>
-                          <td>
-                            <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: "0.72rem", fontWeight: 600, background: user.is_active ? "#d1fae5" : "#fee2e2", color: user.is_active ? "#065f46" : "#991b1b" }}>
-                              {user.is_active ? "Active" : "Blocked"}
-                            </span>
-                          </td>
-                          <td style={{ color: "var(--text-3)", fontSize: "0.72rem" }}>{fmtDate(user.created_at || user.createdAt)}</td>
-                          <td>
-                            {user.role !== "admin" && (
-                              <button
-                                className={user.is_active ? "btn-reject" : "btn-approve"}
-                                onClick={() => handleToggleBlock(user.user_id)}
-                                style={{ fontSize: "0.75rem", padding: "4px 10px" }}
-                              >
-                                {user.is_active ? "Block" : "Unblock"}
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <Pagination currentPage={userPage} totalPages={totalUserPages} onPageChange={setUserPage} theme="admin" />
-              </>
-            )}
-          </div>
-        )}
-
-        {/* ══ ALL SELLERS (C4 NEW) ══ */}
-        {activeTab === "allSellers" && (
-          <div>
-            <div className="page-header">
-              <div><h1>All Sellers</h1><p>{allSellers.length} registered seller profiles</p></div>
-              <button className="btn-refresh" onClick={fetchAllSellers}>{Icons.refresh} Refresh</button>
-            </div>
-
-            <div style={{ marginBottom: "0.75rem" }}>
-              <SearchInput
-                value={sellerSearch}
-                onChange={(v) => { setSellerSearch(v); setSellerPage(1); }}
-                placeholder="Search by shop name, owner name, email or city…"
-                theme="admin"
-                style={{ maxWidth: 420 }}
-              />
-            </div>
-
-            <FilterBar
-              theme="admin"
-              active={sellerFilter}
-              onChange={(f) => { setSellerFilter(f); setSellerPage(1); }}
-              filters={[
-                { key: "all",      label: "All",      count: allSellers.length },
-                { key: "approved", label: "Approved", count: allSellers.filter((s) => s.approval_status === "approved").length },
-                { key: "pending",  label: "Pending",  count: allSellers.filter((s) => s.approval_status === "pending").length },
-                { key: "rejected", label: "Rejected", count: allSellers.filter((s) => s.approval_status === "rejected").length },
-              ]}
-            />
-
-            {sellersLoading ? (
-              <div className="chart-loading"><div className="spinner" /></div>
-            ) : pagedSellers.length === 0 ? (
-              <div className="empty-state"><p>No sellers found</p></div>
-            ) : (
-              <>
-                <div className="table-wrap">
-                  <table className="admin-table">
-                    <thead>
-                      <tr><th>Shop</th><th>Owner</th><th>Email</th><th>City</th><th>Bank</th><th>Status</th><th>Joined</th></tr>
-                    </thead>
-                    <tbody>
-                      {pagedSellers.map((seller) => (
-                        <tr key={seller.seller_id}>
-                          <td>
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                              {seller.shop_logo ? (
-                                <img src={`${API_URL}${seller.shop_logo}`} alt={seller.shop_name} style={{ width: 32, height: 32, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                              ) : (
-                                <div style={{ width: 32, height: 32, borderRadius: 6, background: "var(--accent-light, #f5ede4)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: "0.75rem", color: "var(--accent, #b86e38)", flexShrink: 0 }}>
-                                  {(seller.shop_name || "?")[0].toUpperCase()}
-                                </div>
-                              )}
-                              <span style={{ fontWeight: 600, fontSize: "0.82rem" }}>{seller.shop_name || "—"}</span>
-                            </div>
-                          </td>
-                          <td style={{ fontSize: "0.82rem" }}>{seller.user?.full_name || "—"}</td>
-                          <td style={{ fontSize: "0.78rem", color: "var(--text-3)" }}>{seller.user?.email || "—"}</td>
-                          <td style={{ fontSize: "0.78rem", color: "var(--text-2)" }}>{seller.city || "—"}</td>
-                          <td style={{ fontSize: "0.78rem", color: "var(--text-3)" }}>{seller.bank_name || "—"}</td>
-                          <td>
-                            <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: "0.72rem", fontWeight: 600, background: seller.approval_status === "approved" ? "#d1fae5" : seller.approval_status === "rejected" ? "#fee2e2" : "#fef3c7", color: seller.approval_status === "approved" ? "#065f46" : seller.approval_status === "rejected" ? "#991b1b" : "#92400e" }}>
-                              {seller.approval_status}
-                            </span>
-                          </td>
-                          <td style={{ color: "var(--text-3)", fontSize: "0.72rem" }}>{fmtDate(seller.created_at)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <Pagination currentPage={sellerPage} totalPages={totalSellerPages} onPageChange={setSellerPage} theme="admin" />
-              </>
-            )}
-          </div>
-        )}
-
-        {/* ══ REVIEWS MODERATION (C4 NEW) ══ */}
-        {activeTab === "reviews" && (
-          <div>
-            <div className="page-header">
-              <div><h1>Reviews Moderation</h1><p>{allReviews.length} total reviews on the platform</p></div>
-              <button className="btn-refresh" onClick={fetchAllReviews}>{Icons.refresh} Refresh</button>
-            </div>
-
-            <div style={{ marginBottom: "0.75rem" }}>
-              <SearchInput
-                value={reviewSearch}
-                onChange={(v) => { setReviewSearch(v); setReviewPage(1); }}
-                placeholder="Search by review text, customer or product…"
-                theme="admin"
-                style={{ maxWidth: 420 }}
-              />
-            </div>
-
-            <FilterBar
-              theme="admin"
-              active={reviewFilter}
-              onChange={(f) => { setReviewFilter(f); setReviewPage(1); }}
-              filters={[
-                { key: "all", label: "All Stars", count: allReviews.length },
-                { key: "5",   label: "★★★★★",     count: allReviews.filter((r) => r.rating === 5).length },
-                { key: "4",   label: "★★★★",       count: allReviews.filter((r) => r.rating === 4).length },
-                { key: "3",   label: "★★★",         count: allReviews.filter((r) => r.rating === 3).length },
-                { key: "2",   label: "★★",           count: allReviews.filter((r) => r.rating === 2).length },
-                { key: "1",   label: "★",             count: allReviews.filter((r) => r.rating === 1).length },
-              ]}
-            />
-
-            {reviewsLoading ? (
-              <div className="chart-loading"><div className="spinner" /></div>
-            ) : pagedReviews.length === 0 ? (
-              <div className="empty-state"><p>No reviews found</p></div>
-            ) : (
-              <>
-                <div className="table-wrap">
-                  <table className="admin-table">
-                    <thead>
-                      <tr><th>Product</th><th>Customer</th><th>Rating</th><th>Review</th><th>Date</th><th>Action</th></tr>
-                    </thead>
-                    <tbody>
-                      {pagedReviews.map((review) => (
-                        <tr key={review.review_id}>
-                          <td>
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                              {review.product?.images?.[0] && (
-                                <img src={`${API_URL}${review.product.images[0]}`} alt={review.product.name} style={{ width: 32, height: 32, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                              )}
-                              <span style={{ fontWeight: 600, fontSize: "0.8rem" }}>{review.product?.name || "—"}</span>
-                            </div>
-                          </td>
-                          <td style={{ fontSize: "0.82rem" }}>{review.user?.full_name || "—"}</td>
-                          <td><StarRating rating={review.rating} /></td>
-                          <td style={{ fontSize: "0.78rem", color: "var(--text-2)", maxWidth: 280 }}>
-                            <div style={{ overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
-                              {review.comment || <span style={{ color: "var(--text-3)", fontStyle: "italic" }}>No comment</span>}
-                            </div>
-                          </td>
-                          <td style={{ color: "var(--text-3)", fontSize: "0.72rem" }}>{fmtDate(review.created_at)}</td>
-                          <td>
-                            <button className="btn-reject" onClick={() => handleDeleteReview(review.review_id)} style={{ fontSize: "0.75rem", padding: "4px 10px" }}>Delete</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <Pagination currentPage={reviewPage} totalPages={totalReviewPages} onPageChange={setReviewPage} theme="admin" />
-              </>
             )}
           </div>
         )}

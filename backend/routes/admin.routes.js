@@ -44,10 +44,10 @@ router.put("/products/:id/featured", productController.toggleFeatured);
 router.get("/users", getAllUsers);
 router.put("/users/:id/toggle-block", toggleBlockUser);
 
-// Order management (C2 NEW)
+// Order management 
 router.get("/orders", getAllOrders);
 
-// Reviews moderation (C2 NEW)
+// Reviews moderation 
 router.get("/reviews", getAllReviews);
 router.delete("/reviews/:id", deleteReview);
 

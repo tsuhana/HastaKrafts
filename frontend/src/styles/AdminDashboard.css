@@ -1405,3 +1405,63 @@
 @media (max-width: 768px) {
   .kpi-grid { grid-template-columns: 1fr; }
 }
+
+/* ═══════════════════════════════════════════
+   PASTE AT BOTTOM OF AdminDashboard.css
+   Adds styles for new tabs without breaking
+   any existing styles
+═══════════════════════════════════════════ */
+
+/* Blue CSS variable (used in user role badges) */
+:root {
+  --blue:        #1a509a;
+  --blue-bg:     #eef2fd;
+  --blue-border: #aac4e8;
+}
+
+/* ── Stock count cells in All Products table ── */
+.stock-good { color: var(--green); font-weight: 700; font-size: 0.78rem; }
+.stock-low  { color: var(--amber); font-weight: 700; font-size: 0.78rem; }
+.stock-out  { color: var(--red);   font-weight: 700; font-size: 0.78rem; }
+
+/* ── Featured tag ── */
+.featured-tag {
+  display: inline-block;
+  background: #fdf6e0;
+  color: #886010;
+  border: 1px solid #ddc870;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+/* ── admin_reply bubble in contact messages ── */
+.msg-reply-bubble {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+/* ── Table overflow tweak for very long columns ── */
+.admin-table td { max-width: 200px; }
+.admin-table .td-name { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Toolbar row (search + sort side by side) ── */
+.admin-toolbar {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: 0.75rem;
+}
+
+/* ── Responsive: stack filter rows on small screens ── */
+@media (max-width: 900px) {
+  .admin-toolbar { flex-direction: column; align-items: stretch; }
+}
