@@ -9,6 +9,7 @@ import { productAPI, orderAPI, sellerAPI } from "../api/axios";
 import { useToast } from "../context/ToastContext";
 import { useTranslation } from "react-i18next";
 import ConfirmModal from "../components/ConfirmModal";
+import { Pagination, FilterBar, SearchInput } from "../components/SharedComponents";
 import "../styles/SellerDashboard.css";
 import SellerMyBlogs from "../components/SellerMyBlogs";
 
@@ -26,13 +27,13 @@ const Icons = {
   trendUp:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
   trendDown: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>,
   blog: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-  <polyline points="14 2 14 8 20 8"/>
-  <line x1="16" y1="13" x2="8" y2="13"/>
-  <line x1="16" y1="17" x2="8" y2="17"/>
-  <polyline points="10 9 9 9 8 9"/>
-</svg>,
-  arrow:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
+    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="16" y1="13" x2="8" y2="13"/>
+    <line x1="16" y1="17" x2="8" y2="17"/>
+    <polyline points="10 9 9 9 8 9"/>
+  </svg>,
+  arrow: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
 };
 
 const STATUS_COLORS = { delivered: "#10B981", pending: "#F59E0B", processing: "#3B82F6", shipped: "#8B5CF6", cancelled: "#EF4444" };
@@ -72,33 +73,49 @@ const SellerDashboard = () => {
   const toast = useToast();
   const { t } = useTranslation();
 
-  const [activeTab, setActiveTab]       = useState("overview");
-  const [loading, setLoading]           = useState(true);
-  const [products, setProducts]         = useState([]);
-  const [orders, setOrders]             = useState([]);
-  const [stats, setStats]               = useState({ totalSales: 0, totalOrders: 0, activeProducts: 0, pendingProducts: 0 });
-  const [analytics, setAnalytics]       = useState({
+  const [activeTab, setActiveTab]           = useState("overview");
+  const [loading, setLoading]               = useState(true);
+  const [products, setProducts]             = useState([]);
+  const [orders, setOrders]                 = useState([]);
+  const [stats, setStats]                   = useState({ totalSales: 0, totalOrders: 0, activeProducts: 0, pendingProducts: 0 });
+  const [analytics, setAnalytics]           = useState({
     kpis: { totalRevenue: 0, thisMonthRevenue: 0, lastMonthRevenue: 0, momGrowth: 0, aov: 0, fulfillmentRate: 0, cancellationRate: 0, totalOrders: 0, deliveredOrders: 0 },
     revenueByMonth: [], revenueByWeek: [], topProducts: [],
     ordersByStatus: [], revenueByDow: [], stockHealth: [],
   });
   const [analyticsLoaded, setAnalyticsLoaded] = useState(false);
-  const [confirmModal, setConfirmModal] = useState({ isOpen: false, productId: null });
-  const [orderFilter, setOrderFilter]   = useState("all");
-  const [orderPage, setOrderPage]       = useState(1);
+  const [confirmModal, setConfirmModal]     = useState({ isOpen: false, productId: null });
+
+  // Orders tab state
+  const [orderSearch, setOrderSearch]       = useState("");
+  const [orderFilter, setOrderFilter]       = useState("all");
+  const [orderPage, setOrderPage]           = useState(1);
   const ORDERS_PER_PAGE = 10;
+
+  // Products tab state
+  const [productSearch, setProductSearch]   = useState("");
+  const [productFilter, setProductFilter]   = useState("all");
+  const [productPage, setProductPage]       = useState(1);
+  const PRODUCTS_PER_PAGE = 12;
 
   useEffect(() => { fetchAll(); }, []);
 
   const fetchAll = async () => {
     try {
       setLoading(true);
-      const [productRes, orderRes] = await Promise.all([productAPI.getSellerProducts(), orderAPI.getSellerOrders()]);
+      const [productRes, orderRes] = await Promise.all([
+        productAPI.getSellerProducts(),
+        orderAPI.getSellerOrders(),
+      ]);
 
       if (productRes.data.success) {
         const prods = productRes.data.data.products || [];
         setProducts(prods);
-        setStats((s) => ({ ...s, activeProducts: prods.filter((p) => p.status === "approved").length, pendingProducts: prods.filter((p) => p.status === "pending").length }));
+        setStats((s) => ({
+          ...s,
+          activeProducts:  prods.filter((p) => p.status === "approved").length,
+          pendingProducts: prods.filter((p) => p.status === "pending").length,
+        }));
       }
       if (orderRes.data.success) {
         const { orders: ords, stats: st } = orderRes.data.data;
@@ -116,6 +133,10 @@ const SellerDashboard = () => {
         ords.forEach((o) => { const st = o.order?.order_status || "pending"; statusMap[st] = (statusMap[st] || 0) + 1; });
         setAnalytics((a) => ({ ...a, ordersByStatus: Object.entries(statusMap).map(([status, count]) => ({ status, count })) }));
       }
+
+      // Reset pages on reload
+      setOrderPage(1);
+      setProductPage(1);
     } catch (err) {
       console.error("Dashboard fetch error:", err);
     } finally {
@@ -143,14 +164,48 @@ const SellerDashboard = () => {
     return has && pct > 0 ? Math.round(parseFloat(p.price) * (1 - pct / 100)) : null;
   };
 
-  const pendingCount     = orders.filter((o) => o.order?.order_status === "pending").length;
-  const filteredOrders   = orderFilter === "all" ? orders : orders.filter((o) => o.order?.order_status === orderFilter);
-  const totalOrderPages  = Math.ceil(filteredOrders.length / ORDERS_PER_PAGE);
-  const pagedOrders      = filteredOrders.slice((orderPage - 1) * ORDERS_PER_PAGE, orderPage * ORDERS_PER_PAGE);
-  const totalDonut       = analytics.ordersByStatus.reduce((s, d) => s + d.count, 0);
-  const bestDow          = analytics.revenueByDow?.length ? analytics.revenueByDow.reduce((a, b) => b.orders > a.orders ? b : a, analytics.revenueByDow[0]) : null;
+  // ── Derived values ──
+  const pendingCount = orders.filter((o) => o.order?.order_status === "pending").length;
 
-  if (loading) return <div className="seller-page-wrap"><div className="sd-loading"><div className="sd-spinner" /><p>{t("common.loading")}</p></div></div>;
+  // Orders tab — search + filter + pagination
+  const filteredOrders = orders.filter((item) => {
+    const matchFilter = orderFilter === "all" || item.order?.order_status === orderFilter;
+    const q = orderSearch.toLowerCase();
+    const matchSearch =
+      !q ||
+      (item.order?.order_number || "").toLowerCase().includes(q) ||
+      (item.product_name || "").toLowerCase().includes(q) ||
+      (item.order?.user?.full_name || "").toLowerCase().includes(q);
+    return matchFilter && matchSearch;
+  });
+  const totalOrderPages = Math.ceil(filteredOrders.length / ORDERS_PER_PAGE);
+  const pagedOrders     = filteredOrders.slice((orderPage - 1) * ORDERS_PER_PAGE, orderPage * ORDERS_PER_PAGE);
+
+  // Products tab — search + filter + pagination
+  const filteredProducts = products.filter((p) => {
+    const matchStatus = productFilter === "all" || p.status === productFilter;
+    const q = productSearch.toLowerCase();
+    const matchSearch =
+      !q ||
+      (p.name || "").toLowerCase().includes(q) ||
+      (p.category?.name || "").toLowerCase().includes(q);
+    return matchStatus && matchSearch;
+  });
+  const totalProductPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+  const pagedProducts     = filteredProducts.slice((productPage - 1) * PRODUCTS_PER_PAGE, productPage * PRODUCTS_PER_PAGE);
+
+  const totalDonut = analytics.ordersByStatus.reduce((s, d) => s + d.count, 0);
+  const bestDow    = analytics.revenueByDow?.length
+    ? analytics.revenueByDow.reduce((a, b) => b.orders > a.orders ? b : a, analytics.revenueByDow[0])
+    : null;
+
+  if (loading) {
+    return (
+      <div className="seller-page-wrap">
+        <div className="sd-loading"><div className="sd-spinner" /><p>{t("common.loading")}</p></div>
+      </div>
+    );
+  }
 
   return (
     <div className="seller-page-wrap">
@@ -175,7 +230,7 @@ const SellerDashboard = () => {
               { key: "products",  label: "My Products",     icon: Icons.products },
               { key: "blogs",     label: "My Blogs",        icon: Icons.blog },
               { key: "shop",      label: "Shop Management", icon: Icons.shop },
-              ].map((item) => (
+            ].map((item) => (
               <button key={item.key} className={`sd-nav-item ${activeTab === item.key ? "active" : ""}`} onClick={() => setActiveTab(item.key)}>
                 <span className="sd-nav-icon">{item.icon}</span>
                 <span className="sd-nav-label-text">{item.label}</span>
@@ -192,7 +247,10 @@ const SellerDashboard = () => {
           <div className="sd-sidebar-footer">
             <div className="sd-footer-user">
               <div className="sd-footer-avatar">S</div>
-              <div><div className="sd-footer-name">Artisan Dashboard</div><div className="sd-footer-role">Seller</div></div>
+              <div>
+                <div className="sd-footer-name">Artisan Dashboard</div>
+                <div className="sd-footer-role">Seller</div>
+              </div>
             </div>
           </div>
         </aside>
@@ -208,13 +266,12 @@ const SellerDashboard = () => {
               </div>
 
               <div className="sd-kpi-grid">
-                <KpiCard label="Total Sales"      value={`Rs. ${stats.totalSales.toLocaleString()}`}  trend={analyticsLoaded ? analytics.kpis?.momGrowth : null} color="sales"    onClick={() => setActiveTab("analytics")} />
-                <KpiCard label="Total Orders"     value={stats.totalOrders}   meta={`${pendingCount} this month`}              color="orders"   onClick={() => setActiveTab("orders")} />
-                <KpiCard label="Active Products"  value={stats.activeProducts} meta={`${stats.pendingProducts} pending review`} color="products" onClick={() => setActiveTab("products")} />
-                <KpiCard label="Order Items"      value={orders.length}       meta="View order analytics"                      color="items"    onClick={() => setActiveTab("analytics")} />
+                <KpiCard label="Total Sales"     value={`Rs. ${stats.totalSales.toLocaleString()}`}  trend={analyticsLoaded ? analytics.kpis?.momGrowth : null} color="sales"    onClick={() => setActiveTab("analytics")} />
+                <KpiCard label="Total Orders"    value={stats.totalOrders}  meta={`${pendingCount} pending`}                color="orders"   onClick={() => setActiveTab("orders")} />
+                <KpiCard label="Active Products" value={stats.activeProducts} meta={`${stats.pendingProducts} pending review`} color="products" onClick={() => setActiveTab("products")} />
+                <KpiCard label="Order Items"     value={orders.length}      meta="View order analytics"                      color="items"    onClick={() => setActiveTab("analytics")} />
               </div>
 
-              {/* Revenue trend + donut */}
               {analytics.revenueByMonth.length > 0 && (
                 <div className="sd-two-col" style={{ marginBottom: "1.5rem" }}>
                   <div className="sd-chart-card sd-chart-wide">
@@ -268,13 +325,14 @@ const SellerDashboard = () => {
                 </div>
               )}
 
-              {/* Recent Orders */}
               <div className="sd-section">
                 <div className="sd-section-header">
                   <h2>{t("seller.recent_orders")}</h2>
                   <button className="sd-btn-outline" onClick={() => setActiveTab("orders")}>View All →</button>
                 </div>
-                {orders.length === 0 ? <div className="sd-empty"><p>{t("seller.no_orders")}</p></div> : (
+                {orders.length === 0 ? (
+                  <div className="sd-empty"><p>{t("seller.no_orders")}</p></div>
+                ) : (
                   <div className="sd-orders-list">
                     {orders.slice(0, 5).map((item) => (
                       <div key={item.order_item_id} className="sd-order-row">
@@ -291,7 +349,6 @@ const SellerDashboard = () => {
                 )}
               </div>
 
-              {/* Analytics CTA */}
               <button className="sd-analytics-cta" onClick={() => setActiveTab("analytics")}>
                 <div><div className="sd-cta-title">Deep Dive into Analytics</div><div className="sd-cta-sub">Revenue breakdowns, product performance & more</div></div>
                 <span className="sd-cta-arrow">{Icons.arrow}</span>
@@ -307,22 +364,22 @@ const SellerDashboard = () => {
               </div>
 
               <div className="sd-kpi-grid">
-                <KpiCard label="Total Revenue"   value={`Rs. ${(analytics.kpis?.totalRevenue || stats.totalSales).toLocaleString()}`}  trend={analytics.kpis?.momGrowth} color="sales" />
-                <KpiCard label="This Month"      value={`Rs. ${(analytics.kpis?.thisMonthRevenue || 0).toLocaleString()}`}               meta={`Last month: Rs. ${(analytics.kpis?.lastMonthRevenue || 0).toLocaleString()}`} color="orders" />
-                <KpiCard label="Avg. Order Value" value={`Rs. ${(analytics.kpis?.aov || 0).toLocaleString()}`}                          meta="Per order item" color="products" />
-                <KpiCard label="Total Orders"    value={analytics.kpis?.totalOrders || stats.totalOrders}                               meta={`${analytics.kpis?.deliveredOrders || 0} delivered`} color="items" />
+                <KpiCard label="Total Revenue"    value={`Rs. ${(analytics.kpis?.totalRevenue || stats.totalSales).toLocaleString()}`} trend={analytics.kpis?.momGrowth} color="sales" />
+                <KpiCard label="This Month"       value={`Rs. ${(analytics.kpis?.thisMonthRevenue || 0).toLocaleString()}`} meta={`Last month: Rs. ${(analytics.kpis?.lastMonthRevenue || 0).toLocaleString()}`} color="orders" />
+                <KpiCard label="Avg. Order Value" value={`Rs. ${(analytics.kpis?.aov || 0).toLocaleString()}`} meta="Per order item" color="products" />
+                <KpiCard label="Total Orders"     value={analytics.kpis?.totalOrders || stats.totalOrders} meta={`${analytics.kpis?.deliveredOrders || 0} delivered`} color="items" />
               </div>
 
-              {/* Section header */}
               <div className="sd-ana-section-head">
                 <span className="sd-ana-section-icon">📈</span>
                 <div><div className="sd-ana-section-title">Revenue Analytics</div><div className="sd-ana-section-sub">Track your earnings over time</div></div>
               </div>
 
-              {/* Revenue 12mo area chart */}
               <div className="sd-chart-card" style={{ marginBottom: "1.25rem" }}>
                 <div className="sd-chart-title">Revenue Over Time (12 Months)</div>
-                {analytics.revenueByMonth.length === 0 ? <div className="sd-empty-chart">No revenue data yet</div> : (
+                {analytics.revenueByMonth.length === 0 ? (
+                  <div className="sd-empty-chart">No revenue data yet</div>
+                ) : (
                   <ResponsiveContainer width="100%" height={260}>
                     <AreaChart data={analytics.revenueByMonth} margin={{ top: 8, right: 16, left: -10, bottom: 0 }}>
                       <defs>
@@ -337,17 +394,18 @@ const SellerDashboard = () => {
                       <Tooltip content={<ChartTip prefix="Rs. " />} />
                       <Legend wrapperStyle={{ fontSize: "0.75rem" }} />
                       <Area type="monotone" dataKey="revenue" name="Revenue (Rs.)" stroke="#b86e38" strokeWidth={2.5} fill="url(#revGrad12)" dot={false} activeDot={{ r: 5 }} />
-                      <Line type="monotone" dataKey="orders"  name="Orders"        stroke="#2a9e6a" strokeWidth={2}   dot={false} activeDot={{ r: 4 }} />
+                      <Line type="monotone" dataKey="orders" name="Orders" stroke="#2a9e6a" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
                     </AreaChart>
                   </ResponsiveContainer>
                 )}
               </div>
 
-              {/* Weekly + Top products */}
               <div className="sd-chart-row-2" style={{ marginBottom: "1.25rem" }}>
                 <div className="sd-chart-card">
                   <div className="sd-chart-title">This Month (Weekly)</div>
-                  {!analytics.revenueByWeek || analytics.revenueByWeek.every((w) => w.revenue === 0) ? <div className="sd-empty-chart">No data this month yet</div> : (
+                  {!analytics.revenueByWeek || analytics.revenueByWeek.every((w) => w.revenue === 0) ? (
+                    <div className="sd-empty-chart">No data this month yet</div>
+                  ) : (
                     <ResponsiveContainer width="100%" height={200}>
                       <BarChart data={analytics.revenueByWeek} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#F0EBE5" vertical={false} />
@@ -361,7 +419,9 @@ const SellerDashboard = () => {
                 </div>
                 <div className="sd-chart-card">
                   <div className="sd-chart-title">Top Products by Revenue</div>
-                  {analytics.topProducts.length === 0 ? <div className="sd-empty-chart">No product data yet</div> : (
+                  {analytics.topProducts.length === 0 ? (
+                    <div className="sd-empty-chart">No product data yet</div>
+                  ) : (
                     <ResponsiveContainer width="100%" height={200}>
                       <BarChart data={analytics.topProducts} layout="vertical" margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#F0EBE5" horizontal={false} />
@@ -375,7 +435,6 @@ const SellerDashboard = () => {
                 </div>
               </div>
 
-              {/* Order analytics section */}
               <div className="sd-ana-section-head">
                 <span className="sd-ana-section-icon">📦</span>
                 <div><div className="sd-ana-section-title">Order Analytics</div><div className="sd-ana-section-sub">Order patterns and fulfillment performance</div></div>
@@ -384,7 +443,9 @@ const SellerDashboard = () => {
               <div className="sd-chart-row-2" style={{ marginBottom: "1.25rem" }}>
                 <div className="sd-chart-card">
                   <div className="sd-chart-title">Orders by Status</div>
-                  {analytics.ordersByStatus.length === 0 ? <div className="sd-empty-chart">No order data yet</div> : (
+                  {analytics.ordersByStatus.length === 0 ? (
+                    <div className="sd-empty-chart">No order data yet</div>
+                  ) : (
                     <>
                       <ResponsiveContainer width="100%" height={180}>
                         <PieChart>
@@ -413,7 +474,9 @@ const SellerDashboard = () => {
                     <div className="sd-chart-title">Orders by Day of Week</div>
                     {bestDow && bestDow.orders > 0 && <div className="sd-peak-badge">Peak: {bestDow.day}</div>}
                   </div>
-                  {!analytics.revenueByDow || analytics.revenueByDow.every((d) => d.orders === 0) ? <div className="sd-empty-chart">No data for last 30 days</div> : (
+                  {!analytics.revenueByDow || analytics.revenueByDow.every((d) => d.orders === 0) ? (
+                    <div className="sd-empty-chart">No data for last 30 days</div>
+                  ) : (
                     <>
                       <ResponsiveContainer width="100%" height={190}>
                         <BarChart data={analytics.revenueByDow} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
@@ -432,14 +495,15 @@ const SellerDashboard = () => {
                 </div>
               </div>
 
-              {/* Stock health */}
               <div className="sd-ana-section-head">
                 <span className="sd-ana-section-icon">🏪</span>
                 <div><div className="sd-ana-section-title">Stock Health</div><div className="sd-ana-section-sub">Inventory levels across your catalog</div></div>
               </div>
 
               <div className="sd-chart-card" style={{ marginBottom: "1.5rem" }}>
-                {analytics.stockHealth.length === 0 ? <div className="sd-empty-chart">No approved products yet</div> : (
+                {analytics.stockHealth.length === 0 ? (
+                  <div className="sd-empty-chart">No approved products yet</div>
+                ) : (
                   <div className="sd-stock-grid">
                     {analytics.stockHealth.map((p) => {
                       const maxStock = Math.max(...analytics.stockHealth.map((x) => x.stock), 1);
@@ -481,46 +545,80 @@ const SellerDashboard = () => {
               <div className="sd-page-header">
                 <div><h1>All Orders</h1><p>{orders.length} total order items</p></div>
               </div>
-              <div className="sd-filter-bar">
-                {["all","pending","processing","shipped","delivered","cancelled"].map((f) => (
-                  <button key={f} className={`sd-filter-chip ${orderFilter === f ? "active" : ""}`} onClick={() => { setOrderFilter(f); setOrderPage(1); }}>
-                    {f === "all" ? `All (${orders.length})` : `${f.charAt(0).toUpperCase()+f.slice(1)} (${orders.filter((o) => o.order?.order_status === f).length})`}
-                  </button>
-                ))}
+
+              {/* Search */}
+              <div style={{ marginBottom: "0.75rem" }}>
+                <SearchInput
+                  value={orderSearch}
+                  onChange={(v) => { setOrderSearch(v); setOrderPage(1); }}
+                  placeholder="Search by order #, product or customer…"
+                  theme="seller"
+                  style={{ maxWidth: 380 }}
+                />
               </div>
+
+              {/* Filter bar */}
+              <FilterBar
+                theme="seller"
+                active={orderFilter}
+                onChange={(f) => { setOrderFilter(f); setOrderPage(1); }}
+                filters={[
+                  { key: "all",        label: "All",        count: orders.length },
+                  { key: "pending",    label: "Pending",    count: orders.filter((o) => o.order?.order_status === "pending").length },
+                  { key: "processing", label: "Processing", count: orders.filter((o) => o.order?.order_status === "processing").length },
+                  { key: "shipped",    label: "Shipped",    count: orders.filter((o) => o.order?.order_status === "shipped").length },
+                  { key: "delivered",  label: "Delivered",  count: orders.filter((o) => o.order?.order_status === "delivered").length },
+                  { key: "cancelled",  label: "Cancelled",  count: orders.filter((o) => o.order?.order_status === "cancelled").length },
+                ]}
+              />
+
               <div className="sd-section">
-                {pagedOrders.length === 0 ? <div className="sd-empty"><p>No orders found</p></div> : (
-                  <>
-                    <div className="sd-orders-list">
-                      {pagedOrders.map((item) => (
-                        <div key={item.order_item_id} className="sd-order-row sd-order-row-full">
-                          <div className="sd-order-img">
-                            {item.product?.images?.[0] ? <img src={`${API_URL}${item.product.images[0]}`} alt={item.product_name} /> : <div className="sd-order-no-img">📦</div>}
-                          </div>
-                          <div className="sd-order-info sd-order-info-full">
-                            <div className="sd-order-num">#{item.order?.order_number}</div>
-                            <div className="sd-order-product">{item.product_name}</div>
-                            <div className="sd-order-meta">Customer: <strong>{item.order?.user?.full_name}</strong> · Qty: {item.quantity} · Rs. {parseFloat(item.subtotal).toLocaleString()}</div>
-                            <div className="sd-order-date">{new Date(item.order?.createdAt || item.created_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</div>
-                          </div>
-                          <div className="sd-order-actions">
-                            <span className={`sd-payment-badge ${item.order?.payment_status === "paid" ? "paid" : "unpaid"}`}>{item.order?.payment_status === "paid" ? "Paid" : "Unpaid"}</span>
-                            <select value={item.order?.order_status} onChange={(e) => handleStatusChange(item.order?.order_id, e.target.value)} className={`sd-status-select status-${item.order?.order_status}`}>
-                              {["pending","processing","shipped","delivered","cancelled"].map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
-                            </select>
-                          </div>
+                {filteredOrders.length === 0 && orders.length > 0 ? (
+                  <div className="sd-empty"><p>No orders match your search or filter.</p></div>
+                ) : pagedOrders.length === 0 ? (
+                  <div className="sd-empty"><p>No orders found</p></div>
+                ) : (
+                  <div className="sd-orders-list">
+                    {pagedOrders.map((item) => (
+                      <div key={item.order_item_id} className="sd-order-row sd-order-row-full">
+                        <div className="sd-order-img">
+                          {item.product?.images?.[0] ? (
+                            <img src={`${API_URL}${item.product.images[0]}`} alt={item.product_name} />
+                          ) : (
+                            <div className="sd-order-no-img">📦</div>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                    {totalOrderPages > 1 && (
-                      <div className="sd-pagination">
-                        <button className="sd-page-btn" onClick={() => setOrderPage((p) => Math.max(1, p-1))} disabled={orderPage === 1}>←</button>
-                        {Array.from({ length: totalOrderPages }, (_, i) => i+1).map((p) => <button key={p} className={`sd-page-btn ${orderPage === p ? "active" : ""}`} onClick={() => setOrderPage(p)}>{p}</button>)}
-                        <button className="sd-page-btn" onClick={() => setOrderPage((p) => Math.min(totalOrderPages, p+1))} disabled={orderPage === totalOrderPages}>→</button>
+                        <div className="sd-order-info sd-order-info-full">
+                          <div className="sd-order-num">#{item.order?.order_number}</div>
+                          <div className="sd-order-product">{item.product_name}</div>
+                          <div className="sd-order-meta">Customer: <strong>{item.order?.user?.full_name}</strong> · Qty: {item.quantity} · Rs. {parseFloat(item.subtotal).toLocaleString()}</div>
+                          <div className="sd-order-date">{new Date(item.order?.createdAt || item.created_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</div>
+                        </div>
+                        <div className="sd-order-actions">
+                          <span className={`sd-payment-badge ${item.order?.payment_status === "paid" ? "paid" : "unpaid"}`}>
+                            {item.order?.payment_status === "paid" ? "Paid" : "Unpaid"}
+                          </span>
+                          <select
+                            value={item.order?.order_status}
+                            onChange={(e) => handleStatusChange(item.order?.order_id, e.target.value)}
+                            className={`sd-status-select status-${item.order?.order_status}`}
+                          >
+                            {["pending", "processing", "shipped", "delivered", "cancelled"].map((s) => (
+                              <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
-                    )}
-                  </>
+                    ))}
+                  </div>
                 )}
+
+                <Pagination
+                  currentPage={orderPage}
+                  totalPages={totalOrderPages}
+                  onPageChange={setOrderPage}
+                  theme="seller"
+                />
               </div>
             </div>
           )}
@@ -532,119 +630,225 @@ const SellerDashboard = () => {
                 <div><h1>{t("seller.your_products")}</h1><p>{products.length} products total · {stats.activeProducts} approved</p></div>
                 <Link to="/seller/add-product" className="sd-btn-primary">+ {t("seller.add_product")}</Link>
               </div>
+
+              {/* Filter + Search row */}
+              <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.25rem", flexWrap: "wrap", alignItems: "center" }}>
+                <FilterBar
+                  theme="seller"
+                  active={productFilter}
+                  onChange={(f) => { setProductFilter(f); setProductPage(1); }}
+                  filters={[
+                    { key: "all",      label: "All",      count: products.length },
+                    { key: "approved", label: "Approved", count: products.filter((p) => p.status === "approved").length },
+                    { key: "pending",  label: "Pending",  count: products.filter((p) => p.status === "pending").length },
+                    { key: "rejected", label: "Rejected", count: products.filter((p) => p.status === "rejected").length },
+                  ]}
+                />
+                <SearchInput
+                  value={productSearch}
+                  onChange={(v) => { setProductSearch(v); setProductPage(1); }}
+                  placeholder="Search products…"
+                  theme="seller"
+                  style={{ flex: 1, minWidth: 200, maxWidth: 300 }}
+                />
+              </div>
+
               {products.length === 0 ? (
-                <div className="sd-empty"><p>{t("seller.no_products")}</p><Link to="/seller/add-product" className="sd-btn-primary">{t("seller.add_product")}</Link></div>
-              ) : (
-                <div className="sd-products-grid sd-products-grid-full">
-                  {products.map((product) => {
-                    const dp = getDiscountedPrice(product);
-                    return (
-                      <div key={product.product_id} className="sd-product-card">
-                        <div className="sd-product-img">
-                          {product.images?.[0] ? <img src={`${API_URL}${product.images[0]}`} alt={product.name} /> : <div className="sd-no-img">No Image</div>}
-                          <span className={`sd-status-badge status-${product.status}`}>{product.status}</span>
-                          {dp && <span className="sd-discount-badge">-{product.discount_percentage}%</span>}
-                        </div>
-                        <div className="sd-product-info">
-                          <h4>{product.name}</h4>
-                          {dp ? <div><p className="sd-price-orig">Rs. {parseFloat(product.price).toLocaleString()}</p><p className="sd-price-disc">Rs. {dp.toLocaleString()}</p></div> : <p className="sd-price">Rs. {parseFloat(product.price).toLocaleString()}</p>}
-                          <p className="sd-stock">{product.stock_quantity} {t("seller.in_stock")}</p>
-                        </div>
-                        <div className="sd-product-actions">
-                          <Link to={`/seller/edit-product/${product.product_id}`} className="sd-btn-icon">{t("seller.edit")}</Link>
-                          <button onClick={() => setConfirmModal({ isOpen: true, productId: product.product_id })} className="sd-btn-icon">{t("seller.delete")}</button>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="sd-empty">
+                  <p>{t("seller.no_products")}</p>
+                  <Link to="/seller/add-product" className="sd-btn-primary">{t("seller.add_product")}</Link>
                 </div>
+              ) : (
+                <>
+                  {filteredProducts.length === 0 && products.length > 0 && (
+                    <div className="sd-empty"><p>No products match your search or filter.</p></div>
+                  )}
+
+                  <div className="sd-products-grid sd-products-grid-full">
+                    {pagedProducts.map((product) => {
+                      const dp = getDiscountedPrice(product);
+                      return (
+                        <div key={product.product_id} className="sd-product-card">
+                          <div className="sd-product-img">
+                            {product.images?.[0] ? (
+                              <img src={`${API_URL}${product.images[0]}`} alt={product.name} />
+                            ) : (
+                              <div className="sd-no-img">No Image</div>
+                            )}
+                            <span className={`sd-status-badge status-${product.status}`}>{product.status}</span>
+                            {dp && <span className="sd-discount-badge">-{product.discount_percentage}%</span>}
+                          </div>
+                          <div className="sd-product-info">
+                            <h4>{product.name}</h4>
+                            {dp ? (
+                              <div>
+                                <p className="sd-price-orig">Rs. {parseFloat(product.price).toLocaleString()}</p>
+                                <p className="sd-price-disc">Rs. {dp.toLocaleString()}</p>
+                              </div>
+                            ) : (
+                              <p className="sd-price">Rs. {parseFloat(product.price).toLocaleString()}</p>
+                            )}
+                            <p className="sd-stock">{product.stock_quantity} {t("seller.in_stock")}</p>
+                          </div>
+                          <div className="sd-product-actions">
+                            <Link to={`/seller/edit-product/${product.product_id}`} className="sd-btn-icon">{t("seller.edit")}</Link>
+                            <button onClick={() => setConfirmModal({ isOpen: true, productId: product.product_id })} className="sd-btn-icon">{t("seller.delete")}</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <Pagination
+                    currentPage={productPage}
+                    totalPages={totalProductPages}
+                    onPageChange={setProductPage}
+                    theme="seller"
+                  />
+                </>
               )}
             </div>
           )}
 
-          {activeTab === "shop" && <ShopManagement toast={toast} t={t} />}
+          {activeTab === "shop"  && <ShopManagement toast={toast} t={t} />}
           {activeTab === "blogs" && <SellerMyBlogs toast={toast} t={t} />}
           <div className="sd-footer">© 2025 HastaKrafts Nepal. All rights reserved.</div>
         </main>
       </div>
 
-      <ConfirmModal isOpen={confirmModal.isOpen} title="Delete this product?" message="This action cannot be undone."
-        confirmText={t("common.delete")} cancelText={t("common.cancel")} confirmVariant="danger"
-        onConfirm={handleDeleteConfirm} onCancel={() => setConfirmModal({ isOpen: false, productId: null })} />
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title="Delete this product?"
+        message="This action cannot be undone."
+        confirmText={t("common.delete")}
+        cancelText={t("common.cancel")}
+        confirmVariant="danger"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setConfirmModal({ isOpen: false, productId: null })}
+      />
     </div>
   );
 };
 
 // ══════════════════════════════════════════
 const ShopManagement = ({ toast, t }) => {
-  const [seller, setSeller]                         = useState(null);
-  const [loading, setLoading]                       = useState(true);
-  const [saving, setSaving]                         = useState(false);
-  const [uploadingLogo, setUploadingLogo]           = useState(false);
+  const [seller, setSeller]                             = useState(null);
+  const [loading, setLoading]                           = useState(true);
+  const [saving, setSaving]                             = useState(false);
+  const [uploadingLogo, setUploadingLogo]               = useState(false);
   const [uploadingCitizenship, setUploadingCitizenship] = useState(false);
-  const [isEditing, setIsEditing]                   = useState(false);
-  const [form, setForm] = useState({ shop_name:"", shop_description:"", city:"", address:"", bank_name:"", bank_account_number:"", bank_account_name:"" });
+  const [isEditing, setIsEditing]                       = useState(false);
+  const [form, setForm] = useState({
+    shop_name: "", shop_description: "", city: "", address: "",
+    bank_name: "", bank_account_number: "", bank_account_name: "",
+  });
 
   useEffect(() => { fetchSeller(); }, []);
 
   const fetchSeller = async () => {
-    try { setLoading(true); const res = await sellerAPI.getProfile(); if (res.data.success) { const s = res.data.data; setSeller(s); setForm({ shop_name:s.shop_name||"", shop_description:s.shop_description||"", city:s.city||"", address:s.address||"", bank_name:s.bank_name||"", bank_account_number:s.bank_account_number||"", bank_account_name:s.bank_account_name||"" }); } }
-    catch { toast.error("Failed to load shop info"); } finally { setLoading(false); }
+    try {
+      setLoading(true);
+      const res = await sellerAPI.getProfile();
+      if (res.data.success) {
+        const s = res.data.data;
+        setSeller(s);
+        setForm({
+          shop_name: s.shop_name || "", shop_description: s.shop_description || "",
+          city: s.city || "", address: s.address || "",
+          bank_name: s.bank_name || "", bank_account_number: s.bank_account_number || "",
+          bank_account_name: s.bank_account_name || "",
+        });
+      }
+    } catch { toast.error("Failed to load shop info"); }
+    finally { setLoading(false); }
   };
-  const handleSave = async (e) => { e.preventDefault(); setSaving(true); try { const res = await sellerAPI.updateProfile(form); if (res.data.success) { toast.success("Shop profile updated!"); setIsEditing(false); fetchSeller(); } } catch (err) { toast.error(err.response?.data?.message||"Failed to update shop"); } finally { setSaving(false); } };
-  const handleLogoUpload = async (e) => { const file=e.target.files[0]; if(!file) return; setUploadingLogo(true); try { const fd=new FormData(); fd.append("shop_logo",file); const res=await sellerAPI.uploadLogo(fd); if(res.data.success){toast.success("Shop logo updated!"); fetchSeller();} } catch(err){toast.error(err.response?.data?.message||"Failed to upload logo");} finally{setUploadingLogo(false);} };
-  const handleCitizenshipUpload = async (e) => { const file=e.target.files[0]; if(!file) return; setUploadingCitizenship(true); try { const fd=new FormData(); fd.append("citizenship_image",file); const res=await sellerAPI.uploadCitizenship(fd); if(res.data.success){toast.success("Citizenship document updated!"); fetchSeller();} } catch(err){toast.error(err.response?.data?.message||"Failed to upload citizenship");} finally{setUploadingCitizenship(false);} };
+
+  const handleSave = async (e) => {
+    e.preventDefault(); setSaving(true);
+    try {
+      const res = await sellerAPI.updateProfile(form);
+      if (res.data.success) { toast.success("Shop profile updated!"); setIsEditing(false); fetchSeller(); }
+    } catch (err) { toast.error(err.response?.data?.message || "Failed to update shop"); }
+    finally { setSaving(false); }
+  };
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files[0]; if (!file) return; setUploadingLogo(true);
+    try { const fd = new FormData(); fd.append("shop_logo", file); const res = await sellerAPI.uploadLogo(fd); if (res.data.success) { toast.success("Shop logo updated!"); fetchSeller(); } }
+    catch (err) { toast.error(err.response?.data?.message || "Failed to upload logo"); }
+    finally { setUploadingLogo(false); }
+  };
+
+  const handleCitizenshipUpload = async (e) => {
+    const file = e.target.files[0]; if (!file) return; setUploadingCitizenship(true);
+    try { const fd = new FormData(); fd.append("citizenship_image", file); const res = await sellerAPI.uploadCitizenship(fd); if (res.data.success) { toast.success("Citizenship document updated!"); fetchSeller(); } }
+    catch (err) { toast.error(err.response?.data?.message || "Failed to upload citizenship"); }
+    finally { setUploadingCitizenship(false); }
+  };
 
   if (loading) return <div className="sd-loading"><div className="sd-spinner" /><p>Loading shop info…</p></div>;
+
   return (
     <div>
       <div className="sd-page-header">
         <div><h1>Shop Management</h1><p>Manage your shop profile and documents</p></div>
         {!isEditing && <button className="sd-btn-primary" onClick={() => setIsEditing(true)}>Edit Shop Info</button>}
       </div>
+
       <div className="sd-section sd-shop-logo-section">
         <h3>Shop Logo</h3>
         <div className="sd-logo-wrap">
-          <div className="sd-logo-preview">{seller?.shop_logo ? <img src={`http://localhost:5000${seller.shop_logo}`} alt="Shop logo" /> : <div className="sd-logo-placeholder">{seller?.shop_name?.[0]?.toUpperCase()||"S"}</div>}</div>
+          <div className="sd-logo-preview">
+            {seller?.shop_logo ? (
+              <img src={`http://localhost:5000${seller.shop_logo}`} alt="Shop logo" />
+            ) : (
+              <div className="sd-logo-placeholder">{seller?.shop_name?.[0]?.toUpperCase() || "S"}</div>
+            )}
+          </div>
           <div className="sd-logo-actions">
             <p className="sd-logo-hint">Upload a square image (recommended 400×400px, max 2MB)</p>
-            <label className="sd-upload-btn">{uploadingLogo?"Uploading…":"Upload Logo"}<input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploadingLogo} style={{display:"none"}} /></label>
+            <label className="sd-upload-btn">
+              {uploadingLogo ? "Uploading…" : "Upload Logo"}
+              <input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploadingLogo} style={{ display: "none" }} />
+            </label>
           </div>
         </div>
       </div>
+
       <div className="sd-section">
         <h3>Shop Information</h3>
         {!isEditing ? (
           <div className="sd-info-grid">
-            <div className="sd-info-item"><label>Shop Name</label><p>{seller?.shop_name||"—"}</p></div>
-            <div className="sd-info-item sd-info-full"><label>Description</label><p>{seller?.shop_description||"—"}</p></div>
-            <div className="sd-info-item"><label>City</label><p>{seller?.city||"—"}</p></div>
-            <div className="sd-info-item sd-info-full"><label>Address</label><p>{seller?.address||"—"}</p></div>
-            <div className="sd-info-item"><label>Bank Name</label><p>{seller?.bank_name||"—"}</p></div>
-            <div className="sd-info-item"><label>Account Number</label><p>{seller?.bank_account_number||"—"}</p></div>
-            <div className="sd-info-item"><label>Account Holder</label><p>{seller?.bank_account_name||"—"}</p></div>
+            <div className="sd-info-item"><label>Shop Name</label><p>{seller?.shop_name || "—"}</p></div>
+            <div className="sd-info-item sd-info-full"><label>Description</label><p>{seller?.shop_description || "—"}</p></div>
+            <div className="sd-info-item"><label>City</label><p>{seller?.city || "—"}</p></div>
+            <div className="sd-info-item sd-info-full"><label>Address</label><p>{seller?.address || "—"}</p></div>
+            <div className="sd-info-item"><label>Bank Name</label><p>{seller?.bank_name || "—"}</p></div>
+            <div className="sd-info-item"><label>Account Number</label><p>{seller?.bank_account_number || "—"}</p></div>
+            <div className="sd-info-item"><label>Account Holder</label><p>{seller?.bank_account_name || "—"}</p></div>
           </div>
         ) : (
           <form onSubmit={handleSave} className="sd-edit-form">
             <div className="sd-form-grid">
-              <div className="sd-form-field"><label>Shop Name *</label><input type="text" value={form.shop_name} onChange={(e)=>setForm({...form,shop_name:e.target.value})} required /></div>
-              <div className="sd-form-field sd-form-full"><label>Shop Description</label><textarea rows={3} value={form.shop_description} onChange={(e)=>setForm({...form,shop_description:e.target.value})} /></div>
-              <div className="sd-form-field"><label>City *</label><input type="text" value={form.city} onChange={(e)=>setForm({...form,city:e.target.value})} required /></div>
-              <div className="sd-form-field sd-form-full"><label>Address *</label><textarea rows={2} value={form.address} onChange={(e)=>setForm({...form,address:e.target.value})} required /></div>
+              <div className="sd-form-field"><label>Shop Name *</label><input type="text" value={form.shop_name} onChange={(e) => setForm({ ...form, shop_name: e.target.value })} required /></div>
+              <div className="sd-form-field sd-form-full"><label>Shop Description</label><textarea rows={3} value={form.shop_description} onChange={(e) => setForm({ ...form, shop_description: e.target.value })} /></div>
+              <div className="sd-form-field"><label>City *</label><input type="text" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} required /></div>
+              <div className="sd-form-field sd-form-full"><label>Address *</label><textarea rows={2} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} required /></div>
             </div>
             <h4 className="sd-form-section-title">Bank Information</h4>
             <div className="sd-form-grid">
-              <div className="sd-form-field"><label>Bank Name</label><input type="text" value={form.bank_name} onChange={(e)=>setForm({...form,bank_name:e.target.value})} placeholder="e.g. Nabil Bank" /></div>
-              <div className="sd-form-field"><label>Account Number</label><input type="text" value={form.bank_account_number} onChange={(e)=>setForm({...form,bank_account_number:e.target.value})} /></div>
-              <div className="sd-form-field"><label>Account Holder Name</label><input type="text" value={form.bank_account_name} onChange={(e)=>setForm({...form,bank_account_name:e.target.value})} /></div>
+              <div className="sd-form-field"><label>Bank Name</label><input type="text" value={form.bank_name} onChange={(e) => setForm({ ...form, bank_name: e.target.value })} placeholder="e.g. Nabil Bank" /></div>
+              <div className="sd-form-field"><label>Account Number</label><input type="text" value={form.bank_account_number} onChange={(e) => setForm({ ...form, bank_account_number: e.target.value })} /></div>
+              <div className="sd-form-field"><label>Account Holder Name</label><input type="text" value={form.bank_account_name} onChange={(e) => setForm({ ...form, bank_account_name: e.target.value })} /></div>
             </div>
             <div className="sd-form-actions">
-              <button type="button" className="sd-btn-outline" onClick={()=>setIsEditing(false)}>Cancel</button>
-              <button type="submit" className="sd-btn-primary" disabled={saving}>{saving?"Saving…":"Save Changes"}</button>
+              <button type="button" className="sd-btn-outline" onClick={() => setIsEditing(false)}>Cancel</button>
+              <button type="submit" className="sd-btn-primary" disabled={saving}>{saving ? "Saving…" : "Save Changes"}</button>
             </div>
           </form>
         )}
       </div>
+
       <div className="sd-section">
         <h3>Citizenship Document</h3>
         <p className="sd-section-hint">Upload a clear photo of your citizenship certificate for verification.</p>
@@ -652,19 +856,24 @@ const ShopManagement = ({ toast, t }) => {
           {seller?.citizenship_image ? (
             <div className="sd-citizenship-preview">
               <img src={`http://localhost:5000${seller.citizenship_image}`} alt="Citizenship" />
-              <div className="sd-citizenship-overlay"><label className="sd-upload-btn">{uploadingCitizenship?"Uploading…":"Update Document"}<input type="file" accept="image/*" onChange={handleCitizenshipUpload} disabled={uploadingCitizenship} style={{display:"none"}} /></label></div>
+              <div className="sd-citizenship-overlay">
+                <label className="sd-upload-btn">
+                  {uploadingCitizenship ? "Uploading…" : "Update Document"}
+                  <input type="file" accept="image/*" onChange={handleCitizenshipUpload} disabled={uploadingCitizenship} style={{ display: "none" }} />
+                </label>
+              </div>
             </div>
           ) : (
             <label className="sd-citizenship-upload-zone">
               <div className="sd-upload-icon">📄</div>
-              <p>{uploadingCitizenship?"Uploading…":"Click to upload citizenship photo"}</p>
+              <p>{uploadingCitizenship ? "Uploading…" : "Click to upload citizenship photo"}</p>
               <span>JPG, PNG up to 5MB</span>
-              <input type="file" accept="image/*" onChange={handleCitizenshipUpload} disabled={uploadingCitizenship} style={{display:"none"}} />
+              <input type="file" accept="image/*" onChange={handleCitizenshipUpload} disabled={uploadingCitizenship} style={{ display: "none" }} />
             </label>
           )}
         </div>
         <div className="sd-citizenship-info">
-          <p><strong>Citizenship Number:</strong> {seller?.citizenship_number||"—"}</p>
+          <p><strong>Citizenship Number:</strong> {seller?.citizenship_number || "—"}</p>
           <p><strong>Approval Status:</strong> <span className={`sd-approval-badge ${seller?.approval_status}`}>{seller?.approval_status}</span></p>
           {seller?.rejection_reason && <p><strong>Rejection Reason:</strong> {seller.rejection_reason}</p>}
         </div>

@@ -70,6 +70,7 @@ export const adminAPI = {
   approveProduct: (id) => API.post(`/admin/products/${id}/approve`),
   rejectProduct: (id, data) => API.post(`/admin/products/${id}/reject`, data),
   getAllUsers: () => API.get('/admin/users'),
+  toggleBlockUser: (id) => API.put(`/admin/users/${id}/toggle-block`),
   toggleFeatured: (product_id) => API.put(`/admin/products/${product_id}/featured`),
   getAllContactMessages: (params) => API.get('/contact', { params }),
   updateContactStatus: (id, data) => API.put(`/contact/${id}`, data),
@@ -79,6 +80,10 @@ export const adminAPI = {
   updateBanner: (id, formData) => API.put(`/banners/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   deleteBanner: (id) => API.delete(`/banners/${id}`),
   toggleBannerStatus: (id) => API.put(`/banners/${id}/toggle`),
+  // C3 NEW
+  getAllOrders: () => API.get('/admin/orders'),
+  getAllReviews: () => API.get('/admin/reviews'),
+  deleteReview: (id) => API.delete(`/admin/reviews/${id}`),
 };
 
 // USER
@@ -91,7 +96,7 @@ export const userAPI = {
   getCart: () => API.get('/cart'),
 };
 
-// SELLER ← NEW
+// SELLER
 export const sellerAPI = {
   getProfile: () => API.get('/sellers/profile'),
   updateProfile: (data) => API.put('/sellers/profile', data),
@@ -132,9 +137,7 @@ export const auctionAPI = {
 
 // MESSAGES
 export const messageAPI = {
-  //  text-only message (JSON)
   sendMessage: (data) => API.post('/messages/send', data),
-  //  message with optional image (multipart/form-data)
   sendMessageWithImage: (formData) =>
     API.post('/messages/send', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   getConversations: () => API.get('/messages/conversations'),
@@ -152,15 +155,14 @@ export const wishlistAPI = {
 };
 
 // REVIEWS
-// REVIEWS
 export const reviewAPI = {
   getProductReviews: (product_id) => API.get(`/reviews/product/${product_id}`),
   createReview: (formData) => API.post('/reviews', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   getMyReviews: () => API.get('/reviews/my-reviews'),
   updateReview: (review_id, data) => API.put(`/reviews/${review_id}`, data),
   deleteReview: (review_id) => API.delete(`/reviews/${review_id}`),
-  toggleHelpful: (review_id) => API.post(`/reviews/${review_id}/helpful`),  // ✅ ADD
-  createReply: (review_id, data) => API.post(`/reviews/${review_id}/reply`, data), // ✅ ADD
+  toggleHelpful: (review_id) => API.post(`/reviews/${review_id}/helpful`),
+  createReply: (review_id, data) => API.post(`/reviews/${review_id}/reply`, data),
 };
 
 // CONTACT

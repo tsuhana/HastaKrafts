@@ -11,6 +11,10 @@ const {
   rejectProduct,
   getAllUsers,
   getAllSellers,
+  getAllOrders,
+  getAllReviews,
+  deleteReview,
+  toggleBlockUser,
 } = require("../controllers/admin.controller");
 const productController = require("../controllers/product.controller");
 const { authenticate } = require("../middlewares/auth.middleware");
@@ -38,5 +42,13 @@ router.put("/products/:id/featured", productController.toggleFeatured);
 
 // User management
 router.get("/users", getAllUsers);
+router.put("/users/:id/toggle-block", toggleBlockUser);
+
+// Order management (C2 NEW)
+router.get("/orders", getAllOrders);
+
+// Reviews moderation (C2 NEW)
+router.get("/reviews", getAllReviews);
+router.delete("/reviews/:id", deleteReview);
 
 module.exports = router;

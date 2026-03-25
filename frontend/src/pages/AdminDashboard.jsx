@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -6,8 +6,11 @@ import {
 import { adminAPI, productAPI } from "../api/axios";
 import { useToast } from "../context/ToastContext";
 import ConfirmModal from "../components/ConfirmModal";
- import AdminReplyModal from "../components/AdminReplyModal";
+import AdminReplyModal from "../components/AdminReplyModal";
+import { Pagination, FilterBar, SearchInput } from "../components/SharedComponents";
 import "../styles/AdminDashboard.css";
+
+const API_URL = "http://localhost:5000";
 
 /* ── SVG icons ── */
 const Icons = {
@@ -18,18 +21,21 @@ const Icons = {
   image: (<svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>),
   mail: (<svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>),
   refresh: (<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>),
-  trending: (<svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>),
   users: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>),
   store: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>),
   pkg: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>),
   rupee: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="4" x2="18" y2="4"/><line x1="6" y1="9" x2="18" y2="9"/><path d="M6 14l6 6 6-6"/><path d="M6 9c0 3.314 2.686 5 6 5s6-1.686 6-5"/></svg>),
+  orders: (<svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>),
+  allUsers: (<svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>),
+  allSellers: (<svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>),
+  reviews: (<svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>),
 };
 
 /* ── Donut chart center label ── */
 const DonutLabel = ({ cx, cy, value, label }) => (
   <g>
     <text x={cx} y={cy - 8} textAnchor="middle" fill="var(--text-1)" fontSize="1.5rem" fontWeight="800" fontFamily="inherit">{value}</text>
-    <text x={cx} y={cy + 12} textAnchor="middle" fill="var(--text-3)" fontSize="0.62rem" fontWeight="600" fontFamily="inherit" textTransform="uppercase" letterSpacing="0.05em">{label}</text>
+    <text x={cx} y={cy + 12} textAnchor="middle" fill="var(--text-3)" fontSize="0.62rem" fontWeight="600" fontFamily="inherit" letterSpacing="0.05em">{label}</text>
   </g>
 );
 
@@ -94,6 +100,16 @@ const ProductImg = ({ src, alt }) => {
   return <div className="td-img-placeholder">No img</div>;
 };
 
+/* ── Star Rating ── */
+const StarRating = ({ rating }) => {
+  const r = Math.round(rating || 0);
+  return (
+    <span style={{ color: "#c08830", fontSize: "0.85rem", letterSpacing: 1 }}>
+      {"★".repeat(r)}{"☆".repeat(5 - r)}
+    </span>
+  );
+};
+
 /* ── Reject Modal ── */
 const RejectModal = ({ isOpen, title, onConfirm, onCancel }) => {
   const [reason, setReason] = useState("");
@@ -107,7 +123,11 @@ const RejectModal = ({ isOpen, title, onConfirm, onCancel }) => {
         </div>
         <h3 className="cm-title">{title || "Rejection Reason"}</h3>
         <p className="cm-message">Please provide a reason. This will be shared with the applicant.</p>
-        <textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Enter rejection reason..." rows={3}
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Enter rejection reason..."
+          rows={3}
           style={{ width: "100%", padding: "0.6rem 0.75rem", borderRadius: "10px", border: "1.5px solid #e5e7eb", fontSize: "0.875rem", resize: "vertical", marginBottom: "1.2rem", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
           onFocus={(e) => (e.target.style.borderColor = "#f59e0b")}
           onBlur={(e) => (e.target.style.borderColor = "#e5e7eb")}
@@ -115,8 +135,12 @@ const RejectModal = ({ isOpen, title, onConfirm, onCancel }) => {
         />
         <div className="cm-actions">
           <button className="cm-btn cm-cancel" onClick={onCancel}>Cancel</button>
-          <button className="cm-btn cm-confirm cm-warning" onClick={() => { if (reason.trim()) onConfirm(reason.trim()); }}
-            disabled={!reason.trim()} style={{ opacity: reason.trim() ? 1 : 0.5, cursor: reason.trim() ? "pointer" : "not-allowed" }}>
+          <button
+            className="cm-btn cm-confirm cm-warning"
+            onClick={() => { if (reason.trim()) onConfirm(reason.trim()); }}
+            disabled={!reason.trim()}
+            style={{ opacity: reason.trim() ? 1 : 0.5, cursor: reason.trim() ? "pointer" : "not-allowed" }}
+          >
             Reject
           </button>
         </div>
@@ -125,68 +149,76 @@ const RejectModal = ({ isOpen, title, onConfirm, onCancel }) => {
   );
 };
 
-
-
 /* ════════════════════ MAIN COMPONENT ════════════════════ */
 const AdminDashboard = () => {
   const toast = useToast();
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
-  const [msgFilter, setMsgFilter] = useState("all");
-  const [uploadingBanner, setUploadingBanner] = useState(false);
-  const [revenueView, setRevenueView] = useState("weekly"); // "weekly" | "monthly"
+  const [revenueView, setRevenueView] = useState("weekly");
   const [replyModal, setReplyModal] = useState({ isOpen: false, contact: null });
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+
+  // Core data
   const [stats, setStats] = useState({
     totalUsers: 0, totalSellersUsers: 0, totalBuyers: 0,
     totalSellerProfiles: 0, pendingSellers: 0, approvedSellers: 0,
     totalProducts: 0, pendingProducts: 0, approvedProducts: 0, rejectedProducts: 0,
   });
-
   const [analytics, setAnalytics] = useState({
-    dailySales: [],
-    monthlySales: [],
-    productDonut: [],
-    orderDonut: [],
-    topCategories: [],
-    topSellers: [],
-    summary: { totalRevenue: 0, thisMonthRevenue: 0, totalOrders: 0 },
+    dailySales: [], monthlySales: [], productDonut: [], orderDonut: [],
+    topCategories: [], topSellers: [], summary: { totalRevenue: 0, thisMonthRevenue: 0, totalOrders: 0 },
   });
-
   const [pendingSellers, setPendingSellers] = useState([]);
   const [pendingProducts, setPendingProducts] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
   const [banners, setBanners] = useState([]);
   const [contactMessages, setContactMessages] = useState([]);
 
+  // New tab data
+  const [allOrders, setAllOrders] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+  const [allSellers, setAllSellers] = useState([]);
+  const [allReviews, setAllReviews] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [sellersLoading, setSellersLoading] = useState(false);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+
+  // Orders tab state
+  const [orderSearch, setOrderSearch] = useState("");
+  const [orderFilter, setOrderFilter] = useState("all");
+  const [orderPage, setOrderPage] = useState(1);
+  const [orderSort, setOrderSort] = useState("newest");
+  const ORDERS_PER_PAGE = 12;
+
+  // Users tab state
+  const [userSearch, setUserSearch] = useState("");
+  const [userFilter, setUserFilter] = useState("all");
+  const [userPage, setUserPage] = useState(1);
+  const USERS_PER_PAGE = 15;
+
+  // Sellers tab state
+  const [sellerSearch, setSellerSearch] = useState("");
+  const [sellerFilter, setSellerFilter] = useState("all");
+  const [sellerPage, setSellerPage] = useState(1);
+  const SELLERS_PER_PAGE = 12;
+
+  // Reviews tab state
+  const [reviewSearch, setReviewSearch] = useState("");
+  const [reviewFilter, setReviewFilter] = useState("all");
+  const [reviewPage, setReviewPage] = useState(1);
+  const REVIEWS_PER_PAGE = 12;
+
+  // Contacts tab state
+  const [msgFilter, setMsgFilter] = useState("all");
+
+  // Modals
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: null, id: null });
   const [rejectModal, setRejectModal] = useState({ isOpen: false, type: null, id: null });
 
-  const API_URL = "http://localhost:5000";
-
-  // Chart colors — all harmonious with the existing warm palette
-  const CHART_COLORS = {
-    accent: "#b86e38",
-    green: "#2a9e6a",
-    amber: "#c08830",
-    blue: "#1a509a",
-    red: "#aa2c1c",
-    purple: "#6b4fa0",
-  };
-
-  const DONUT_COLORS_PRODUCT = ["#2a9e6a", "#c08830", "#aa2c1c"];
-  const DONUT_COLORS_ORDER   = ["#c08830", "#1a509a", "#2a9e6a", "#aa2c1c", "#b86e38"];
-
-  useEffect(() => {
-    fetchDashboardData();
-    fetchAnalytics();
-    fetchBanners();
-    fetchContactMessages();
-    // eslint-disable-next-line
-  }, []);
-
-  const safe = (v) => { if (v == null) return "—"; const s = String(v).trim(); return s || "—"; };
   const parseDate = (raw) => { if (!raw) return null; const d = new Date(raw); return isNaN(d.getTime()) ? null : d; };
+  const safe = (v) => { if (v == null) return "—"; const s = String(v).trim(); return s || "—"; };
   const timeAgo = (seller) => {
     const d = parseDate(seller?.created_at || seller?.createdAt);
     if (!d) return "—";
@@ -199,6 +231,28 @@ const AdminDashboard = () => {
     const a = parts[0][0] || ""; const b = parts.length > 1 ? parts[parts.length - 1][0] : parts[0][1] || "";
     return (a + b).toUpperCase() || "?";
   };
+  const fmtDate = (raw) => {
+    const d = parseDate(raw);
+    return d ? d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "—";
+  };
+
+  const DONUT_COLORS_PRODUCT = ["#2a9e6a", "#c08830", "#aa2c1c"];
+  const DONUT_COLORS_ORDER   = ["#c08830", "#1a509a", "#2a9e6a", "#aa2c1c", "#b86e38"];
+
+  useEffect(() => {
+    fetchDashboardData();
+    fetchAnalytics();
+    fetchBanners();
+    fetchContactMessages();
+  }, []);
+
+  // Lazy-load new tabs on first visit
+  useEffect(() => {
+    if (activeTab === "allOrders"  && allOrders.length  === 0 && !ordersLoading)  fetchAllOrders();
+    if (activeTab === "allUsers"   && allUsers.length   === 0 && !usersLoading)   fetchAllUsers();
+    if (activeTab === "allSellers" && allSellers.length === 0 && !sellersLoading) fetchAllSellers();
+    if (activeTab === "reviews"    && allReviews.length === 0 && !reviewsLoading) fetchAllReviews();
+  }, [activeTab]);
 
   const fetchDashboardData = async () => {
     try {
@@ -217,10 +271,10 @@ const AdminDashboard = () => {
           totalSellerProfiles: d?.sellers?.total    || 0,
           pendingSellers:      d?.sellers?.pending  || 0,
           approvedSellers:     d?.sellers?.approved || 0,
-          totalProducts:       d?.products?.total    || 0,
-          pendingProducts:     d?.products?.pending  || 0,
-          approvedProducts:    d?.products?.approved || 0,
-          rejectedProducts:    d?.products?.rejected || 0,
+          totalProducts:       d?.products?.total   || 0,
+          pendingProducts:     d?.products?.pending || 0,
+          approvedProducts:    d?.products?.approved|| 0,
+          rejectedProducts:    d?.products?.rejected|| 0,
         });
       }
       if (sellersRes?.data?.success) setPendingSellers(sellersRes.data.data || []);
@@ -252,7 +306,38 @@ const AdminDashboard = () => {
     catch (err) { console.error("Fetch contact messages error:", err); }
   };
 
-  const handleRefresh = () => { fetchDashboardData(); fetchAnalytics(); };
+  const fetchAllOrders = async () => {
+    try { setOrdersLoading(true); const res = await adminAPI.getAllOrders(); if (res.data.success) setAllOrders(res.data.data || []); }
+    catch (err) { console.error("Fetch all orders error:", err); toast.error("Failed to load orders"); }
+    finally { setOrdersLoading(false); }
+  };
+
+  const fetchAllUsers = async () => {
+    try { setUsersLoading(true); const res = await adminAPI.getAllUsers(); if (res.data.success) setAllUsers(res.data.data || []); }
+    catch (err) { console.error("Fetch all users error:", err); toast.error("Failed to load users"); }
+    finally { setUsersLoading(false); }
+  };
+
+  const fetchAllSellers = async () => {
+    try { setSellersLoading(true); const res = await adminAPI.getAllSellers(); if (res.data.success) setAllSellers(res.data.data || []); }
+    catch (err) { console.error("Fetch all sellers error:", err); toast.error("Failed to load sellers"); }
+    finally { setSellersLoading(false); }
+  };
+
+  const fetchAllReviews = async () => {
+    try { setReviewsLoading(true); const res = await adminAPI.getAllReviews(); if (res.data.success) setAllReviews(res.data.data || []); }
+    catch (err) { console.error("Fetch all reviews error:", err); toast.error("Failed to load reviews"); }
+    finally { setReviewsLoading(false); }
+  };
+
+  const handleRefresh = () => {
+    fetchDashboardData();
+    fetchAnalytics();
+    if (activeTab === "allOrders")  fetchAllOrders();
+    if (activeTab === "allUsers")   fetchAllUsers();
+    if (activeTab === "allSellers") fetchAllSellers();
+    if (activeTab === "reviews")    fetchAllReviews();
+  };
 
   const handleUploadBanner = async (e) => {
     e.preventDefault(); setUploadingBanner(true);
@@ -268,38 +353,41 @@ const AdminDashboard = () => {
     catch { toast.error("Failed to toggle banner status"); }
   };
 
-  const handleDeleteBanner        = (id) => setConfirmModal({ isOpen: true, type: "deleteBanner", id });
-  const handleContactStatus       = async (contactId, status) => {
+  const handleToggleBlock = async (userId) => {
+    try {
+      const res = await adminAPI.toggleBlockUser(userId);
+      if (res.data.success) {
+        toast.success(res.data.message);
+        setAllUsers((prev) => prev.map((u) =>
+          u.user_id === userId ? { ...u, is_active: res.data.data.is_active } : u
+        ));
+      }
+    } catch (err) { toast.error(err.response?.data?.message || "Failed to update user status"); }
+  };
+
+  const handleDeleteBanner     = (id) => setConfirmModal({ isOpen: true, type: "deleteBanner",   id });
+  const handleDeleteContact    = (id) => setConfirmModal({ isOpen: true, type: "deleteContact",  id });
+  const handleApproveSeller    = (id) => setConfirmModal({ isOpen: true, type: "approveSeller",  id });
+  const handleRejectSeller     = (id) => setRejectModal({ isOpen: true, type: "rejectSeller",   id });
+  const handleApproveProduct   = (id) => setConfirmModal({ isOpen: true, type: "approveProduct", id });
+  const handleRejectProduct    = (id) => setRejectModal({ isOpen: true, type: "rejectProduct",  id });
+  const handleDeleteReview     = (id) => setConfirmModal({ isOpen: true, type: "deleteReview",   id });
+
+  const handleContactStatus = async (contactId, status) => {
     try { const res = await adminAPI.updateContactStatus(contactId, { status }); if (res.data.success) { toast.success("Status updated"); fetchContactMessages(); } }
     catch { toast.error("Failed to update status"); }
   };
-  const handleOpenReply  = (contact) =>
-  setReplyModal({ isOpen: true, contact });
 
-  const handleCloseReply = () =>
-  setReplyModal({ isOpen: false, contact: null });
+  const handleOpenReply  = (contact) => setReplyModal({ isOpen: true, contact });
+  const handleCloseReply = () => setReplyModal({ isOpen: false, contact: null });
+  const handleSendReply  = async (contactId, reply) => {
+    try {
+      const res = await adminAPI.updateContactStatus(contactId, { status: "in_progress", admin_reply: reply });
+      if (res.data.success) { toast.success("Reply sent and email delivered!"); fetchContactMessages(); }
+    } catch { toast.error("Failed to send reply"); }
+  };
 
-const handleSendReply  = async (contactId, reply) => {
-  try {
-    const res = await adminAPI.updateContactStatus(contactId, {
-      status: "in_progress",
-      admin_reply: reply,
-    });
-
-    if (res.data.success) {
-      toast.success("Reply sent and email delivered!");
-      fetchContactMessages();
-    }
-  } catch {
-    toast.error("Failed to send reply");
-  }
-};
-  const handleDeleteContact       = (id) => setConfirmModal({ isOpen: true, type: "deleteContact", id });
-  const handleApproveSeller       = (id) => setConfirmModal({ isOpen: true, type: "approveSeller", id });
-  const handleRejectSeller        = (id) => setRejectModal({ isOpen: true, type: "rejectSeller", id });
-  const handleApproveProduct      = (id) => setConfirmModal({ isOpen: true, type: "approveProduct", id });
-  const handleRejectProduct       = (id) => setRejectModal({ isOpen: true, type: "rejectProduct", id });
-  const handleToggleFeatured      = async (productId) => {
+  const handleToggleFeatured = async (productId) => {
     try { const res = await adminAPI.toggleFeatured(productId); if (res.data.success) { toast.info(res.data.message); fetchDashboardData(); } }
     catch (err) { toast.error(err.response?.data?.message || "Failed to update featured status"); }
   };
@@ -312,8 +400,9 @@ const handleSendReply  = async (contactId, reply) => {
       if (type === "deleteContact")  { const r = await adminAPI.deleteContactMessage(id); if (r.data.success) { toast.success("Message deleted");  fetchContactMessages(); } }
       if (type === "approveSeller")  { const r = await adminAPI.approveSeller(id);        if (r.data.success) { toast.success("Seller approved");  fetchDashboardData(); fetchAnalytics(); } }
       if (type === "approveProduct") { const r = await adminAPI.approveProduct(id);       if (r.data.success) { toast.success("Product approved"); fetchDashboardData(); fetchAnalytics(); } }
+      if (type === "deleteReview")   { const r = await adminAPI.deleteReview(id);         if (r.data.success) { toast.success("Review deleted");   setAllReviews((prev) => prev.filter((rv) => rv.review_id !== id)); } }
     } catch {
-      const labels = { deleteBanner: "Failed to delete banner", deleteContact: "Failed to delete message", approveSeller: "Failed to approve seller", approveProduct: "Failed to approve product" };
+      const labels = { deleteBanner: "Failed to delete banner", deleteContact: "Failed to delete message", approveSeller: "Failed to approve seller", approveProduct: "Failed to approve product", deleteReview: "Failed to delete review" };
       toast.error(labels[type] || "Action failed");
     }
   };
@@ -332,16 +421,98 @@ const handleSendReply  = async (contactId, reply) => {
     deleteContact:  { title: "Delete this message?",  message: "The message will be permanently removed.",               confirmText: "Delete",  confirmVariant: "danger"  },
     approveSeller:  { title: "Approve this seller?",  message: "They will be able to list products on the marketplace.", confirmText: "Approve", confirmVariant: "warning" },
     approveProduct: { title: "Approve this product?", message: "It will be visible to buyers on the marketplace.",       confirmText: "Approve", confirmVariant: "warning" },
+    deleteReview:   { title: "Delete this review?",   message: "This review will be permanently removed.",               confirmText: "Delete",  confirmVariant: "danger"  },
   };
   const rejectConfig = { rejectSeller: { title: "Reject this seller?" }, rejectProduct: { title: "Reject this product?" } };
 
+  // ── Derived: Orders tab ──
+  const filteredOrders = useMemo(() => {
+    let list = [...allOrders];
+    if (orderFilter !== "all") list = list.filter((o) => o.order_status === orderFilter);
+    if (orderSearch.trim()) {
+      const q = orderSearch.toLowerCase();
+      list = list.filter((o) =>
+        (o.order_number || "").toLowerCase().includes(q) ||
+        (o.user?.full_name || "").toLowerCase().includes(q) ||
+        (o.user?.email || "").toLowerCase().includes(q)
+      );
+    }
+    if (orderSort === "newest")  list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    if (orderSort === "oldest")  list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    if (orderSort === "highest") list.sort((a, b) => parseFloat(b.total) - parseFloat(a.total));
+    if (orderSort === "lowest")  list.sort((a, b) => parseFloat(a.total) - parseFloat(b.total));
+    return list;
+  }, [allOrders, orderFilter, orderSearch, orderSort]);
+  const totalOrderPages = Math.ceil(filteredOrders.length / ORDERS_PER_PAGE);
+  const pagedOrders = filteredOrders.slice((orderPage - 1) * ORDERS_PER_PAGE, orderPage * ORDERS_PER_PAGE);
+
+  // ── Derived: Users tab ──
+  const filteredUsers = useMemo(() => {
+    let list = [...allUsers];
+    if (userFilter === "buyers")   list = list.filter((u) => u.role === "buyer");
+    if (userFilter === "sellers")  list = list.filter((u) => u.role === "seller");
+    if (userFilter === "admins")   list = list.filter((u) => u.role === "admin");
+    if (userFilter === "blocked")  list = list.filter((u) => !u.is_active);
+    if (userFilter === "active")   list = list.filter((u) => u.is_active);
+    if (userSearch.trim()) {
+      const q = userSearch.toLowerCase();
+      list = list.filter((u) =>
+        (u.full_name || "").toLowerCase().includes(q) ||
+        (u.email || "").toLowerCase().includes(q) ||
+        (u.phone || "").toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [allUsers, userFilter, userSearch]);
+  const totalUserPages = Math.ceil(filteredUsers.length / USERS_PER_PAGE);
+  const pagedUsers = filteredUsers.slice((userPage - 1) * USERS_PER_PAGE, userPage * USERS_PER_PAGE);
+
+  // ── Derived: Sellers tab ──
+  const filteredSellers = useMemo(() => {
+    let list = [...allSellers];
+    if (sellerFilter !== "all") list = list.filter((s) => s.approval_status === sellerFilter);
+    if (sellerSearch.trim()) {
+      const q = sellerSearch.toLowerCase();
+      list = list.filter((s) =>
+        (s.shop_name || "").toLowerCase().includes(q) ||
+        (s.user?.full_name || "").toLowerCase().includes(q) ||
+        (s.user?.email || "").toLowerCase().includes(q) ||
+        (s.city || "").toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [allSellers, sellerFilter, sellerSearch]);
+  const totalSellerPages = Math.ceil(filteredSellers.length / SELLERS_PER_PAGE);
+  const pagedSellers = filteredSellers.slice((sellerPage - 1) * SELLERS_PER_PAGE, sellerPage * SELLERS_PER_PAGE);
+
+  // ── Derived: Reviews tab ──
+  const filteredReviews = useMemo(() => {
+    let list = [...allReviews];
+    if (reviewFilter !== "all") list = list.filter((r) => String(r.rating) === reviewFilter);
+    if (reviewSearch.trim()) {
+      const q = reviewSearch.toLowerCase();
+      list = list.filter((r) =>
+        (r.comment || "").toLowerCase().includes(q) ||
+        (r.user?.full_name || "").toLowerCase().includes(q) ||
+        (r.product?.name || "").toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [allReviews, reviewFilter, reviewSearch]);
+  const totalReviewPages = Math.ceil(filteredReviews.length / REVIEWS_PER_PAGE);
+  const pagedReviews = filteredReviews.slice((reviewPage - 1) * REVIEWS_PER_PAGE, reviewPage * REVIEWS_PER_PAGE);
+
   const nav = useMemo(() => [
-    { key: "overview",  label: "Overview",             icon: Icons.grid,   badge: 0 },
-    { key: "sellers",   label: "Artisan Verification", icon: Icons.shield, badge: pendingSellers.length },
-    { key: "products",  label: "Product Approvals",    icon: Icons.box,    badge: pendingProducts.length },
-    { key: "featured",  label: "Featured Products",    icon: Icons.star,   badge: 0 },
-    { key: "banners",   label: "Festival Banners",     icon: Icons.image,  badge: 0 },
-    { key: "contacts",  label: "Contact Messages",     icon: Icons.mail,   badge: 0 },
+    { key: "overview",    label: "Overview",             icon: Icons.grid,       badge: 0 },
+    { key: "sellers",     label: "Artisan Verification", icon: Icons.shield,     badge: pendingSellers.length },
+    { key: "products",    label: "Product Approvals",    icon: Icons.box,        badge: pendingProducts.length },
+    { key: "featured",    label: "Featured Products",    icon: Icons.star,       badge: 0 },
+    { key: "banners",     label: "Festival Banners",     icon: Icons.image,      badge: 0 },
+    { key: "contacts",    label: "Contact Messages",     icon: Icons.mail,       badge: 0 },
+    { key: "allOrders",   label: "All Orders",           icon: Icons.orders,     badge: 0 },
+    { key: "allUsers",    label: "All Users",            icon: Icons.allUsers,   badge: 0 },
+    { key: "allSellers",  label: "All Sellers",          icon: Icons.allSellers, badge: 0 },
+    { key: "reviews",     label: "Reviews",              icon: Icons.reviews,    badge: 0 },
   ], [pendingSellers.length, pendingProducts.length]);
 
   if (loading) {
@@ -358,29 +529,37 @@ const handleSendReply  = async (contactId, reply) => {
   const filteredMsgs = msgFilter === "all" ? contactMessages : contactMessages.filter((m) => m.status === msgFilter);
   const activeCfg    = confirmConfig[confirmModal.type] || {};
   const activeRejCfg = rejectConfig[rejectModal.type]   || {};
-
-  const chartData = revenueView === "weekly" ? analytics.dailySales : analytics.monthlySales;
-  const chartXKey = revenueView === "weekly" ? "date" : "month";
-
-  /* ── Total for donut center labels ── */
+  const chartData    = revenueView === "weekly" ? analytics.dailySales : analytics.monthlySales;
+  const chartXKey    = revenueView === "weekly" ? "date" : "month";
   const totalProductsDonut = analytics.productDonut.reduce((s, d) => s + d.value, 0);
   const totalOrdersDonut   = analytics.orderDonut.reduce((s, d) => s + d.value, 0);
 
-  /* ════════════════════ RENDER ════════════════════ */
   return (
     <div className="admin-dashboard-container">
 
-      <ConfirmModal isOpen={confirmModal.isOpen} title={activeCfg.title} message={activeCfg.message}
-        confirmText={activeCfg.confirmText} cancelText="Cancel" confirmVariant={activeCfg.confirmVariant}
-        onConfirm={handleConfirmAction} onCancel={() => setConfirmModal({ isOpen: false, type: null, id: null })} />
-      <RejectModal isOpen={rejectModal.isOpen} title={activeRejCfg.title}
-        onConfirm={handleRejectAction} onCancel={() => setRejectModal({ isOpen: false, type: null, id: null })} />
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={activeCfg.title}
+        message={activeCfg.message}
+        confirmText={activeCfg.confirmText}
+        cancelText="Cancel"
+        confirmVariant={activeCfg.confirmVariant}
+        onConfirm={handleConfirmAction}
+        onCancel={() => setConfirmModal({ isOpen: false, type: null, id: null })}
+      />
+      <RejectModal
+        isOpen={rejectModal.isOpen}
+        title={activeRejCfg.title}
+        onConfirm={handleRejectAction}
+        onCancel={() => setRejectModal({ isOpen: false, type: null, id: null })}
+      />
       <AdminReplyModal
-      isOpen={replyModal.isOpen}
+        isOpen={replyModal.isOpen}
         contact={replyModal.contact}
         onClose={handleCloseReply}
         onSend={handleSendReply}
       />
+
       {/* ─── SIDEBAR ─── */}
       <aside className="admin-sidebar">
         <div className="sidebar-header">
@@ -393,7 +572,11 @@ const handleSendReply  = async (contactId, reply) => {
         <nav className="sidebar-nav">
           <div className="nav-section-label">Navigation</div>
           {nav.map((item) => (
-            <button key={item.key} className={`nav-item ${activeTab === item.key ? "active" : ""}`} onClick={() => setActiveTab(item.key)}>
+            <button
+              key={item.key}
+              className={`nav-item ${activeTab === item.key ? "active" : ""}`}
+              onClick={() => setActiveTab(item.key)}
+            >
               {item.icon}
               <span className="nav-label">{item.label}</span>
               {item.badge > 0 && <span className="badge">{item.badge}</span>}
@@ -417,7 +600,6 @@ const handleSendReply  = async (contactId, reply) => {
         {/* ══ OVERVIEW ══ */}
         {activeTab === "overview" && (
           <div>
-            {/* Header */}
             <div className="page-header">
               <div>
                 <h1>Dashboard Overview</h1>
@@ -426,7 +608,6 @@ const handleSendReply  = async (contactId, reply) => {
               <button className="btn-refresh" onClick={handleRefresh}>{Icons.refresh} Refresh</button>
             </div>
 
-            {/* Pending alert */}
             {(stats.pendingSellers > 0 || stats.pendingProducts > 0) && (
               <div className="pending-alert">
                 <span className="pending-dot" />
@@ -440,17 +621,14 @@ const handleSendReply  = async (contactId, reply) => {
               </div>
             )}
 
-            {/* ── KPI Row ── */}
             <div className="kpi-grid">
-              <KpiCard icon={Icons.users}  label="Total Users"     value={stats.totalUsers}          sub={`${stats.totalBuyers} buyers · ${stats.totalSellersUsers} sellers`} accent="#b86e38" />
-              <KpiCard icon={Icons.store}  label="Active Sellers"  value={stats.approvedSellers}     sub={`${stats.pendingSellers} pending verification`}                      accent="#2a9e6a" />
-              <KpiCard icon={Icons.pkg}    label="Total Products"  value={stats.totalProducts}       sub={`${stats.approvedProducts} live · ${stats.pendingProducts} pending`} accent="#1a509a" />
-              <KpiCard icon={Icons.rupee}  label="Total Revenue"   value={`Rs. ${(analytics.summary.totalRevenue || 0).toLocaleString()}`} sub={`Rs. ${(analytics.summary.thisMonthRevenue || 0).toLocaleString()} this month`} accent="#c08830" />
+              <KpiCard icon={Icons.users}  label="Total Users"    value={stats.totalUsers}         sub={`${stats.totalBuyers} buyers · ${stats.totalSellersUsers} sellers`} accent="#b86e38" />
+              <KpiCard icon={Icons.store}  label="Active Sellers" value={stats.approvedSellers}    sub={`${stats.pendingSellers} pending verification`}                     accent="#2a9e6a" />
+              <KpiCard icon={Icons.pkg}    label="Total Products" value={stats.totalProducts}      sub={`${stats.approvedProducts} live · ${stats.pendingProducts} pending`}accent="#1a509a" />
+              <KpiCard icon={Icons.rupee}  label="Total Revenue"  value={`Rs. ${(analytics.summary.totalRevenue || 0).toLocaleString()}`} sub={`Rs. ${(analytics.summary.thisMonthRevenue || 0).toLocaleString()} this month`} accent="#c08830" />
             </div>
 
-            {/* ── Revenue Chart + Product Donut ── */}
             <div className="charts-row">
-              {/* Area/Bar Revenue */}
               <div className="chart-card chart-card-wide">
                 <div className="chart-card-header">
                   <div>
@@ -491,7 +669,6 @@ const handleSendReply  = async (contactId, reply) => {
                 )}
               </div>
 
-              {/* Product Status Donut */}
               <div className="chart-card chart-card-narrow">
                 <div className="chart-card-header">
                   <div>
@@ -507,8 +684,7 @@ const handleSendReply  = async (contactId, reply) => {
                   <>
                     <ResponsiveContainer width="100%" height={180}>
                       <PieChart>
-                        <Pie data={analytics.productDonut} cx="50%" cy="50%" innerRadius={55} outerRadius={78}
-                          paddingAngle={3} dataKey="value" strokeWidth={0}>
+                        <Pie data={analytics.productDonut} cx="50%" cy="50%" innerRadius={55} outerRadius={78} paddingAngle={3} dataKey="value" strokeWidth={0}>
                           {analytics.productDonut.map((_, i) => <Cell key={i} fill={DONUT_COLORS_PRODUCT[i % DONUT_COLORS_PRODUCT.length]} />)}
                           <DonutLabel cx="50%" cy="50%" value={totalProductsDonut} label="total" />
                         </Pie>
@@ -529,9 +705,7 @@ const handleSendReply  = async (contactId, reply) => {
               </div>
             </div>
 
-            {/* ── Bottom Row: Bar Chart + Order Donut + Top Sellers ── */}
             <div className="charts-row charts-row-3">
-              {/* Top Categories Bar */}
               <div className="chart-card">
                 <div className="chart-card-header">
                   <div>
@@ -556,7 +730,6 @@ const handleSendReply  = async (contactId, reply) => {
                 )}
               </div>
 
-              {/* Order Status Donut */}
               <div className="chart-card">
                 <div className="chart-card-header">
                   <div>
@@ -572,8 +745,7 @@ const handleSendReply  = async (contactId, reply) => {
                   <>
                     <ResponsiveContainer width="100%" height={155}>
                       <PieChart>
-                        <Pie data={analytics.orderDonut} cx="50%" cy="50%" innerRadius={45} outerRadius={65}
-                          paddingAngle={3} dataKey="value" strokeWidth={0}>
+                        <Pie data={analytics.orderDonut} cx="50%" cy="50%" innerRadius={45} outerRadius={65} paddingAngle={3} dataKey="value" strokeWidth={0}>
                           {analytics.orderDonut.map((_, i) => <Cell key={i} fill={DONUT_COLORS_ORDER[i % DONUT_COLORS_ORDER.length]} />)}
                           <DonutLabel cx="50%" cy="50%" value={totalOrdersDonut} label="orders" />
                         </Pie>
@@ -593,7 +765,6 @@ const handleSendReply  = async (contactId, reply) => {
                 )}
               </div>
 
-              {/* Top Sellers */}
               <div className="chart-card">
                 <div className="chart-card-header">
                   <div>
@@ -628,7 +799,6 @@ const handleSendReply  = async (contactId, reply) => {
               </div>
             </div>
 
-            {/* ── Approval Rates ── */}
             <div className="insights-grid" style={{ marginTop: 14 }}>
               <div className="insight-card">
                 <div className="insight-title">Seller Approval Rate</div>
@@ -659,7 +829,7 @@ const handleSendReply  = async (contactId, reply) => {
           </div>
         )}
 
-        {/* ══ SELLERS ══ */}
+        {/* ══ SELLERS (pending verification) ══ */}
         {activeTab === "sellers" && (
           <div>
             <div className="page-header">
@@ -802,7 +972,9 @@ const handleSendReply  = async (contactId, reply) => {
             </div>
             <div className="section-card">
               <div className="section-title">Existing Banners ({banners.length})</div>
-              {banners.length === 0 ? <div className="empty-state" style={{ border: "none", padding: "24px 0 0" }}><p>No banners uploaded yet</p></div> : (
+              {banners.length === 0 ? (
+                <div className="empty-state" style={{ border: "none", padding: "24px 0 0" }}><p>No banners uploaded yet</p></div>
+              ) : (
                 <div className="banners-grid">
                   {banners.map((banner) => (
                     <div key={banner.banner_id} className="banner-card">
@@ -838,14 +1010,20 @@ const handleSendReply  = async (contactId, reply) => {
                 </button>
               ))}
             </div>
-            {filteredMsgs.length === 0 ? <div className="no-messages">No {msgFilter !== "all" ? msgFilter.replace("_", " ") : ""} messages found.</div> : (
+            {filteredMsgs.length === 0 ? (
+              <div className="no-messages">No {msgFilter !== "all" ? msgFilter.replace("_", " ") : ""} messages found.</div>
+            ) : (
               <div className="msg-list">
                 {filteredMsgs.map((contact) => {
                   const created = parseDate(contact.created_at);
                   return (
                     <div key={contact.contact_id} className="msg-card">
                       <div className="msg-head">
-                        <div><div className="msg-name">{contact.name}</div><div className="msg-email">{contact.email}</div>{contact.phone && <div className="msg-phone">{contact.phone}</div>}</div>
+                        <div>
+                          <div className="msg-name">{contact.name}</div>
+                          <div className="msg-email">{contact.email}</div>
+                          {contact.phone && <div className="msg-phone">{contact.phone}</div>}
+                        </div>
                         <div className="msg-meta">
                           <span className={`status-pill s-${contact.status}`}>{contact.status === "in_progress" ? "In Progress" : contact.status}</span>
                           {created && <span className="msg-date">{created.toLocaleDateString()}</span>}
@@ -856,62 +1034,348 @@ const handleSendReply  = async (contactId, reply) => {
                         <div className="msg-text">{contact.message}</div>
                       </div>
                       <div className="msg-actions">
-
-  <button
-    className="btn-inprogress"
-    onClick={() => handleOpenReply(contact)}
-  >
-    Reply
-  </button>
-
-  {contact.status === "pending" && (
-    <button
-      className="btn-inprogress"
-      onClick={() =>
-        handleContactStatus(contact.contact_id, "in_progress")
-      }
-    >
-      Mark In Progress
-    </button>
-  )}
-
-  {(contact.status === "pending" ||
-    contact.status === "in_progress") && (
-    <button
-      className="btn-resolve"
-      onClick={() =>
-        handleContactStatus(contact.contact_id, "resolved")
-      }
-    >
-      Mark Resolved
-    </button>
-  )}
-
-  {contact.status === "resolved" && (
-    <button
-      className="btn-reopen"
-      onClick={() =>
-        handleContactStatus(contact.contact_id, "pending")
-      }
-    >
-      Reopen
-    </button>
-  )}
-
-  <button
-    className="btn-delete"
-    onClick={() =>
-      handleDeleteContact(contact.contact_id)
-    }
-  >
-    Delete
-  </button>
-
-</div>
+                        <button className="btn-inprogress" onClick={() => handleOpenReply(contact)}>Reply</button>
+                        {contact.status === "pending" && (
+                          <button className="btn-inprogress" onClick={() => handleContactStatus(contact.contact_id, "in_progress")}>Mark In Progress</button>
+                        )}
+                        {(contact.status === "pending" || contact.status === "in_progress") && (
+                          <button className="btn-resolve" onClick={() => handleContactStatus(contact.contact_id, "resolved")}>Mark Resolved</button>
+                        )}
+                        {contact.status === "resolved" && (
+                          <button className="btn-reopen" onClick={() => handleContactStatus(contact.contact_id, "pending")}>Reopen</button>
+                        )}
+                        <button className="btn-delete" onClick={() => handleDeleteContact(contact.contact_id)}>Delete</button>
+                      </div>
                     </div>
                   );
                 })}
               </div>
+            )}
+          </div>
+        )}
+
+        {/* ══ ALL ORDERS (C4 NEW) ══ */}
+        {activeTab === "allOrders" && (
+          <div>
+            <div className="page-header">
+              <div><h1>All Orders</h1><p>{allOrders.length} total orders on the platform</p></div>
+              <button className="btn-refresh" onClick={fetchAllOrders}>{Icons.refresh} Refresh</button>
+            </div>
+
+            <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+              <SearchInput
+                value={orderSearch}
+                onChange={(v) => { setOrderSearch(v); setOrderPage(1); }}
+                placeholder="Search by order #, customer name or email…"
+                theme="admin"
+                style={{ flex: 1, minWidth: 260, maxWidth: 400 }}
+              />
+              <select
+                value={orderSort}
+                onChange={(e) => { setOrderSort(e.target.value); setOrderPage(1); }}
+                style={{ padding: "0.4rem 0.75rem", border: "1.5px solid var(--border, #ddd5c4)", borderRadius: 8, fontSize: "0.8rem", color: "var(--text-2)", background: "var(--bg-card, #fff)", fontFamily: "inherit", cursor: "pointer" }}
+              >
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+                <option value="highest">Highest amount</option>
+                <option value="lowest">Lowest amount</option>
+              </select>
+            </div>
+
+            <FilterBar
+              theme="admin"
+              active={orderFilter}
+              onChange={(f) => { setOrderFilter(f); setOrderPage(1); }}
+              filters={[
+                { key: "all",        label: "All",        count: allOrders.length },
+                { key: "pending",    label: "Pending",    count: allOrders.filter((o) => o.order_status === "pending").length },
+                { key: "processing", label: "Processing", count: allOrders.filter((o) => o.order_status === "processing").length },
+                { key: "shipped",    label: "Shipped",    count: allOrders.filter((o) => o.order_status === "shipped").length },
+                { key: "delivered",  label: "Delivered",  count: allOrders.filter((o) => o.order_status === "delivered").length },
+                { key: "cancelled",  label: "Cancelled",  count: allOrders.filter((o) => o.order_status === "cancelled").length },
+              ]}
+            />
+
+            {ordersLoading ? (
+              <div className="chart-loading"><div className="spinner" /></div>
+            ) : pagedOrders.length === 0 ? (
+              <div className="empty-state"><p>No orders found</p></div>
+            ) : (
+              <>
+                <div className="table-wrap">
+                  <table className="admin-table">
+                    <thead>
+                      <tr><th>Order #</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th>Date</th></tr>
+                    </thead>
+                    <tbody>
+                      {pagedOrders.map((order) => (
+                        <tr key={order.order_id}>
+                          <td style={{ fontWeight: 700, color: "var(--accent, #b86e38)", fontSize: "0.8rem" }}>#{order.order_number}</td>
+                          <td>
+                            <div style={{ fontWeight: 600, fontSize: "0.82rem" }}>{order.user?.full_name || "—"}</div>
+                            <div style={{ fontSize: "0.72rem", color: "var(--text-3)" }}>{order.user?.email || ""}</div>
+                          </td>
+                          <td style={{ fontSize: "0.78rem", color: "var(--text-2)" }}>{order.items?.length || 0} item{order.items?.length !== 1 ? "s" : ""}</td>
+                          <td style={{ fontWeight: 700, fontSize: "0.82rem" }}>Rs. {parseFloat(order.total || 0).toLocaleString()}</td>
+                          <td>
+                            <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: "0.72rem", fontWeight: 600, background: order.payment_status === "paid" ? "#d1fae5" : "#fef3c7", color: order.payment_status === "paid" ? "#065f46" : "#92400e" }}>
+                              {order.payment_status === "paid" ? "Paid" : "Unpaid"}
+                            </span>
+                          </td>
+                          <td>
+                            <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: "0.72rem", fontWeight: 600, background: order.order_status === "delivered" ? "#d1fae5" : order.order_status === "cancelled" ? "#fee2e2" : order.order_status === "shipped" ? "#ede9fe" : "#fef3c7", color: order.order_status === "delivered" ? "#065f46" : order.order_status === "cancelled" ? "#991b1b" : order.order_status === "shipped" ? "#5b21b6" : "#92400e" }}>
+                              {order.order_status ? order.order_status.charAt(0).toUpperCase() + order.order_status.slice(1) : "—"}
+                            </span>
+                          </td>
+                          <td style={{ color: "var(--text-3)", fontSize: "0.72rem" }}>{fmtDate(order.created_at)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination currentPage={orderPage} totalPages={totalOrderPages} onPageChange={setOrderPage} theme="admin" />
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ══ ALL USERS (C4 NEW) ══ */}
+        {activeTab === "allUsers" && (
+          <div>
+            <div className="page-header">
+              <div><h1>All Users</h1><p>{allUsers.length} registered users</p></div>
+              <button className="btn-refresh" onClick={fetchAllUsers}>{Icons.refresh} Refresh</button>
+            </div>
+
+            <div style={{ marginBottom: "0.75rem" }}>
+              <SearchInput
+                value={userSearch}
+                onChange={(v) => { setUserSearch(v); setUserPage(1); }}
+                placeholder="Search by name, email or phone…"
+                theme="admin"
+                style={{ maxWidth: 400 }}
+              />
+            </div>
+
+            <FilterBar
+              theme="admin"
+              active={userFilter}
+              onChange={(f) => { setUserFilter(f); setUserPage(1); }}
+              filters={[
+                { key: "all",     label: "All",     count: allUsers.length },
+                { key: "buyers",  label: "Buyers",  count: allUsers.filter((u) => u.role === "buyer").length },
+                { key: "sellers", label: "Sellers", count: allUsers.filter((u) => u.role === "seller").length },
+                { key: "active",  label: "Active",  count: allUsers.filter((u) => u.is_active).length },
+                { key: "blocked", label: "Blocked", count: allUsers.filter((u) => !u.is_active).length },
+              ]}
+            />
+
+            {usersLoading ? (
+              <div className="chart-loading"><div className="spinner" /></div>
+            ) : pagedUsers.length === 0 ? (
+              <div className="empty-state"><p>No users found</p></div>
+            ) : (
+              <>
+                <div className="table-wrap">
+                  <table className="admin-table">
+                    <thead>
+                      <tr><th>User</th><th>Email</th><th>Phone</th><th>Role</th><th>Status</th><th>Joined</th><th>Action</th></tr>
+                    </thead>
+                    <tbody>
+                      {pagedUsers.map((user) => (
+                        <tr key={user.user_id}>
+                          <td>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--accent-light, #f5ede4)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: "0.75rem", color: "var(--accent, #b86e38)", flexShrink: 0 }}>
+                                {initials(user.full_name)}
+                              </div>
+                              <span style={{ fontWeight: 600, fontSize: "0.82rem" }}>{user.full_name || "—"}</span>
+                            </div>
+                          </td>
+                          <td style={{ fontSize: "0.78rem", color: "var(--text-2)" }}>{user.email}</td>
+                          <td style={{ fontSize: "0.78rem", color: "var(--text-3)" }}>{user.phone || "—"}</td>
+                          <td>
+                            <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: "0.72rem", fontWeight: 600, background: user.role === "admin" ? "#ede9fe" : user.role === "seller" ? "#fef3c7" : "#d1fae5", color: user.role === "admin" ? "#5b21b6" : user.role === "seller" ? "#92400e" : "#065f46" }}>
+                              {user.role}
+                            </span>
+                          </td>
+                          <td>
+                            <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: "0.72rem", fontWeight: 600, background: user.is_active ? "#d1fae5" : "#fee2e2", color: user.is_active ? "#065f46" : "#991b1b" }}>
+                              {user.is_active ? "Active" : "Blocked"}
+                            </span>
+                          </td>
+                          <td style={{ color: "var(--text-3)", fontSize: "0.72rem" }}>{fmtDate(user.created_at || user.createdAt)}</td>
+                          <td>
+                            {user.role !== "admin" && (
+                              <button
+                                className={user.is_active ? "btn-reject" : "btn-approve"}
+                                onClick={() => handleToggleBlock(user.user_id)}
+                                style={{ fontSize: "0.75rem", padding: "4px 10px" }}
+                              >
+                                {user.is_active ? "Block" : "Unblock"}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination currentPage={userPage} totalPages={totalUserPages} onPageChange={setUserPage} theme="admin" />
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ══ ALL SELLERS (C4 NEW) ══ */}
+        {activeTab === "allSellers" && (
+          <div>
+            <div className="page-header">
+              <div><h1>All Sellers</h1><p>{allSellers.length} registered seller profiles</p></div>
+              <button className="btn-refresh" onClick={fetchAllSellers}>{Icons.refresh} Refresh</button>
+            </div>
+
+            <div style={{ marginBottom: "0.75rem" }}>
+              <SearchInput
+                value={sellerSearch}
+                onChange={(v) => { setSellerSearch(v); setSellerPage(1); }}
+                placeholder="Search by shop name, owner name, email or city…"
+                theme="admin"
+                style={{ maxWidth: 420 }}
+              />
+            </div>
+
+            <FilterBar
+              theme="admin"
+              active={sellerFilter}
+              onChange={(f) => { setSellerFilter(f); setSellerPage(1); }}
+              filters={[
+                { key: "all",      label: "All",      count: allSellers.length },
+                { key: "approved", label: "Approved", count: allSellers.filter((s) => s.approval_status === "approved").length },
+                { key: "pending",  label: "Pending",  count: allSellers.filter((s) => s.approval_status === "pending").length },
+                { key: "rejected", label: "Rejected", count: allSellers.filter((s) => s.approval_status === "rejected").length },
+              ]}
+            />
+
+            {sellersLoading ? (
+              <div className="chart-loading"><div className="spinner" /></div>
+            ) : pagedSellers.length === 0 ? (
+              <div className="empty-state"><p>No sellers found</p></div>
+            ) : (
+              <>
+                <div className="table-wrap">
+                  <table className="admin-table">
+                    <thead>
+                      <tr><th>Shop</th><th>Owner</th><th>Email</th><th>City</th><th>Bank</th><th>Status</th><th>Joined</th></tr>
+                    </thead>
+                    <tbody>
+                      {pagedSellers.map((seller) => (
+                        <tr key={seller.seller_id}>
+                          <td>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                              {seller.shop_logo ? (
+                                <img src={`${API_URL}${seller.shop_logo}`} alt={seller.shop_name} style={{ width: 32, height: 32, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                              ) : (
+                                <div style={{ width: 32, height: 32, borderRadius: 6, background: "var(--accent-light, #f5ede4)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: "0.75rem", color: "var(--accent, #b86e38)", flexShrink: 0 }}>
+                                  {(seller.shop_name || "?")[0].toUpperCase()}
+                                </div>
+                              )}
+                              <span style={{ fontWeight: 600, fontSize: "0.82rem" }}>{seller.shop_name || "—"}</span>
+                            </div>
+                          </td>
+                          <td style={{ fontSize: "0.82rem" }}>{seller.user?.full_name || "—"}</td>
+                          <td style={{ fontSize: "0.78rem", color: "var(--text-3)" }}>{seller.user?.email || "—"}</td>
+                          <td style={{ fontSize: "0.78rem", color: "var(--text-2)" }}>{seller.city || "—"}</td>
+                          <td style={{ fontSize: "0.78rem", color: "var(--text-3)" }}>{seller.bank_name || "—"}</td>
+                          <td>
+                            <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: "0.72rem", fontWeight: 600, background: seller.approval_status === "approved" ? "#d1fae5" : seller.approval_status === "rejected" ? "#fee2e2" : "#fef3c7", color: seller.approval_status === "approved" ? "#065f46" : seller.approval_status === "rejected" ? "#991b1b" : "#92400e" }}>
+                              {seller.approval_status}
+                            </span>
+                          </td>
+                          <td style={{ color: "var(--text-3)", fontSize: "0.72rem" }}>{fmtDate(seller.created_at)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination currentPage={sellerPage} totalPages={totalSellerPages} onPageChange={setSellerPage} theme="admin" />
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ══ REVIEWS MODERATION (C4 NEW) ══ */}
+        {activeTab === "reviews" && (
+          <div>
+            <div className="page-header">
+              <div><h1>Reviews Moderation</h1><p>{allReviews.length} total reviews on the platform</p></div>
+              <button className="btn-refresh" onClick={fetchAllReviews}>{Icons.refresh} Refresh</button>
+            </div>
+
+            <div style={{ marginBottom: "0.75rem" }}>
+              <SearchInput
+                value={reviewSearch}
+                onChange={(v) => { setReviewSearch(v); setReviewPage(1); }}
+                placeholder="Search by review text, customer or product…"
+                theme="admin"
+                style={{ maxWidth: 420 }}
+              />
+            </div>
+
+            <FilterBar
+              theme="admin"
+              active={reviewFilter}
+              onChange={(f) => { setReviewFilter(f); setReviewPage(1); }}
+              filters={[
+                { key: "all", label: "All Stars", count: allReviews.length },
+                { key: "5",   label: "★★★★★",     count: allReviews.filter((r) => r.rating === 5).length },
+                { key: "4",   label: "★★★★",       count: allReviews.filter((r) => r.rating === 4).length },
+                { key: "3",   label: "★★★",         count: allReviews.filter((r) => r.rating === 3).length },
+                { key: "2",   label: "★★",           count: allReviews.filter((r) => r.rating === 2).length },
+                { key: "1",   label: "★",             count: allReviews.filter((r) => r.rating === 1).length },
+              ]}
+            />
+
+            {reviewsLoading ? (
+              <div className="chart-loading"><div className="spinner" /></div>
+            ) : pagedReviews.length === 0 ? (
+              <div className="empty-state"><p>No reviews found</p></div>
+            ) : (
+              <>
+                <div className="table-wrap">
+                  <table className="admin-table">
+                    <thead>
+                      <tr><th>Product</th><th>Customer</th><th>Rating</th><th>Review</th><th>Date</th><th>Action</th></tr>
+                    </thead>
+                    <tbody>
+                      {pagedReviews.map((review) => (
+                        <tr key={review.review_id}>
+                          <td>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                              {review.product?.images?.[0] && (
+                                <img src={`${API_URL}${review.product.images[0]}`} alt={review.product.name} style={{ width: 32, height: 32, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                              )}
+                              <span style={{ fontWeight: 600, fontSize: "0.8rem" }}>{review.product?.name || "—"}</span>
+                            </div>
+                          </td>
+                          <td style={{ fontSize: "0.82rem" }}>{review.user?.full_name || "—"}</td>
+                          <td><StarRating rating={review.rating} /></td>
+                          <td style={{ fontSize: "0.78rem", color: "var(--text-2)", maxWidth: 280 }}>
+                            <div style={{ overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                              {review.comment || <span style={{ color: "var(--text-3)", fontStyle: "italic" }}>No comment</span>}
+                            </div>
+                          </td>
+                          <td style={{ color: "var(--text-3)", fontSize: "0.72rem" }}>{fmtDate(review.created_at)}</td>
+                          <td>
+                            <button className="btn-reject" onClick={() => handleDeleteReview(review.review_id)} style={{ fontSize: "0.75rem", padding: "4px 10px" }}>Delete</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination currentPage={reviewPage} totalPages={totalReviewPages} onPageChange={setReviewPage} theme="admin" />
+              </>
             )}
           </div>
         )}

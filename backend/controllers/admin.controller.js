@@ -50,7 +50,6 @@ const getAnalytics = async (req, res) => {
     const { Op, fn, col, literal } = db.Sequelize;
     const now = new Date();
 
-    // ── Last 7 days daily sales ──
     const sevenDaysAgo = new Date(now);
     sevenDaysAgo.setDate(now.getDate() - 6);
     sevenDaysAgo.setHours(0, 0, 0, 0);
@@ -83,7 +82,6 @@ const getAnalytics = async (req, res) => {
       });
     }
 
-    // ── Last 6 months monthly sales ──
     const sixMonthsAgo = new Date(now);
     sixMonthsAgo.setMonth(now.getMonth() - 5);
     sixMonthsAgo.setDate(1);
@@ -117,7 +115,6 @@ const getAnalytics = async (req, res) => {
       });
     }
 
-    // ── Product status donut ──
     let productDonut = [];
     try {
       const productStats = await db.Product.findAll({
@@ -131,21 +128,19 @@ const getAnalytics = async (req, res) => {
       }));
     } catch (_) {}
 
-    // ── Order status donut ──
     let orderDonut = [];
     try {
       const orderStats = await db.Order.findAll({
-        attributes: ["status", [fn("COUNT", col("order_id")), "count"]],
-        group: ["status"],
+        attributes: ["order_status", [fn("COUNT", col("order_id")), "count"]],
+        group: ["order_status"],
         raw: true,
       });
       orderDonut = orderStats.map((o) => ({
-        name:  o.status.charAt(0).toUpperCase() + o.status.slice(1),
+        name:  o.order_status.charAt(0).toUpperCase() + o.order_status.slice(1),
         value: parseInt(o.count) || 0,
       }));
     } catch (_) {}
 
-    // ── Top 5 categories ──
     let topCategories = [];
     try {
       const cats = await db.Category.findAll({
@@ -165,7 +160,6 @@ const getAnalytics = async (req, res) => {
         .filter((c) => c.count > 0);
     } catch (_) {}
 
-    // ── Top 5 sellers ──
     let topSellers = [];
     try {
       const sellers = await db.Seller.findAll({
@@ -182,11 +176,10 @@ const getAnalytics = async (req, res) => {
         .filter((s) => s.sales > 0);
     } catch (_) {}
 
-    // ── Revenue summary ──
     let totalRevenue = 0, thisMonthRevenue = 0, totalOrders = 0;
     try {
       const totalRevRes = await db.Order.findOne({
-        attributes: [[fn("SUM", col("total_amount")), "total"]],
+        attributes: [[fn("SUM", col("total")), "total"]],
         where: { payment_status: "paid" },
         raw: true,
       });
@@ -194,7 +187,7 @@ const getAnalytics = async (req, res) => {
 
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const monthRevRes = await db.Order.findOne({
-        attributes: [[fn("SUM", col("total_amount")), "total"]],
+        attributes: [[fn("SUM", col("total")), "total"]],
         where: { payment_status: "paid", created_at: { [Op.gte]: startOfMonth } },
         raw: true,
       });
@@ -204,8 +197,10 @@ const getAnalytics = async (req, res) => {
 
     res.json({
       success: true,
-      data: { dailySales, monthlySales, productDonut, orderDonut, topCategories, topSellers,
-        summary: { totalRevenue, thisMonthRevenue, totalOrders } },
+      data: {
+        dailySales, monthlySales, productDonut, orderDonut, topCategories, topSellers,
+        summary: { totalRevenue, thisMonthRevenue, totalOrders },
+      },
     });
   } catch (error) {
     console.error("Analytics error:", error);
@@ -228,11 +223,10 @@ const getPendingSellers = async (req, res) => {
   }
 };
 
-// ==================== APPROVE SELLER  + EMAIL ====================
+// ==================== APPROVE SELLER ====================
 const approveSeller = async (req, res) => {
   try {
     const { id } = req.params;
-
     const seller = await db.Seller.findByPk(id, {
       include: [{ model: db.User, as: "user", attributes: ["full_name", "email"] }],
     });
@@ -240,7 +234,6 @@ const approveSeller = async (req, res) => {
 
     await seller.update({ approval_status: "approved", approved_at: new Date() });
 
-    //  Send approval email (non-blocking — don't fail the request if email fails)
     if (seller.user?.email) {
       sendSellerApprovalEmail(
         seller.user.email,
@@ -256,7 +249,7 @@ const approveSeller = async (req, res) => {
   }
 };
 
-// ==================== REJECT SELLER + EMAIL ====================
+// ==================== REJECT SELLER ====================
 const rejectSeller = async (req, res) => {
   try {
     const { id } = req.params;
@@ -273,7 +266,6 @@ const rejectSeller = async (req, res) => {
 
     await seller.update({ approval_status: "rejected", rejection_reason: rejection_reason.trim() });
 
-    //  Send rejection email with the admin's reason (non-blocking)
     if (seller.user?.email) {
       sendSellerRejectionEmail(
         seller.user.email,
@@ -361,13 +353,97 @@ const getAllUsers = async (req, res) => {
 const getAllSellers = async (req, res) => {
   try {
     const sellers = await db.Seller.findAll({
-      include: [{ model: db.User, as: "user", attributes: ["user_id", "full_name", "email", "phone"] }],
+      include: [{ model: db.User, as: "user", attributes: ["user_id", "full_name", "email", "phone", "is_active"] }],
       order: [["created_at", "DESC"]],
     });
     res.status(200).json({ success: true, data: sellers });
   } catch (error) {
     console.error("Get all sellers error:", error);
     res.status(500).json({ success: false, message: "Failed to fetch sellers" });
+  }
+};
+
+// ==================== GET ALL ORDERS (C1 NEW) ====================
+const getAllOrders = async (req, res) => {
+  try {
+    const orders = await db.Order.findAll({
+      include: [
+        { model: db.User, as: "user", attributes: ["user_id", "full_name", "email", "phone"] },
+        {
+          model: db.OrderItem,
+          as: "items",
+          include: [
+            { model: db.Product, as: "product", attributes: ["product_id", "name", "images"] },
+            { model: db.Seller, as: "seller", attributes: ["seller_id", "shop_name"] },
+          ],
+        },
+      ],
+      order: [["created_at", "DESC"]],
+    });
+    res.status(200).json({ success: true, data: orders });
+  } catch (error) {
+    console.error("Get all orders error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch orders" });
+  }
+};
+
+// ==================== GET ALL REVIEWS (C1 NEW) ====================
+const getAllReviews = async (req, res) => {
+  try {
+    const reviews = await db.Review.findAll({
+      include: [
+        { model: db.User, as: "user", attributes: ["user_id", "full_name", "email"] },
+        { model: db.Product, as: "product", attributes: ["product_id", "name", "images"] },
+      ],
+      order: [["created_at", "DESC"]],
+    });
+    res.status(200).json({ success: true, data: reviews });
+  } catch (error) {
+    console.error("Get all reviews error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch reviews" });
+  }
+};
+
+// ==================== DELETE REVIEW (C1 NEW) ====================
+const deleteReview = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const review = await db.Review.findByPk(id);
+    if (!review) return res.status(404).json({ success: false, message: "Review not found" });
+    await review.destroy();
+    res.status(200).json({ success: true, message: "Review deleted successfully" });
+  } catch (error) {
+    console.error("Delete review error:", error);
+    res.status(500).json({ success: false, message: "Failed to delete review" });
+  }
+};
+
+// ==================== TOGGLE BLOCK USER (C1 NEW) ====================
+const toggleBlockUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (parseInt(id) === req.user.user_id) {
+      return res.status(400).json({ success: false, message: "You cannot block yourself" });
+    }
+
+    const user = await db.User.findByPk(id);
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    if (user.role === "admin") {
+      return res.status(400).json({ success: false, message: "Cannot block an admin account" });
+    }
+
+    await user.update({ is_active: !user.is_active });
+
+    res.status(200).json({
+      success: true,
+      message: user.is_active ? "User unblocked successfully" : "User blocked successfully",
+      data: { user_id: user.user_id, is_active: user.is_active },
+    });
+  } catch (error) {
+    console.error("Toggle block user error:", error);
+    res.status(500).json({ success: false, message: "Failed to update user status" });
   }
 };
 
@@ -382,4 +458,8 @@ module.exports = {
   rejectProduct,
   getAllUsers,
   getAllSellers,
+  getAllOrders,
+  getAllReviews,
+  deleteReview,
+  toggleBlockUser,
 };
