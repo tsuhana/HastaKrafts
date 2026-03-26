@@ -44,10 +44,10 @@ import EditProduct from "./pages/EditProduct";
 import AdminDashboard from "./pages/AdminDashboard";
 
 import "./styles/variables.css";
-import "./styles/Toast.css";
+import "./context/Toast.css";
 import "./App.css";
 
-// ✅ FIXED: was ["/admin", "/seller/dashboard"] — /admin never matched /admin/dashboard
+// FIXED: was ["/admin", "/seller/dashboard"] — /admin never matched /admin/dashboard
 const NO_FOOTER_PATHS = ["/admin/dashboard", "/seller/dashboard"];
 
 const AppContent = () => {

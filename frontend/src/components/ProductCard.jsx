@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Icons from '../utils/icons';
 import { wishlistAPI } from '../api/axios';
-import '../styles/ProductCard.css';
+import './ProductCard.css';
 
 const calculateDiscountedPrice = (price, hasDiscount, discountPercentage) => {
   if (!hasDiscount || !discountPercentage) return price;

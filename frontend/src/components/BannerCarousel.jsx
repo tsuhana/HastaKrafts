@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { productAPI } from '../api/axios';
-import '../styles/BannerCarousel.css';
+import './BannerCarousel.css';
 
 const BannerCarousel = () => {
   const [banners, setBanners] = useState([]);

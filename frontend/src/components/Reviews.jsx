@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { reviewAPI } from "../api/axios";
 import { useToast } from "../context/ToastContext";
-import "../styles/Reviews.css";
+import "./Reviews.css";
 
 const API_URL = "http://localhost:5000";
 

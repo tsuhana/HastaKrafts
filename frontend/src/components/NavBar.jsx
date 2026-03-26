@@ -4,7 +4,7 @@ import { cartAPI, pointsAPI, wishlistAPI, messageAPI } from '../api/axios';
 import { useTranslation } from 'react-i18next';
 import Icons from '../utils/icons';
 import LanguageSwitcher from './LanguageSwitcher';
-import '../styles/NavBar.css';
+import './NavBar.css';
 
 const NavBar = () => {
   const navigate = useNavigate();
@@ -55,7 +55,7 @@ const NavBar = () => {
         fetchPoints();
       }
 
-      // ✅ FIX: Admin does not use messages — skip the API call entirely
+      //  Admin does not use messages — skip the API call entirely
       if (parsedUser.role !== 'admin') {
         fetchUnreadMessages();
       }
@@ -287,7 +287,7 @@ const NavBar = () => {
                 </Link>
               )}
 
-              {/* ✅ FIX: Messages in mobile — buyers and sellers only, NOT admin */}
+              {/*  Messages in mobile — buyers and sellers only, NOT admin */}
               {user?.role !== 'admin' && (
                 <Link to="/messages" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
                   <Icons.Messages size={20} />

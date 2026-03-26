@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import '../styles/CategoryCard.css';
+import './CategoryCard.css';
 
 const CategoryCard = ({ category }) => {
   return (

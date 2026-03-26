@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import '../styles/Footer.css';
+import './Footer.css';
 import logo from '../assets/logoo.png';
 
 const Footer = () => {
