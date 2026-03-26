@@ -15,7 +15,13 @@ const {
   getAllReviews,
   deleteReview,
   toggleBlockUser,
+  getAllAuctionsAdmin,
 } = require("../controllers/admin.controller");
+const {
+  approveAuction,
+  rejectAuction,
+  deleteAuction,
+} = require("../controllers/auction.controller");
 const productController = require("../controllers/product.controller");
 const { authenticate } = require("../middlewares/auth.middleware");
 const { checkRole } = require("../middlewares/roleCheck.middleware");
@@ -44,11 +50,17 @@ router.put("/products/:id/featured", productController.toggleFeatured);
 router.get("/users", getAllUsers);
 router.put("/users/:id/toggle-block", toggleBlockUser);
 
-// Order management 
+// Order management
 router.get("/orders", getAllOrders);
 
-// Reviews moderation 
+// Reviews moderation
 router.get("/reviews", getAllReviews);
 router.delete("/reviews/:id", deleteReview);
+
+// Auction management (admin-specific list + approve/reject/delete)
+router.get("/auctions", getAllAuctionsAdmin);
+router.post("/auctions/:id/approve", approveAuction);
+router.post("/auctions/:id/reject", rejectAuction);
+router.delete("/auctions/:id", deleteAuction);
 
 module.exports = router;

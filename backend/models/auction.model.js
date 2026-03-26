@@ -12,17 +12,11 @@ const Auction = sequelize.define(
     seller_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      references: {
-        model: "sellers",
-        key: "seller_id",
-      },
+      references: { model: "sellers", key: "seller_id" },
     },
     product_id: {
       type: DataTypes.INTEGER,
-      references: {
-        model: "products",
-        key: "product_id",
-      },
+      references: { model: "products", key: "product_id" },
     },
     title: {
       type: DataTypes.STRING(255),
@@ -54,16 +48,24 @@ const Auction = sequelize.define(
       type: DataTypes.DATE,
       allowNull: false,
     },
+    // Lifecycle status: upcoming | live | ended | cancelled
     status: {
       type: DataTypes.STRING(50),
-      defaultValue: 'upcoming',
+      defaultValue: "upcoming",
+    },
+    // Admin approval gate: pending | approved | rejected
+    approval_status: {
+      type: DataTypes.STRING(50),
+      defaultValue: "pending",
+    },
+    rejection_reason: {
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
     winner_id: {
       type: DataTypes.INTEGER,
-      references: {
-        model: "users",
-        key: "user_id",
-      },
+      allowNull: true,
+      references: { model: "users", key: "user_id" },
     },
     total_bids: {
       type: DataTypes.INTEGER,

@@ -27,12 +27,7 @@ router.post(
   "/upload-logo",
   (req, res, next) => {
     uploadShopLogoMiddleware(req, res, (err) => {
-      if (err) {
-        return res.status(400).json({
-          success: false,
-          message: err.message || "Logo upload failed",
-        });
-      }
+      if (err) return res.status(400).json({ success: false, message: err.message || "Logo upload failed" });
       next();
     });
   },
@@ -44,12 +39,7 @@ router.post(
   "/upload-citizenship",
   (req, res, next) => {
     uploadCitizenshipMiddleware(req, res, (err) => {
-      if (err) {
-        return res.status(400).json({
-          success: false,
-          message: err.message || "Citizenship upload failed",
-        });
-      }
+      if (err) return res.status(400).json({ success: false, message: err.message || "Citizenship upload failed" });
       next();
     });
   },

@@ -3,7 +3,7 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
-// ==================== MULTER CONFIG (Review Images) ====================
+// ==================== MULTER CONFIG ====================
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadPath = path.join(__dirname, "../uploads/reviews");
@@ -21,24 +21,18 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = /jpeg|jpg|png|webp/;
-    const extOk = allowed.test(path.extname(file.originalname).toLowerCase());
+    const extOk  = allowed.test(path.extname(file.originalname).toLowerCase());
     const mimeOk = allowed.test(file.mimetype);
     if (extOk && mimeOk) return cb(null, true);
     cb(new Error("Only image files allowed (jpeg, jpg, png, webp)"));
   },
 }).array("images", 3);
 
-// ==================== HELPER: fetch reviews with replies ====================
+// ==================== HELPER ====================
 const fetchReviewsWithReplies = async (productId, currentUserId = null) => {
   const all = await db.Review.findAll({
     where: { product_id: productId },
-    include: [
-      {
-        model: db.User,
-        as: "user",
-        attributes: ["user_id", "full_name", "profile_image"],
-      },
-    ],
+    include: [{ model: db.User, as: "user", attributes: ["user_id", "full_name", "profile_image"] }],
     order: [["created_at", "ASC"]],
   });
 
@@ -64,9 +58,7 @@ const fetchReviewsWithReplies = async (productId, currentUserId = null) => {
   all.forEach((r) => {
     const plain = map[r.review_id];
     if (plain.parent_id) {
-      if (map[plain.parent_id]) {
-        map[plain.parent_id].replies.push(plain);
-      }
+      if (map[plain.parent_id]) map[plain.parent_id].replies.push(plain);
     } else {
       topLevel.push(plain);
     }
@@ -83,13 +75,9 @@ const createReview = async (req, res) => {
     try {
       const { product_id, rating, comment } = req.body;
 
-      // ── Validation ──
-      if (!product_id) {
-        return res.status(400).json({ success: false, message: "Product ID is required" });
-      }
-      if (!rating) {
-        return res.status(400).json({ success: false, message: "Rating is required" });
-      }
+      if (!product_id) return res.status(400).json({ success: false, message: "Product ID is required" });
+      if (!rating)     return res.status(400).json({ success: false, message: "Rating is required" });
+
       const parsedRating = parseInt(rating);
       if (isNaN(parsedRating) || parsedRating < 1 || parsedRating > 5) {
         return res.status(400).json({ success: false, message: "Rating must be between 1 and 5" });
@@ -104,9 +92,7 @@ const createReview = async (req, res) => {
       const existing = await db.Review.findOne({
         where: { product_id, user_id: req.user.user_id, parent_id: null },
       });
-      if (existing) {
-        return res.status(400).json({ success: false, message: "You have already reviewed this product" });
-      }
+      if (existing) return res.status(400).json({ success: false, message: "You have already reviewed this product" });
 
       const orderItem = await db.OrderItem.findOne({
         include: [{ model: db.Order, as: "order", where: { user_id: req.user.user_id, payment_status: "paid" } }],
@@ -117,14 +103,14 @@ const createReview = async (req, res) => {
 
       const review = await db.Review.create({
         product_id,
-        user_id: req.user.user_id,
-        order_id: orderItem ? orderItem.order_id : null,
-        parent_id: null,
-        rating: parsedRating,
-        comment: comment ? comment.trim() : null,
-        images: imagePaths,
+        user_id:          req.user.user_id,
+        order_id:         orderItem ? orderItem.order_id : null,
+        parent_id:        null,
+        rating:           parsedRating,
+        comment:          comment ? comment.trim() : null,
+        images:           imagePaths,
         verified_purchase: !!orderItem,
-        helpful_count: 0,
+        helpful_count:    0,
       });
 
       const reviewWithUser = await db.Review.findByPk(review.review_id, {
@@ -145,36 +131,23 @@ const createReply = async (req, res) => {
     const { review_id } = req.params;
     const { comment } = req.body;
 
-    // ── Validation ──
-    if (!comment || !comment.trim()) {
-      return res.status(400).json({ success: false, message: "Reply comment is required" });
-    }
-    if (comment.trim().length > 500) {
-      return res.status(400).json({ success: false, message: "Reply must be under 500 characters" });
-    }
+    if (!comment || !comment.trim()) return res.status(400).json({ success: false, message: "Reply comment is required" });
+    if (comment.trim().length > 500)  return res.status(400).json({ success: false, message: "Reply must be under 500 characters" });
 
     const parentReview = await db.Review.findByPk(review_id);
-    if (!parentReview) {
-      return res.status(404).json({ success: false, message: "Review not found" });
-    }
+    if (!parentReview) return res.status(404).json({ success: false, message: "Review not found" });
 
-    // ── Prevent replying to a reply (only 1 level of nesting allowed) ──
-    // If the parent itself is a reply, attach to the same root parent instead
-    const rootParentId = parentReview.parent_id
-      ? parentReview.parent_id  // reply-to-reply → attach to original reply's parent
-      : parseInt(review_id);    // normal reply → attach directly
-
-    const productId = parentReview.product_id;
+    const rootParentId = parentReview.parent_id ? parentReview.parent_id : parseInt(review_id);
 
     const reply = await db.Review.create({
-      product_id: productId,
-      user_id: req.user.user_id,
-      parent_id: rootParentId,
-      rating: null,
-      comment: comment.trim(),
-      images: [],
+      product_id:       parentReview.product_id,
+      user_id:          req.user.user_id,
+      parent_id:        rootParentId,
+      rating:           null,
+      comment:          comment.trim(),
+      images:           [],
       verified_purchase: false,
-      helpful_count: 0,
+      helpful_count:    0,
     });
 
     const replyWithUser = await db.Review.findByPk(reply.review_id, {
@@ -221,28 +194,19 @@ const getProductReviews = async (req, res) => {
   try {
     const { product_id } = req.params;
     const currentUserId = req.user?.user_id || null;
-
     const reviews = await fetchReviewsWithReplies(product_id, currentUserId);
 
     const totalReviews = reviews.length;
-    const avgRating =
-      totalReviews > 0
-        ? reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / totalReviews
-        : 0;
+    const avgRating = totalReviews > 0
+      ? reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / totalReviews
+      : 0;
 
     const ratingCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-    reviews.forEach((r) => {
-      if (r.rating) ratingCounts[r.rating] = (ratingCounts[r.rating] || 0) + 1;
-    });
+    reviews.forEach((r) => { if (r.rating) ratingCounts[r.rating] = (ratingCounts[r.rating] || 0) + 1; });
 
     return res.status(200).json({
       success: true,
-      data: {
-        reviews,
-        totalReviews,
-        averageRating: parseFloat(avgRating.toFixed(1)),
-        ratingCounts,
-      },
+      data: { reviews, totalReviews, averageRating: parseFloat(avgRating.toFixed(1)), ratingCounts },
     });
   } catch (error) {
     console.error("Get product reviews error:", error);
@@ -250,7 +214,7 @@ const getProductReviews = async (req, res) => {
   }
 };
 
-// ==================== GET USER REVIEWS ====================
+// ==================== GET USER (BUYER) REVIEWS ====================
 const getUserReviews = async (req, res) => {
   try {
     const reviews = await db.Review.findAll({
@@ -265,6 +229,45 @@ const getUserReviews = async (req, res) => {
   }
 };
 
+// ==================== GET SELLER REVIEWS ====================
+// Returns all reviews for products that belong to this seller
+const getSellerReviews = async (req, res) => {
+  try {
+    // 1. Find the seller record for this user
+    const seller = await db.Seller.findOne({ where: { user_id: req.user.user_id } });
+    if (!seller) return res.status(404).json({ success: false, message: "Seller profile not found" });
+
+    // 2. Get all approved products owned by this seller
+    const sellerProducts = await db.Product.findAll({
+      where: { seller_id: seller.seller_id },
+      attributes: ["product_id"],
+    });
+    const productIds = sellerProducts.map((p) => p.product_id);
+
+    if (productIds.length === 0) {
+      return res.status(200).json({ success: true, data: [] });
+    }
+
+    // 3. Fetch top-level reviews for those products
+    const reviews = await db.Review.findAll({
+      where: {
+        product_id: productIds,
+        parent_id:  null, // top-level reviews only, no replies
+      },
+      include: [
+        { model: db.User,    as: "user",    attributes: ["user_id", "full_name", "profile_image"] },
+        { model: db.Product, as: "product", attributes: ["product_id", "name", "images", "price"] },
+      ],
+      order: [["created_at", "DESC"]],
+    });
+
+    return res.status(200).json({ success: true, data: reviews });
+  } catch (error) {
+    console.error("Get seller reviews error:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch seller reviews" });
+  }
+};
+
 // ==================== UPDATE REVIEW ====================
 const updateReview = async (req, res) => {
   try {
@@ -274,31 +277,20 @@ const updateReview = async (req, res) => {
     const isAdmin = req.user.role === "admin";
 
     const review = await db.Review.findByPk(review_id);
-    if (!review) {
-      return res.status(404).json({ success: false, message: "Review not found" });
-    }
-
-    // ── Permission: owner OR admin can edit ──
+    if (!review) return res.status(404).json({ success: false, message: "Review not found" });
     if (review.user_id !== currentUserId && !isAdmin) {
       return res.status(403).json({ success: false, message: "You can only edit your own reviews" });
     }
 
     const isReply = review.parent_id !== null;
+    if (rating !== undefined && isReply) return res.status(400).json({ success: false, message: "Cannot set a rating on a reply" });
 
-    // ── Rating is only valid on top-level reviews, not replies ──
-    if (rating !== undefined && isReply) {
-      return res.status(400).json({ success: false, message: "Cannot set a rating on a reply" });
-    }
-
-    // ── Validate rating if provided ──
     if (rating !== undefined) {
       const parsedRating = parseInt(rating);
       if (isNaN(parsedRating) || parsedRating < 1 || parsedRating > 5) {
         return res.status(400).json({ success: false, message: "Rating must be between 1 and 5" });
       }
     }
-
-    // ── Validate comment if provided ──
     if (comment !== undefined) {
       if (typeof comment !== "string" || comment.trim().length === 0) {
         return res.status(400).json({ success: false, message: "Comment cannot be empty" });
@@ -314,7 +306,6 @@ const updateReview = async (req, res) => {
     if (rating !== undefined && !isReply) updatePayload.rating = parseInt(rating);
 
     await review.update(updatePayload);
-
     return res.status(200).json({ success: true, message: "Updated successfully", data: review });
   } catch (error) {
     console.error("Update review error:", error);
@@ -330,16 +321,11 @@ const deleteReview = async (req, res) => {
     const isAdmin = req.user.role === "admin";
 
     const review = await db.Review.findByPk(review_id);
-    if (!review) {
-      return res.status(404).json({ success: false, message: "Review not found" });
-    }
-
-    // ── Permission: owner OR admin can delete ──
+    if (!review) return res.status(404).json({ success: false, message: "Review not found" });
     if (review.user_id !== currentUserId && !isAdmin) {
       return res.status(403).json({ success: false, message: "You can only delete your own reviews" });
     }
 
-    // Delete images from filesystem (top-level reviews only)
     if (review.images?.length > 0) {
       review.images.forEach((imgPath) => {
         const fullPath = path.join(__dirname, "..", imgPath);
@@ -347,7 +333,6 @@ const deleteReview = async (req, res) => {
       });
     }
 
-    // Also delete all replies and helpful votes
     await db.Review.destroy({ where: { parent_id: review_id } });
     await db.ReviewHelpful.destroy({ where: { review_id } });
     await review.destroy();
@@ -365,6 +350,7 @@ module.exports = {
   toggleHelpful,
   getProductReviews,
   getUserReviews,
+  getSellerReviews,
   updateReview,
   deleteReview,
 };

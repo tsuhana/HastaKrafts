@@ -10,10 +10,10 @@ const getDashboardStats = async (req, res) => {
     const totalBuyers      = await db.User.count({ where: { role: "buyer" } });
     const totalSellerUsers = await db.User.count({ where: { role: "seller" } });
 
-    const totalSellers     = await db.Seller.count();
-    const pendingSellers   = await db.Seller.count({ where: { approval_status: "pending" } });
-    const approvedSellers  = await db.Seller.count({ where: { approval_status: "approved" } });
-    const rejectedSellers  = await db.Seller.count({ where: { approval_status: "rejected" } });
+    const totalSellers    = await db.Seller.count();
+    const pendingSellers  = await db.Seller.count({ where: { approval_status: "pending" } });
+    const approvedSellers = await db.Seller.count({ where: { approval_status: "approved" } });
+    const rejectedSellers = await db.Seller.count({ where: { approval_status: "rejected" } });
 
     const totalProducts    = await db.Product.count();
     const pendingProducts  = await db.Product.count({ where: { status: "pending" } });
@@ -29,6 +29,12 @@ const getDashboardStats = async (req, res) => {
       totalRevenue = revenueResult || 0;
     } catch (_) {}
 
+    // Pending auctions count for sidebar badge
+    let pendingAuctions = 0;
+    try {
+      pendingAuctions = await db.Auction.count({ where: { approval_status: "pending" } });
+    } catch (_) {}
+
     res.status(200).json({
       success: true,
       data: {
@@ -36,6 +42,7 @@ const getDashboardStats = async (req, res) => {
         sellers:  { total: totalSellers, pending: pendingSellers, approved: approvedSellers, rejected: rejectedSellers },
         products: { total: totalProducts, pending: pendingProducts, approved: approvedProducts, rejected: rejectedProducts },
         orders:   { total: totalOrders, pending: pendingOrders, completed: completedOrders, revenue: totalRevenue },
+        auctions: { pending: pendingAuctions },
       },
     });
   } catch (error) {
@@ -155,9 +162,7 @@ const getAnalytics = async (req, res) => {
         subQuery: false,
         raw: true,
       });
-      topCategories = cats
-        .map((c) => ({ name: c.name, count: parseInt(c.count) || 0 }))
-        .filter((c) => c.count > 0);
+      topCategories = cats.map((c) => ({ name: c.name, count: parseInt(c.count) || 0 })).filter((c) => c.count > 0);
     } catch (_) {}
 
     let topSellers = [];
@@ -171,9 +176,7 @@ const getAnalytics = async (req, res) => {
         subQuery: false,
         raw: true,
       });
-      topSellers = sellers
-        .map((s) => ({ name: s.shop_name || "Unknown", sales: parseInt(s.sales) || 0 }))
-        .filter((s) => s.sales > 0);
+      topSellers = sellers.map((s) => ({ name: s.shop_name || "Unknown", sales: parseInt(s.sales) || 0 })).filter((s) => s.sales > 0);
     } catch (_) {}
 
     let totalRevenue = 0, thisMonthRevenue = 0, totalOrders = 0;
@@ -184,7 +187,6 @@ const getAnalytics = async (req, res) => {
         raw: true,
       });
       totalRevenue = Math.round(parseFloat(totalRevRes?.total) || 0);
-
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const monthRevRes = await db.Order.findOne({
         attributes: [[fn("SUM", col("total")), "total"]],
@@ -231,17 +233,11 @@ const approveSeller = async (req, res) => {
       include: [{ model: db.User, as: "user", attributes: ["full_name", "email"] }],
     });
     if (!seller) return res.status(404).json({ success: false, message: "Seller not found" });
-
     await seller.update({ approval_status: "approved", approved_at: new Date() });
-
     if (seller.user?.email) {
-      sendSellerApprovalEmail(
-        seller.user.email,
-        seller.user.full_name,
-        seller.shop_name || "your shop"
-      ).catch((err) => console.error("Approval email error (non-fatal):", err.message));
+      sendSellerApprovalEmail(seller.user.email, seller.user.full_name, seller.shop_name || "your shop")
+        .catch((err) => console.error("Approval email error (non-fatal):", err.message));
     }
-
     res.status(200).json({ success: true, message: "Seller approved successfully", data: seller });
   } catch (error) {
     console.error("Approve seller error:", error);
@@ -254,27 +250,18 @@ const rejectSeller = async (req, res) => {
   try {
     const { id } = req.params;
     const { rejection_reason } = req.body;
-
     if (!rejection_reason || !rejection_reason.trim()) {
       return res.status(400).json({ success: false, message: "Please provide a rejection reason" });
     }
-
     const seller = await db.Seller.findByPk(id, {
       include: [{ model: db.User, as: "user", attributes: ["full_name", "email"] }],
     });
     if (!seller) return res.status(404).json({ success: false, message: "Seller not found" });
-
     await seller.update({ approval_status: "rejected", rejection_reason: rejection_reason.trim() });
-
     if (seller.user?.email) {
-      sendSellerRejectionEmail(
-        seller.user.email,
-        seller.user.full_name,
-        seller.shop_name || "your shop",
-        rejection_reason.trim()
-      ).catch((err) => console.error("Rejection email error (non-fatal):", err.message));
+      sendSellerRejectionEmail(seller.user.email, seller.user.full_name, seller.shop_name || "your shop", rejection_reason.trim())
+        .catch((err) => console.error("Rejection email error (non-fatal):", err.message));
     }
-
     res.status(200).json({ success: true, message: "Seller rejected", data: seller });
   } catch (error) {
     console.error("Reject seller error:", error);
@@ -363,7 +350,7 @@ const getAllSellers = async (req, res) => {
   }
 };
 
-// ==================== GET ALL ORDERS (C1 NEW) ====================
+// ==================== GET ALL ORDERS ====================
 const getAllOrders = async (req, res) => {
   try {
     const orders = await db.Order.findAll({
@@ -387,7 +374,7 @@ const getAllOrders = async (req, res) => {
   }
 };
 
-// ==================== GET ALL REVIEWS (C1 NEW) ====================
+// ==================== GET ALL REVIEWS ====================
 const getAllReviews = async (req, res) => {
   try {
     const reviews = await db.Review.findAll({
@@ -404,7 +391,7 @@ const getAllReviews = async (req, res) => {
   }
 };
 
-// ==================== DELETE REVIEW (C1 NEW) ====================
+// ==================== DELETE REVIEW ====================
 const deleteReview = async (req, res) => {
   try {
     const { id } = req.params;
@@ -418,24 +405,17 @@ const deleteReview = async (req, res) => {
   }
 };
 
-// ==================== TOGGLE BLOCK USER (C1 NEW) ====================
+// ==================== TOGGLE BLOCK USER ====================
 const toggleBlockUser = async (req, res) => {
   try {
     const { id } = req.params;
-
     if (parseInt(id) === req.user.user_id) {
       return res.status(400).json({ success: false, message: "You cannot block yourself" });
     }
-
     const user = await db.User.findByPk(id);
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
-
-    if (user.role === "admin") {
-      return res.status(400).json({ success: false, message: "Cannot block an admin account" });
-    }
-
+    if (user.role === "admin") return res.status(400).json({ success: false, message: "Cannot block an admin account" });
     await user.update({ is_active: !user.is_active });
-
     res.status(200).json({
       success: true,
       message: user.is_active ? "User unblocked successfully" : "User blocked successfully",
@@ -444,6 +424,224 @@ const toggleBlockUser = async (req, res) => {
   } catch (error) {
     console.error("Toggle block user error:", error);
     res.status(500).json({ success: false, message: "Failed to update user status" });
+  }
+};
+
+// ==================== GET ALL AUCTIONS (admin) ====================
+const getAllAuctionsAdmin = async (req, res) => {
+  try {
+    const auctions = await db.Auction.findAll({
+      include: [
+        {
+          model: db.Seller,
+          as: "seller",
+          attributes: ["seller_id", "shop_name", "user_id"],
+          include: [{ model: db.User, as: "user", attributes: ["full_name"] }],
+        },
+        { model: db.User, as: "winner", attributes: ["user_id", "full_name"] },
+        { model: db.Bid, as: "bids", attributes: ["bid_id", "bid_amount", "user_id"] },
+      ],
+      order: [["created_at", "DESC"]],
+    });
+    res.status(200).json({ success: true, data: auctions });
+  } catch (error) {
+    console.error("Get all auctions admin error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch auctions" });
+  }
+};
+
+// ==================== APPROVE AUCTION (admin) ====================
+const approveAuction = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const auction = await db.Auction.findByPk(id);
+    if (!auction) return res.status(404).json({ success: false, message: "Auction not found" });
+
+    // Determine lifecycle status based on current time vs scheduled times
+    const now = new Date();
+    const start = new Date(auction.auction_start);
+    const end   = new Date(auction.auction_end);
+
+    let newStatus = "upcoming";
+    if (now >= start && now < end) newStatus = "live";
+    else if (now >= end)           newStatus = "ended";
+
+    await auction.update({
+      approval_status: "approved",
+      status: newStatus,
+      approved_at: now,
+      approved_by: req.user.user_id,
+    });
+
+    res.status(200).json({ success: true, message: "Auction approved successfully", data: auction });
+  } catch (error) {
+    console.error("Approve auction error:", error);
+    res.status(500).json({ success: false, message: "Failed to approve auction" });
+  }
+};
+
+// ==================== REJECT AUCTION (admin) ====================
+const rejectAuction = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rejection_reason } = req.body;
+    if (!rejection_reason || !rejection_reason.trim()) {
+      return res.status(400).json({ success: false, message: "Please provide a rejection reason" });
+    }
+    const auction = await db.Auction.findByPk(id);
+    if (!auction) return res.status(404).json({ success: false, message: "Auction not found" });
+
+    await auction.update({
+      approval_status: "rejected",
+      status: "cancelled",           // treat rejected as cancelled so it's terminal
+      rejection_reason: rejection_reason.trim(),
+    });
+
+    res.status(200).json({ success: true, message: "Auction rejected", data: auction });
+  } catch (error) {
+    console.error("Reject auction error:", error);
+    res.status(500).json({ success: false, message: "Failed to reject auction" });
+  }
+};
+
+// ==================== DELETE AUCTION (admin hard delete) ====================
+const deleteAuction = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const auction = await db.Auction.findByPk(id);
+    if (!auction) return res.status(404).json({ success: false, message: "Auction not found" });
+
+    // Delete associated bids first to avoid FK constraint errors
+    await db.Bid.destroy({ where: { auction_id: id } });
+    await auction.destroy();
+
+    res.status(200).json({ success: true, message: "Auction deleted successfully" });
+  } catch (error) {
+    console.error("Delete auction error:", error);
+    res.status(500).json({ success: false, message: "Failed to delete auction" });
+  }
+};
+
+// ==================== BANNER MANAGEMENT ====================
+const getAllBanners = async (req, res) => {
+  try {
+    const banners = await db.Banner.findAll({ order: [["created_at", "DESC"]] });
+    res.status(200).json({ success: true, data: banners });
+  } catch (error) {
+    console.error("Get all banners error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch banners" });
+  }
+};
+
+const createBanner = async (req, res) => {
+  try {
+    const { title, description, link_url, link_type } = req.body;
+    if (!title || !req.file) return res.status(400).json({ success: false, message: "Title and image are required" });
+    const banner = await db.Banner.create({
+      title,
+      description: description || null,
+      image: `/uploads/banners/${req.file.filename}`,
+      link_url: link_url || null,
+      link_type: link_type || "none",
+      is_active: true,
+    });
+    res.status(201).json({ success: true, message: "Banner created successfully", data: banner });
+  } catch (error) {
+    console.error("Create banner error:", error);
+    res.status(500).json({ success: false, message: "Failed to create banner" });
+  }
+};
+
+const toggleBannerStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const banner = await db.Banner.findByPk(id);
+    if (!banner) return res.status(404).json({ success: false, message: "Banner not found" });
+    await banner.update({ is_active: !banner.is_active });
+    res.status(200).json({
+      success: true,
+      message: banner.is_active ? "Banner activated" : "Banner deactivated",
+      data: banner,
+    });
+  } catch (error) {
+    console.error("Toggle banner error:", error);
+    res.status(500).json({ success: false, message: "Failed to toggle banner" });
+  }
+};
+
+const deleteBanner = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const banner = await db.Banner.findByPk(id);
+    if (!banner) return res.status(404).json({ success: false, message: "Banner not found" });
+    await banner.destroy();
+    res.status(200).json({ success: true, message: "Banner deleted successfully" });
+  } catch (error) {
+    console.error("Delete banner error:", error);
+    res.status(500).json({ success: false, message: "Failed to delete banner" });
+  }
+};
+
+// ==================== CONTACT MESSAGES ====================
+const getAllContactMessages = async (req, res) => {
+  try {
+    const messages = await db.Contact.findAll({ order: [["created_at", "DESC"]] });
+    res.status(200).json({ success: true, data: messages });
+  } catch (error) {
+    console.error("Get all contact messages error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch contact messages" });
+  }
+};
+
+const updateContactStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, admin_reply } = req.body;
+    const contact = await db.Contact.findByPk(id);
+    if (!contact) return res.status(404).json({ success: false, message: "Contact message not found" });
+    const updates = {};
+    if (status) updates.status = status;
+    if (admin_reply !== undefined) {
+      updates.admin_reply = admin_reply;
+      updates.replied_at  = new Date();
+      if (!status) updates.status = "resolved";
+    }
+    await contact.update(updates);
+    res.status(200).json({ success: true, message: "Contact message updated", data: contact });
+  } catch (error) {
+    console.error("Update contact status error:", error);
+    res.status(500).json({ success: false, message: "Failed to update contact message" });
+  }
+};
+
+const deleteContactMessage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const contact = await db.Contact.findByPk(id);
+    if (!contact) return res.status(404).json({ success: false, message: "Contact message not found" });
+    await contact.destroy();
+    res.status(200).json({ success: true, message: "Contact message deleted successfully" });
+  } catch (error) {
+    console.error("Delete contact message error:", error);
+    res.status(500).json({ success: false, message: "Failed to delete contact message" });
+  }
+};
+
+// ==================== TOGGLE FEATURED ====================
+const toggleFeatured = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const product = await db.Product.findByPk(id);
+    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+    await product.update({ is_featured: !product.is_featured });
+    res.status(200).json({
+      success: true,
+      message: product.is_featured ? "Product featured" : "Product unfeatured",
+      data: product,
+    });
+  } catch (error) {
+    console.error("Toggle featured error:", error);
+    res.status(500).json({ success: false, message: "Failed to toggle featured status" });
   }
 };
 
@@ -462,4 +660,16 @@ module.exports = {
   getAllReviews,
   deleteReview,
   toggleBlockUser,
+  getAllAuctionsAdmin,
+  approveAuction,   // 
+  rejectAuction,    // 
+  deleteAuction,    // 
+  getAllBanners,
+  createBanner,
+  toggleBannerStatus,
+  deleteBanner,
+  getAllContactMessages,
+  updateContactStatus,
+  deleteContactMessage,
+  toggleFeatured,
 };

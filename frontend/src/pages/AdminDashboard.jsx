@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -6,7 +6,6 @@ import {
 import { adminAPI, productAPI } from "../api/axios";
 import { useToast } from "../context/ToastContext";
 import ConfirmModal from "../components/ConfirmModal";
-import AdminReplyModal from "../components/AdminReplyModal";
 import {
   Pagination, FilterBar, SearchInput, DateRangePicker, SortSelect, filterByDateRange,
 } from "../components/SharedComponents";
@@ -34,7 +33,51 @@ const Icons = {
   auction:  <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2.5l7 7-7 7"/><path d="M9.5 7.5L2.5 14.5"/><path d="M6 21h12"/><path d="M12 17v4"/></svg>,
 };
 
-/* ─── Small helpers ─── */
+/* ─── Helpers ─── */
+const API_URL = "http://localhost:5000";
+const PER_PAGE = 15;
+const DONUT_COLORS_PRODUCT = ["#2a9e6a", "#c08830", "#aa2c1c"];
+const DONUT_COLORS_ORDER   = ["#c08830", "#1a509a", "#2a9e6a", "#aa2c1c", "#b86e38"];
+
+const parseAnyDate = (raw) => {
+  if (!raw) return null;
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? null : d;
+};
+
+const fmtDate = (val) => {
+  const d = parseAnyDate(val);
+  if (!d) return "—";
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+};
+
+const fmtDateTime = (val) => {
+  const d = parseAnyDate(val);
+  if (!d) return "—";
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) +
+    " " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+};
+
+const getDate = (obj) => obj?.created_at || obj?.createdAt || obj?.auction_start || obj?.date || null;
+
+const timeAgo = (obj) => {
+  const d = parseAnyDate(getDate(obj));
+  if (!d) return "—";
+  const days = Math.floor((Date.now() - d) / 86_400_000);
+  if (days <= 0) return "Today";
+  if (days === 1) return "1 day ago";
+  return `${days} days ago`;
+};
+
+const safe = (v) => { if (v == null) return "—"; const s = String(v).trim(); return s || "—"; };
+const fmtAmount = (v) => `Rs. ${Math.round(parseFloat(v) || 0).toLocaleString()}`;
+const initials = (name) => {
+  const parts = (name || "").trim().split(" ").filter(Boolean);
+  if (!parts.length) return "?";
+  return ((parts[0][0] || "") + (parts.length > 1 ? parts[parts.length - 1][0] : parts[0][1] || "")).toUpperCase() || "?";
+};
+
+/* ─── Sub-components ─── */
 const DonutLabel = ({ cx, cy, value, label }) => (
   <g>
     <text x={cx} y={cy - 8} textAnchor="middle" fill="var(--text-1)" fontSize="1.5rem" fontWeight="800" fontFamily="inherit">{value}</text>
@@ -104,7 +147,7 @@ const StarRating = ({ rating }) => {
   const r = parseInt(rating) || 0;
   return (
     <div style={{ display: "flex", gap: 1, alignItems: "center" }}>
-      {[1, 2, 3, 4, 5].map((s) => (
+      {[1,2,3,4,5].map((s) => (
         <span key={s} style={{ fontSize: "0.75rem", color: s <= r ? "#c08830" : "#ddd5c4" }}>★</span>
       ))}
       <span style={{ fontSize: "0.68rem", color: "var(--text-3)", marginLeft: 3 }}>{r}/5</span>
@@ -131,7 +174,7 @@ const RejectModal = ({ isOpen, title, onConfirm, onCancel }) => {
           rows={3}
           style={{ width: "100%", padding: "0.6rem 0.75rem", borderRadius: 10, border: "1.5px solid #e5e7eb", fontSize: "0.875rem", resize: "vertical", marginBottom: "1.2rem", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
           onFocus={(e) => (e.target.style.borderColor = "#f59e0b")}
-          onBlur={(e) => (e.target.style.borderColor = "#e5e7eb")}
+          onBlur={(e)  => (e.target.style.borderColor = "#e5e7eb")}
           autoFocus
         />
         <div className="cm-actions">
@@ -148,87 +191,128 @@ const RejectModal = ({ isOpen, title, onConfirm, onCancel }) => {
   );
 };
 
-/* ─── Constants ─── */
-const API_URL = "http://localhost:5000";
-const PER_PAGE = 15;
-const DONUT_COLORS_PRODUCT = ["#2a9e6a", "#c08830", "#aa2c1c"];
-const DONUT_COLORS_ORDER   = ["#c08830", "#1a509a", "#2a9e6a", "#aa2c1c", "#b86e38"];
-const AUCTION_STATUS_COLORS = { live: "#10B981", upcoming: "#3B82F6", ended: "#8B5CF6", cancelled: "#EF4444" };
+const ReplyModal = ({ isOpen, contact, onClose, onSend }) => {
+  const [reply, setReply]     = useState("");
+  const [sending, setSending] = useState(false);
+  useEffect(() => { if (isOpen) { setReply(contact?.admin_reply || ""); setSending(false); } }, [isOpen, contact]);
+  if (!isOpen || !contact) return null;
+  const canSend = reply.trim().length > 0 && !sending;
+  const handleSend = async () => {
+    if (!canSend) return;
+    setSending(true);
+    await onSend(contact.contact_id, reply.trim());
+    setSending(false);
+    onClose();
+  };
+  return (
+    <div className="cm-overlay" onClick={onClose}>
+      <div className="cm-box" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+          <div>
+            <h3 className="cm-title" style={{ marginBottom: 4 }}>Reply to {contact.name}</h3>
+            <p style={{ fontSize: "0.72rem", color: "var(--text-3)", margin: 0 }}>{contact.email} · {contact.subject}</p>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: "1.3rem", cursor: "pointer", color: "var(--text-3)", lineHeight: 1 }}>×</button>
+        </div>
+        <div style={{ background: "var(--bg)", border: "1px solid var(--border-light)", borderRadius: 8, padding: "10px 12px", marginBottom: 14, fontSize: "0.78rem", color: "var(--text-2)", lineHeight: 1.6 }}>
+          <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Their message</div>
+          {contact.message}
+        </div>
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ display: "block", fontSize: "0.65rem", fontWeight: 700, color: "var(--text-2)", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.06em" }}>Your reply (sent via email)</label>
+          <textarea
+            value={reply}
+            onChange={(e) => setReply(e.target.value)}
+            rows={5}
+            autoFocus
+            placeholder="Write your reply here…"
+            style={{ width: "100%", padding: "0.65rem 0.8rem", borderRadius: 8, border: "1.5px solid var(--border)", fontSize: "0.84rem", fontFamily: "inherit", resize: "vertical", outline: "none", boxSizing: "border-box", background: "var(--bg)", color: "var(--text-1)" }}
+            onFocus={(e) => (e.target.style.borderColor = "var(--accent)")}
+            onBlur={(e)  => (e.target.style.borderColor = "var(--border)")}
+          />
+        </div>
+        <div className="cm-actions">
+          <button className="cm-btn cm-cancel" onClick={onClose}>Cancel</button>
+          <button
+            className="cm-btn cm-confirm"
+            onClick={handleSend}
+            disabled={!canSend}
+            style={{ opacity: canSend ? 1 : 0.5, cursor: canSend ? "pointer" : "not-allowed", background: "var(--accent)", color: "#fff", border: "none" }}
+          >
+            {sending ? "Sending…" : "Send Reply"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-/* ════════════════════ MAIN COMPONENT ════════════════════ */
+/* ════════════════════ MAIN ════════════════════ */
 const AdminDashboard = () => {
   const toast = useToast();
-  const [activeTab, setActiveTab]         = useState("overview");
-  const [loading, setLoading]             = useState(true);
+  const [activeTab, setActiveTab]               = useState("overview");
+  const [loading, setLoading]                   = useState(true);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
-  const [msgFilter, setMsgFilter]         = useState("all");
-  const [uploadingBanner, setUploadingBanner] = useState(false);
-  const [revenueView, setRevenueView]     = useState("weekly");
+  const [msgFilter, setMsgFilter]               = useState("all");
+  const [uploadingBanner, setUploadingBanner]   = useState(false);
+  const [revenueView, setRevenueView]           = useState("weekly");
 
-  /* ── Data states ── */
-  const [stats, setStats]                 = useState({ totalUsers: 0, totalSellersUsers: 0, totalBuyers: 0, totalSellerProfiles: 0, pendingSellers: 0, approvedSellers: 0, totalProducts: 0, pendingProducts: 0, approvedProducts: 0, rejectedProducts: 0 });
-  const [analytics, setAnalytics]         = useState({ dailySales: [], monthlySales: [], productDonut: [], orderDonut: [], topCategories: [], topSellers: [], summary: { totalRevenue: 0, thisMonthRevenue: 0, totalOrders: 0 } });
+  /* ── Data ── */
+  const [stats, setStats]             = useState({ totalUsers: 0, totalSellersUsers: 0, totalBuyers: 0, totalSellerProfiles: 0, pendingSellers: 0, approvedSellers: 0, totalProducts: 0, pendingProducts: 0, approvedProducts: 0, rejectedProducts: 0 });
+  const [analytics, setAnalytics]     = useState({ dailySales: [], monthlySales: [], productDonut: [], orderDonut: [], topCategories: [], topSellers: [], summary: { totalRevenue: 0, thisMonthRevenue: 0, totalOrders: 0 } });
   const [pendingSellers, setPendingSellers]   = useState([]);
   const [pendingProducts, setPendingProducts] = useState([]);
-  const [allProducts, setAllProducts]     = useState([]);
-  const [allOrders, setAllOrders]         = useState([]);
-  const [allUsers, setAllUsers]           = useState([]);
-  const [allSellers, setAllSellers]       = useState([]);
-  const [allReviews, setAllReviews]       = useState([]);
-  const [allAuctions, setAllAuctions]     = useState([]);
-  const [banners, setBanners]             = useState([]);
+  const [allProducts, setAllProducts]         = useState([]);
+  const [allOrders, setAllOrders]             = useState([]);
+  const [allUsers, setAllUsers]               = useState([]);
+  const [allSellers, setAllSellers]           = useState([]);
+  const [allReviews, setAllReviews]           = useState([]);
+  const [allAuctions, setAllAuctions]         = useState([]);
+  const [banners, setBanners]                 = useState([]);
   const [contactMessages, setContactMessages] = useState([]);
 
-  /* ── Modal states ── */
-  const [confirmModal, setConfirmModal]   = useState({ isOpen: false, type: null, id: null });
-  const [rejectModal, setRejectModal]     = useState({ isOpen: false, type: null, id: null });
-  const [replyModal, setReplyModal]       = useState({ isOpen: false, contact: null });
+  /* ── Modals ── */
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: null, id: null });
+  const [rejectModal, setRejectModal]   = useState({ isOpen: false, type: null, id: null });
+  const [replyModal, setReplyModal]     = useState({ isOpen: false, contact: null });
 
-  /* ── Orders tab state ── */
-  const [orderSearch, setOrderSearch]     = useState("");
-  const [orderFilter, setOrderFilter]     = useState("all");
+  /* ── Tab filter/sort/page state ── */
+  const [orderSearch, setOrderSearch]       = useState("");
+  const [orderFilter, setOrderFilter]       = useState("all");
   const [orderPayFilter, setOrderPayFilter] = useState("all");
-  const [orderDate, setOrderDate]         = useState({ startDate: "", endDate: "" });
-  const [orderSort, setOrderSort]         = useState("newest");
-  const [orderPage, setOrderPage]         = useState(1);
+  const [orderDate, setOrderDate]           = useState({ startDate: "", endDate: "" });
+  const [orderSort, setOrderSort]           = useState("newest");
+  const [orderPage, setOrderPage]           = useState(1);
 
-  /* ── All Products tab state ── */
-  const [prodSearch, setProdSearch]       = useState("");
-  const [prodFilter, setProdFilter]       = useState("all");
-  const [prodSort, setProdSort]           = useState("newest");
-  const [prodPage, setProdPage]           = useState(1);
+  const [prodSearch, setProdSearch] = useState("");
+  const [prodFilter, setProdFilter] = useState("all");
+  const [prodSort, setProdSort]     = useState("newest");
+  const [prodPage, setProdPage]     = useState(1);
 
-  /* ── Featured Products tab state ── */
-  const [featSearch, setFeatSearch]       = useState("");
-  const [featFilter, setFeatFilter]       = useState("all");
-  const [featSort, setFeatSort]           = useState("newest");
-  const [featPage, setFeatPage]           = useState(1);
+  const [featPage, setFeatPage]     = useState(1);
+  const [featSearch, setFeatSearch] = useState("");
+  const FEAT_PER_PAGE = 15;
 
-  /* ── Users tab state ── */
-  const [userSearch, setUserSearch]       = useState("");
-  const [userFilter, setUserFilter]       = useState("all");
-  const [userSort, setUserSort]           = useState("newest");
-  const [userPage, setUserPage]           = useState(1);
+  const [userSearch, setUserSearch] = useState("");
+  const [userFilter, setUserFilter] = useState("all");
+  const [userSort, setUserSort]     = useState("newest");
+  const [userPage, setUserPage]     = useState(1);
 
-  /* ── Sellers tab state ── */
-  const [sellerSearch, setSellerSearch]   = useState("");
-  const [sellerFilter, setSellerFilter]   = useState("all");
-  const [sellerSort, setSellerSort]       = useState("newest");
-  const [sellerPage, setSellerPage]       = useState(1);
+  const [sellerSearch, setSellerSearch] = useState("");
+  const [sellerFilter, setSellerFilter] = useState("all");
+  const [sellerSort, setSellerSort]     = useState("newest");
+  const [sellerPage, setSellerPage]     = useState(1);
 
-  /* ── Reviews tab state ── */
-  const [reviewSearch, setReviewSearch]   = useState("");
-  const [reviewSort, setReviewSort]       = useState("newest");
-  const [reviewRating, setReviewRating]   = useState("all");
-  const [reviewPage, setReviewPage]       = useState(1);
+  const [reviewSearch, setReviewSearch] = useState("");
+  const [reviewSort, setReviewSort]     = useState("newest");
+  const [reviewRating, setReviewRating] = useState("all");
+  const [reviewPage, setReviewPage]     = useState(1);
 
-  /* ── Auctions tab state ── */
   const [auctionSearch, setAuctionSearch] = useState("");
   const [auctionFilter, setAuctionFilter] = useState("all");
   const [auctionSort, setAuctionSort]     = useState("newest");
   const [auctionPage, setAuctionPage]     = useState(1);
 
-  /* ── Fetch functions ── */
   useEffect(() => {
     fetchDashboardData();
     fetchAnalytics();
@@ -241,39 +325,7 @@ const AdminDashboard = () => {
     fetchAllAuctions();
   }, []);
 
-  /* ─── FIXED: fmtDate tries both createdAt and created_at ─── */
-  const parseAnyDate = (raw) => {
-    if (!raw) return null;
-    const d = new Date(raw);
-    return isNaN(d.getTime()) ? null : d;
-  };
-
-  const safe      = (v) => { if (v == null) return "—"; const s = String(v).trim(); return s || "—"; };
-  const timeAgo   = (seller) => {
-    const d = parseAnyDate(seller?.created_at || seller?.createdAt);
-    if (!d) return "—";
-    const days = Math.floor((Date.now() - d) / 86_400_000);
-    if (days <= 0) return "Today"; if (days === 1) return "1 day ago"; return `${days} days ago`;
-  };
-  const initials  = (name) => {
-    const parts = (name || "").trim().split(" ").filter(Boolean);
-    if (!parts.length) return "?";
-    return ((parts[0][0] || "") + (parts.length > 1 ? parts[parts.length - 1][0] : parts[0][1] || "")).toUpperCase() || "?";
-  };
-  // FIXED: handles createdAt, created_at, and nested variants
-  const fmtDate   = (raw) => {
-    const d = parseAnyDate(raw);
-    if (!d) return "—";
-    return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
-  };
-  const fmtAmount = (v) => `Rs. ${Math.round(parseFloat(v) || 0).toLocaleString()}`;
-
-  const fmtAuctionDate = (raw) => {
-    const d = parseAnyDate(raw);
-    if (!d) return "—";
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + " " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
-  };
-
+  /* ── Fetch functions ── */
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
@@ -299,41 +351,42 @@ const AdminDashboard = () => {
       }
       if (sellersRes?.data?.success)  setPendingSellers(sellersRes.data.data || []);
       if (productsRes?.data?.success) setPendingProducts(productsRes.data.data || []);
-
-      // FIXED: fetch ALL products (all statuses) for the All Products tab
       try {
-        const r = await productAPI.getAllProducts();
-        setAllProducts(r.data.data.products || []);
+        const r = await productAPI.getAllProducts({});
+        setAllProducts(r.data.data?.products || r.data.data || []);
       } catch {}
     } catch (err) { console.error("fetchDashboardData:", err); }
     finally { setLoading(false); }
   };
 
-  const fetchAnalytics    = async () => {
+  const fetchAnalytics = async () => {
     try { setAnalyticsLoading(true); const res = await adminAPI.getAnalytics(); if (res?.data?.success) setAnalytics(res.data.data); }
     catch (err) { console.error("fetchAnalytics:", err); }
     finally { setAnalyticsLoading(false); }
   };
-  const fetchBanners      = async () => {
+  const fetchBanners = async () => {
     try { const res = await adminAPI.getAllBanners(); if (res.data.success) setBanners(res.data.data || []); } catch {}
   };
   const fetchContactMessages = async () => {
     try { const res = await adminAPI.getAllContactMessages(); if (res.data.success) setContactMessages(res.data.data || []); } catch {}
   };
-  const fetchAllOrders    = async () => {
-    try { const res = await adminAPI.getAllOrders(); if (res.data.success) setAllOrders(res.data.data || []); } catch (err) { console.error("fetchAllOrders:", err); }
+  const fetchAllOrders = async () => {
+    try { const res = await adminAPI.getAllOrders(); if (res.data.success) setAllOrders(res.data.data || []); } catch (err) { console.error(err); }
   };
-  const fetchAllUsers     = async () => {
+  const fetchAllUsers = async () => {
     try { const res = await adminAPI.getAllUsers(); if (res.data.success) setAllUsers(res.data.data || []); } catch {}
   };
-  const fetchAllSellers   = async () => {
+  const fetchAllSellers = async () => {
     try { const res = await adminAPI.getAllSellers(); if (res.data.success) setAllSellers(res.data.data || []); } catch {}
   };
-  const fetchAllReviews   = async () => {
+  const fetchAllReviews = async () => {
     try { const res = await adminAPI.getAllReviews(); if (res.data.success) setAllReviews(res.data.data || []); } catch {}
   };
-  const fetchAllAuctions  = async () => {
-    try { const res = await adminAPI.getAllAuctions(); if (res.data.success) setAllAuctions(res.data.data || []); } catch (err) { console.error("fetchAllAuctions:", err); }
+
+  //  FIX: Uses adminAPI (sees ALL auctions regardless of approval_status)
+  const fetchAllAuctions = async () => {
+    try { const res = await adminAPI.getAllAuctions(); if (res.data.success) setAllAuctions(res.data.data || []); }
+    catch (err) { console.error("fetchAllAuctions:", err); }
   };
 
   const handleRefresh = () => {
@@ -356,19 +409,12 @@ const AdminDashboard = () => {
   const handleContactStatus = async (id, status) => {
     try { const res = await adminAPI.updateContactStatus(id, { status }); if (res.data.success) { toast.success("Status updated"); fetchContactMessages(); } } catch { toast.error("Failed to update status"); }
   };
-
   const handleOpenReply  = (contact) => setReplyModal({ isOpen: true, contact });
   const handleCloseReply = () => setReplyModal({ isOpen: false, contact: null });
   const handleSendReply  = async (contactId, reply) => {
     try {
-      const res = await adminAPI.updateContactStatus(contactId, {
-        status: "in_progress",
-        admin_reply: reply,
-      });
-      if (res.data.success) {
-        toast.success("Reply sent! Email delivered to user.");
-        fetchContactMessages();
-      }
+      const res = await adminAPI.updateContactStatus(contactId, { admin_reply: reply });
+      if (res.data.success) { toast.success("Reply sent! Email delivered to user."); fetchContactMessages(); }
     } catch { toast.error("Failed to send reply"); }
   };
 
@@ -383,7 +429,7 @@ const AdminDashboard = () => {
     } catch { toast.error("Failed to update user"); }
   };
 
-  /* ── Confirm/reject handlers ── */
+  /* ── Confirm / reject handlers ── */
   const handleConfirmAction = async () => {
     const { type, id } = confirmModal;
     setConfirmModal({ isOpen: false, type: null, id: null });
@@ -394,7 +440,8 @@ const AdminDashboard = () => {
       if (type === "approveSeller")  { const r = await adminAPI.approveSeller(id);        if (r.data.success) { toast.success("Seller approved");  fetchDashboardData(); fetchAllSellers(); } }
       if (type === "approveProduct") { const r = await adminAPI.approveProduct(id);       if (r.data.success) { toast.success("Product approved"); fetchDashboardData(); } }
       if (type === "toggleFeatured") { const r = await adminAPI.toggleFeatured(id);       if (r.data.success) { toast.info(r.data.message);       fetchDashboardData(); } }
-      if (type === "deleteAuction")  { const r = await adminAPI.deleteAuction(id);        if (r.data.success) { toast.success("Auction removed");  fetchAllAuctions(); } }
+      if (type === "deleteAuction")  { const r = await adminAPI.deleteAuction(id);        if (r.data.success) { toast.success("Auction deleted");  fetchAllAuctions(); } }
+      if (type === "approveAuction") { const r = await adminAPI.approveAuction(id);       if (r.data.success) { toast.success("Auction approved"); fetchAllAuctions(); fetchDashboardData(); } }
     } catch { toast.error("Action failed"); }
   };
 
@@ -404,25 +451,27 @@ const AdminDashboard = () => {
     try {
       if (type === "rejectSeller")  { const r = await adminAPI.rejectSeller(id, { rejection_reason: reason });  if (r.data.success) { toast.success("Seller rejected");  fetchDashboardData(); fetchAllSellers(); } }
       if (type === "rejectProduct") { const r = await adminAPI.rejectProduct(id, { rejection_reason: reason }); if (r.data.success) { toast.success("Product rejected"); fetchDashboardData(); } }
+      if (type === "rejectAuction") { const r = await adminAPI.rejectAuction(id, { rejection_reason: reason }); if (r.data.success) { toast.success("Auction rejected"); fetchAllAuctions(); fetchDashboardData(); } }
     } catch { toast.error("Failed to reject"); }
   };
 
   const confirmConfig = {
-    deleteBanner:   { title: "Delete this banner?",       message: "This cannot be undone.",                                  confirmText: "Delete",  confirmVariant: "danger"  },
-    deleteContact:  { title: "Delete this message?",      message: "The message will be permanently removed.",                confirmText: "Delete",  confirmVariant: "danger"  },
-    deleteReview:   { title: "Delete this review?",       message: "The review will be permanently removed.",                 confirmText: "Delete",  confirmVariant: "danger"  },
-    approveSeller:  { title: "Approve this seller?",      message: "They will be able to list products on the marketplace.",  confirmText: "Approve", confirmVariant: "warning" },
-    approveProduct: { title: "Approve this product?",     message: "It will be visible to buyers on the marketplace.",        confirmText: "Approve", confirmVariant: "warning" },
-    toggleFeatured: { title: "Toggle featured status?",   message: "This will update the product's featured status.",         confirmText: "Confirm", confirmVariant: "warning" },
-    deleteAuction:  { title: "Remove this auction?",      message: "This auction will be permanently removed.",               confirmText: "Remove",  confirmVariant: "danger"  },
+    deleteBanner:    { title: "Delete this banner?",     message: "This cannot be undone.",                                 confirmText: "Delete",  confirmVariant: "danger"  },
+    deleteContact:   { title: "Delete this message?",    message: "The message will be permanently removed.",               confirmText: "Delete",  confirmVariant: "danger"  },
+    deleteReview:    { title: "Delete this review?",     message: "The review will be permanently removed.",                confirmText: "Delete",  confirmVariant: "danger"  },
+    deleteAuction:   { title: "Delete this auction?",    message: "This cannot be undone.",                                 confirmText: "Delete",  confirmVariant: "danger"  },
+    approveAuction:  { title: "Approve this auction?",   message: "It will be visible to buyers and accept bids.",          confirmText: "Approve", confirmVariant: "warning" },
+    approveSeller:   { title: "Approve this seller?",    message: "They will be able to list products on the marketplace.", confirmText: "Approve", confirmVariant: "warning" },
+    approveProduct:  { title: "Approve this product?",   message: "It will be visible to buyers on the marketplace.",       confirmText: "Approve", confirmVariant: "warning" },
+    toggleFeatured:  { title: "Toggle featured status?", message: "This will update the product's featured status.",        confirmText: "Confirm", confirmVariant: "warning" },
   };
-  const rejectConfig = { rejectSeller: { title: "Reject this seller?" }, rejectProduct: { title: "Reject this product?" } };
+  const rejectConfig = {
+    rejectSeller:  { title: "Reject this seller?" },
+    rejectProduct: { title: "Reject this product?" },
+    rejectAuction: { title: "Reject this auction?" },
+  };
 
-  /* ─────────────────────────────────────────
-     DERIVED / FILTERED DATA  (useMemo)
-  ───────────────────────────────────────── */
-
-  /* Orders */
+  /* ─── Derived / Filtered Data ─── */
   const filteredOrders = useMemo(() => {
     let list = [...allOrders];
     if (orderFilter !== "all") list = list.filter((o) => o.order_status === orderFilter);
@@ -438,21 +487,19 @@ const AdminDashboard = () => {
     }
     list = filterByDateRange(list, "created_at", orderDate.startDate, orderDate.endDate);
     list.sort((a, b) => {
-      const da = new Date(a.created_at || a.createdAt || 0);
-      const db2 = new Date(b.created_at || b.createdAt || 0);
-      if (orderSort === "newest")  return db2 - da;
-      if (orderSort === "oldest")  return da - db2;
+      const da = parseAnyDate(a.created_at || a.createdAt);
+      const db = parseAnyDate(b.created_at || b.createdAt);
+      if (orderSort === "newest")  return (db || 0) - (da || 0);
+      if (orderSort === "oldest")  return (da || 0) - (db || 0);
       if (orderSort === "highest") return parseFloat(b.total) - parseFloat(a.total);
       if (orderSort === "lowest")  return parseFloat(a.total) - parseFloat(b.total);
       return 0;
     });
     return list;
   }, [allOrders, orderFilter, orderPayFilter, orderSearch, orderDate, orderSort]);
-
   const orderPages  = Math.ceil(filteredOrders.length / PER_PAGE);
   const pagedOrders = filteredOrders.slice((orderPage - 1) * PER_PAGE, orderPage * PER_PAGE);
 
-  /* All Products */
   const filteredAllProds = useMemo(() => {
     let list = [...allProducts];
     if (prodFilter !== "all") list = list.filter((p) => p.status === prodFilter);
@@ -465,50 +512,32 @@ const AdminDashboard = () => {
       );
     }
     list.sort((a, b) => {
-      const da = new Date(a.created_at || a.createdAt || 0);
-      const db2 = new Date(b.created_at || b.createdAt || 0);
-      if (prodSort === "newest")    return db2 - da;
-      if (prodSort === "oldest")    return da - db2;
+      const da = parseAnyDate(a.created_at || a.createdAt);
+      const db = parseAnyDate(b.created_at || b.createdAt);
+      if (prodSort === "newest")    return (db || 0) - (da || 0);
+      if (prodSort === "oldest")    return (da || 0) - (db || 0);
       if (prodSort === "price_asc") return parseFloat(a.price) - parseFloat(b.price);
       if (prodSort === "price_desc")return parseFloat(b.price) - parseFloat(a.price);
       return 0;
     });
     return list;
   }, [allProducts, prodFilter, prodSearch, prodSort]);
-
   const prodPages  = Math.ceil(filteredAllProds.length / PER_PAGE);
   const pagedProds = filteredAllProds.slice((prodPage - 1) * PER_PAGE, prodPage * PER_PAGE);
 
-  /* Featured Products (pagination added) */
   const approvedProducts = useMemo(() => allProducts.filter((p) => p.status === "approved"), [allProducts]);
-  const filteredFeatProds = useMemo(() => {
-    let list = featFilter === "featured" ? approvedProducts.filter((p) => p.is_featured) :
-               featFilter === "unfeatured" ? approvedProducts.filter((p) => !p.is_featured) :
-               [...approvedProducts];
-    if (featSearch.trim()) {
-      const q = featSearch.toLowerCase();
-      list = list.filter((p) =>
-        (p.name || "").toLowerCase().includes(q) ||
-        (p.category?.name || "").toLowerCase().includes(q) ||
-        (p.seller?.shop_name || "").toLowerCase().includes(q)
-      );
-    }
-    list.sort((a, b) => {
-      const da = new Date(a.created_at || a.createdAt || 0);
-      const db2 = new Date(b.created_at || b.createdAt || 0);
-      if (featSort === "newest")    return db2 - da;
-      if (featSort === "oldest")    return da - db2;
-      if (featSort === "price_asc") return parseFloat(a.price) - parseFloat(b.price);
-      if (featSort === "price_desc")return parseFloat(b.price) - parseFloat(a.price);
-      return 0;
-    });
-    return list;
-  }, [approvedProducts, featFilter, featSearch, featSort]);
+  const filteredFeatured = useMemo(() => {
+    if (!featSearch.trim()) return approvedProducts;
+    const q = featSearch.toLowerCase();
+    return approvedProducts.filter((p) =>
+      (p.name || "").toLowerCase().includes(q) ||
+      (p.seller?.shop_name || "").toLowerCase().includes(q) ||
+      (p.category?.name || "").toLowerCase().includes(q)
+    );
+  }, [approvedProducts, featSearch]);
+  const featPages = Math.ceil(filteredFeatured.length / FEAT_PER_PAGE);
+  const pagedFeat = filteredFeatured.slice((featPage - 1) * FEAT_PER_PAGE, featPage * FEAT_PER_PAGE);
 
-  const featPages  = Math.ceil(filteredFeatProds.length / PER_PAGE);
-  const pagedFeats = filteredFeatProds.slice((featPage - 1) * PER_PAGE, featPage * PER_PAGE);
-
-  /* Users */
   const filteredUsers = useMemo(() => {
     let list = [...allUsers];
     if (userFilter === "buyer")   list = list.filter((u) => u.role === "buyer");
@@ -524,20 +553,18 @@ const AdminDashboard = () => {
       );
     }
     list.sort((a, b) => {
-      const da = new Date(a.created_at || a.createdAt || 0);
-      const db2 = new Date(b.created_at || b.createdAt || 0);
-      if (userSort === "newest") return db2 - da;
-      if (userSort === "oldest") return da - db2;
+      const da = parseAnyDate(a.created_at || a.createdAt);
+      const db = parseAnyDate(b.created_at || b.createdAt);
+      if (userSort === "newest") return (db || 0) - (da || 0);
+      if (userSort === "oldest") return (da || 0) - (db || 0);
       if (userSort === "name")   return (a.full_name || "").localeCompare(b.full_name || "");
       return 0;
     });
     return list;
   }, [allUsers, userFilter, userSearch, userSort]);
-
   const userPages  = Math.ceil(filteredUsers.length / PER_PAGE);
   const pagedUsers = filteredUsers.slice((userPage - 1) * PER_PAGE, userPage * PER_PAGE);
 
-  /* Sellers */
   const filteredSellers = useMemo(() => {
     let list = [...allSellers];
     if (sellerFilter !== "all") list = list.filter((s) => s.approval_status === sellerFilter);
@@ -551,20 +578,18 @@ const AdminDashboard = () => {
       );
     }
     list.sort((a, b) => {
-      const da = new Date(a.created_at || a.createdAt || 0);
-      const db2 = new Date(b.created_at || b.createdAt || 0);
-      if (sellerSort === "newest") return db2 - da;
-      if (sellerSort === "oldest") return da - db2;
+      const da = parseAnyDate(a.created_at || a.createdAt);
+      const db = parseAnyDate(b.created_at || b.createdAt);
+      if (sellerSort === "newest") return (db || 0) - (da || 0);
+      if (sellerSort === "oldest") return (da || 0) - (db || 0);
       if (sellerSort === "name")   return (a.shop_name || "").localeCompare(b.shop_name || "");
       return 0;
     });
     return list;
   }, [allSellers, sellerFilter, sellerSearch, sellerSort]);
-
   const sellerPages  = Math.ceil(filteredSellers.length / PER_PAGE);
   const pagedSellers = filteredSellers.slice((sellerPage - 1) * PER_PAGE, sellerPage * PER_PAGE);
 
-  /* Reviews */
   const filteredReviews = useMemo(() => {
     let list = [...allReviews].filter((r) => !r.parent_id);
     if (reviewRating !== "all") list = list.filter((r) => String(r.rating) === reviewRating);
@@ -577,21 +602,19 @@ const AdminDashboard = () => {
       );
     }
     list.sort((a, b) => {
-      const da = new Date(a.created_at || a.createdAt || 0);
-      const db2 = new Date(b.created_at || b.createdAt || 0);
-      if (reviewSort === "newest")  return db2 - da;
-      if (reviewSort === "oldest")  return da - db2;
+      const da = parseAnyDate(a.created_at || a.createdAt);
+      const db = parseAnyDate(b.created_at || b.createdAt);
+      if (reviewSort === "newest")  return (db || 0) - (da || 0);
+      if (reviewSort === "oldest")  return (da || 0) - (db || 0);
       if (reviewSort === "highest") return (b.rating || 0) - (a.rating || 0);
       if (reviewSort === "lowest")  return (a.rating || 0) - (b.rating || 0);
       return 0;
     });
     return list;
   }, [allReviews, reviewRating, reviewSearch, reviewSort]);
-
   const reviewPages  = Math.ceil(filteredReviews.length / PER_PAGE);
   const pagedReviews = filteredReviews.slice((reviewPage - 1) * PER_PAGE, reviewPage * PER_PAGE);
 
-  /* Auctions */
   const filteredAuctions = useMemo(() => {
     let list = [...allAuctions];
     if (auctionFilter !== "all") list = list.filter((a) => a.status === auctionFilter);
@@ -604,21 +627,20 @@ const AdminDashboard = () => {
       );
     }
     list.sort((a, b) => {
-      const da = new Date(a.created_at || a.createdAt || 0);
-      const db2 = new Date(b.created_at || b.createdAt || 0);
-      if (auctionSort === "newest")   return db2 - da;
-      if (auctionSort === "oldest")   return da - db2;
-      if (auctionSort === "highest")  return parseFloat(b.current_bid || b.starting_bid || 0) - parseFloat(a.current_bid || a.starting_bid || 0);
-      if (auctionSort === "most_bids")return (b.total_bids || 0) - (a.total_bids || 0);
+      const da = parseAnyDate(a.created_at || a.createdAt);
+      const db = parseAnyDate(b.created_at || b.createdAt);
+      if (auctionSort === "newest")   return (db || 0) - (da || 0);
+      if (auctionSort === "oldest")   return (da || 0) - (db || 0);
+      if (auctionSort === "bid_high") return parseFloat(b.current_bid || 0) - parseFloat(a.current_bid || 0);
+      if (auctionSort === "bid_low")  return parseFloat(a.current_bid || 0) - parseFloat(b.current_bid || 0);
       return 0;
     });
     return list;
   }, [allAuctions, auctionFilter, auctionSearch, auctionSort]);
-
   const auctionPages  = Math.ceil(filteredAuctions.length / PER_PAGE);
   const pagedAuctions = filteredAuctions.slice((auctionPage - 1) * PER_PAGE, auctionPage * PER_PAGE);
 
-  /* ─── Sidebar nav ─── */
+  /* ── Sidebar nav ── */
   const nav = useMemo(() => [
     { key: "overview",   label: "Overview",             icon: Icons.grid,     badge: 0 },
     { key: "sellers",    label: "Artisan Verification", icon: Icons.shield,   badge: pendingSellers.length },
@@ -628,19 +650,19 @@ const AdminDashboard = () => {
     { key: "allprods",   label: "All Products",         icon: Icons.products, badge: 0 },
     { key: "allusers",   label: "All Users",            icon: Icons.users,    badge: 0 },
     { key: "allsellers", label: "All Sellers",          icon: Icons.store,    badge: 0 },
-    { key: "auctions",   label: "Auctions",             icon: Icons.auction,  badge: 0 },
+    { key: "auctions",   label: "All Auctions",         icon: Icons.auction,  badge: allAuctions.filter((a) => a.approval_status === "pending").length },
     { key: "reviews",    label: "Reviews",              icon: Icons.reviews,  badge: 0 },
     { key: "banners",    label: "Festival Banners",     icon: Icons.image,    badge: 0 },
-    { key: "contacts",   label: "Contact Messages",     icon: Icons.mail,     badge: 0 },
-  ], [pendingSellers.length, pendingProducts.length]);
+    { key: "contacts",   label: "Contact Messages",     icon: Icons.mail,     badge: contactMessages.filter((m) => m.status === "pending").length },
+  ], [pendingSellers.length, pendingProducts.length, allAuctions, contactMessages]);
 
   const sellerRate  = stats.totalSellerProfiles > 0 ? Math.round((stats.approvedSellers / stats.totalSellerProfiles) * 100) : 0;
   const productRate = stats.totalProducts > 0 ? Math.round((stats.approvedProducts / stats.totalProducts) * 100) : 0;
   const filteredMsgs = msgFilter === "all" ? contactMessages : contactMessages.filter((m) => m.status === msgFilter);
-  const activeCfg   = confirmConfig[confirmModal.type] || {};
+  const activeCfg    = confirmConfig[confirmModal.type] || {};
   const activeRejCfg = rejectConfig[rejectModal.type] || {};
-  const chartData   = revenueView === "weekly" ? analytics.dailySales : analytics.monthlySales;
-  const chartXKey   = revenueView === "weekly" ? "date" : "month";
+  const chartData    = revenueView === "weekly" ? analytics.dailySales : analytics.monthlySales;
+  const chartXKey    = revenueView === "weekly" ? "date" : "month";
   const totalProductsDonut = analytics.productDonut.reduce((s, d) => s + d.value, 0);
   const totalOrdersDonut   = analytics.orderDonut.reduce((s, d) => s + d.value, 0);
 
@@ -648,7 +670,6 @@ const AdminDashboard = () => {
     return <div className="admin-loading"><div className="spinner" /><p>Loading dashboard…</p></div>;
   }
 
-  /* ════════════════════ RENDER ════════════════════ */
   return (
     <div className="admin-dashboard-container">
       <ConfirmModal
@@ -660,11 +681,9 @@ const AdminDashboard = () => {
         isOpen={rejectModal.isOpen} title={activeRejCfg.title}
         onConfirm={handleRejectAction} onCancel={() => setRejectModal({ isOpen: false, type: null, id: null })}
       />
-      <AdminReplyModal
-        isOpen={replyModal.isOpen}
-        contact={replyModal.contact}
-        onClose={handleCloseReply}
-        onSend={handleSendReply}
+      <ReplyModal
+        isOpen={replyModal.isOpen} contact={replyModal.contact}
+        onClose={handleCloseReply} onSend={handleSendReply}
       />
 
       {/* ─── SIDEBAR ─── */}
@@ -679,11 +698,7 @@ const AdminDashboard = () => {
         <nav className="sidebar-nav">
           <div className="nav-section-label">Navigation</div>
           {nav.map((item) => (
-            <button
-              key={item.key}
-              className={`nav-item ${activeTab === item.key ? "active" : ""}`}
-              onClick={() => setActiveTab(item.key)}
-            >
+            <button key={item.key} className={`nav-item ${activeTab === item.key ? "active" : ""}`} onClick={() => setActiveTab(item.key)}>
               {item.icon}
               <span className="nav-label">{item.label}</span>
               {item.badge > 0 && <span className="badge">{item.badge}</span>}
@@ -889,7 +904,7 @@ const AdminDashboard = () => {
                   <div className="summary-item"><span>Approved Products</span><strong>{stats.approvedProducts}</strong></div>
                   <div className="summary-item"><span>Total Orders</span><strong>{analytics.summary.totalOrders}</strong></div>
                   <div className="summary-item"><span>Pending Reviews</span><strong>{stats.pendingSellers + stats.pendingProducts}</strong></div>
-                  <div className="summary-item"><span>Total Auctions</span><strong>{allAuctions.length}</strong></div>
+                  <div className="summary-item"><span>Active Auctions</span><strong>{allAuctions.filter((a) => a.status === "live").length}</strong></div>
                 </div>
               </div>
             </div>
@@ -980,27 +995,16 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* ══ FEATURED PRODUCTS (now with search + filter + pagination) ══ */}
+        {/* ══ FEATURED PRODUCTS ══ */}
         {activeTab === "featured" && (
           <div>
             <div className="page-header">
-              <div><h1>Manage Featured Products</h1><p>{filteredFeatProds.length} of {approvedProducts.length} approved products</p></div>
+              <div><h1>Manage Featured Products</h1><p>Featured products are highlighted on the homepage</p></div>
             </div>
-            <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap", alignItems: "flex-end", marginBottom: "0.75rem" }}>
-              <SearchInput value={featSearch} onChange={(v) => { setFeatSearch(v); setFeatPage(1); }} placeholder="Search by name, category, shop…" theme="admin" style={{ flex: 1, minWidth: 220 }} />
-              <SortSelect theme="admin" value={featSort} onChange={(v) => { setFeatSort(v); setFeatPage(1); }}
-                options={[{ value: "newest", label: "Newest first" }, { value: "oldest", label: "Oldest first" }, { value: "price_asc", label: "Price ↑" }, { value: "price_desc", label: "Price ↓" }]} />
+            <div style={{ marginBottom: "0.75rem" }}>
+              <SearchInput value={featSearch} onChange={(v) => { setFeatSearch(v); setFeatPage(1); }} placeholder="Search products…" theme="admin" style={{ maxWidth: 340 }} />
             </div>
-            <div style={{ marginBottom: "1rem" }}>
-              <FilterBar theme="admin" active={featFilter} onChange={(f) => { setFeatFilter(f); setFeatPage(1); }}
-                filters={[
-                  { key: "all",        label: "All",        count: approvedProducts.length },
-                  { key: "featured",   label: "Featured",   count: approvedProducts.filter((p) => p.is_featured).length },
-                  { key: "unfeatured", label: "Not Featured", count: approvedProducts.filter((p) => !p.is_featured).length },
-                ]}
-              />
-            </div>
-            {filteredFeatProds.length === 0 ? (
+            {filteredFeatured.length === 0 ? (
               <div className="empty-state"><p>No approved products available</p></div>
             ) : (
               <>
@@ -1008,7 +1012,7 @@ const AdminDashboard = () => {
                   <table className="admin-table">
                     <thead><tr><th>Image</th><th>Product Name</th><th>Shop</th><th>Category</th><th>Price</th><th>Discount</th><th>Featured</th><th>Action</th></tr></thead>
                     <tbody>
-                      {pagedFeats.map((product) => (
+                      {pagedFeat.map((product) => (
                         <tr key={product.product_id}>
                           <td><ProductImg src={product.images?.[0] ? `${API_URL}${product.images[0]}` : null} alt={product.name} /></td>
                           <td className="td-name">{product.name || "—"}</td>
@@ -1035,7 +1039,6 @@ const AdminDashboard = () => {
             <div className="page-header">
               <div><h1>All Orders</h1><p>{filteredOrders.length} of {allOrders.length} orders</p></div>
             </div>
-
             <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap", alignItems: "flex-end", marginBottom: "0.75rem" }}>
               <SearchInput value={orderSearch} onChange={(v) => { setOrderSearch(v); setOrderPage(1); }} placeholder="Search by order #, customer, city…" theme="admin" style={{ flex: 1, minWidth: 220 }} />
               <SortSelect theme="admin" value={orderSort} onChange={(v) => { setOrderSort(v); setOrderPage(1); }}
@@ -1059,16 +1062,13 @@ const AdminDashboard = () => {
                 filters={[{ key: "all", label: "All payments" }, { key: "paid", label: "Paid" }, { key: "pending", label: "Unpaid" }]}
               />
             </div>
-
             {filteredOrders.length === 0 ? (
               <div className="empty-state"><p>No orders match your filters.</p></div>
             ) : (
               <>
                 <div className="table-wrap">
                   <table className="admin-table">
-                    <thead>
-                      <tr><th>Order #</th><th>Customer</th><th>Items</th><th>Delivery</th><th>Status</th><th>Payment</th><th>Total</th><th>Date</th></tr>
-                    </thead>
+                    <thead><tr><th>Order #</th><th>Customer</th><th>Items</th><th>Delivery</th><th>Status</th><th>Payment</th><th>Total</th><th>Date</th></tr></thead>
                     <tbody>
                       {pagedOrders.map((order) => (
                         <tr key={order.order_id}>
@@ -1102,7 +1102,7 @@ const AdminDashboard = () => {
                             </span>
                             <div style={{ fontSize: "0.65rem", color: "var(--text-3)", marginTop: 2 }}>{order.payment_method?.toUpperCase()}</div>
                           </td>
-                          <td style={{ fontWeight: 700, color: "var(--text-1)", fontSize: "0.8rem", fontVariantNumeric: "tabular-nums" }}>{fmtAmount(order.total)}</td>
+                          <td style={{ fontWeight: 700, color: "var(--text-1)", fontSize: "0.8rem" }}>{fmtAmount(order.total)}</td>
                           <td style={{ color: "var(--text-3)", fontSize: "0.68rem" }}>{fmtDate(order.created_at || order.createdAt)}</td>
                         </tr>
                       ))}
@@ -1115,7 +1115,7 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* ══ ALL PRODUCTS (now fetches all statuses) ══ */}
+        {/* ══ ALL PRODUCTS ══ */}
         {activeTab === "allprods" && (
           <div>
             <div className="page-header">
@@ -1233,7 +1233,9 @@ const AdminDashboard = () => {
                           <td style={{ fontSize: "0.68rem", color: "var(--text-3)" }}>{fmtDate(user.created_at || user.createdAt)}</td>
                           <td>
                             {user.role !== "admin" && (
-                              <button className={user.is_active ? "btn-reject" : "btn-approve"} onClick={() => handleToggleBlock(user.user_id)}>{user.is_active ? "Block" : "Unblock"}</button>
+                              <button className={user.is_active ? "btn-reject" : "btn-approve"} onClick={() => handleToggleBlock(user.user_id)}>
+                                {user.is_active ? "Block" : "Unblock"}
+                              </button>
                             )}
                           </td>
                         </tr>
@@ -1319,9 +1321,7 @@ const AdminDashboard = () => {
                                   <button className="btn-reject"  onClick={() => setRejectModal({ isOpen: true, type: "rejectSeller", id: seller.seller_id })}>Reject</button>
                                 </div>
                               )}
-                              {seller.approval_status !== "pending" && (
-                                <span style={{ fontSize: "0.7rem", color: "var(--text-3)" }}>—</span>
-                              )}
+                              {seller.approval_status !== "pending" && <span style={{ fontSize: "0.7rem", color: "var(--text-3)" }}>—</span>}
                             </td>
                           </tr>
                         );
@@ -1335,97 +1335,103 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* ══ AUCTIONS (NEW TAB) ══ */}
+        {/* ══ ALL AUCTIONS ══ */}
         {activeTab === "auctions" && (
           <div>
             <div className="page-header">
-              <div><h1>Auctions</h1><p>{filteredAuctions.length} of {allAuctions.length} auctions</p></div>
+              <div><h1>All Auctions</h1><p>{filteredAuctions.length} of {allAuctions.length} auctions</p></div>
               <button className="btn-refresh" onClick={fetchAllAuctions}>{Icons.refresh} Refresh</button>
             </div>
-
-            {/* Stats row */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
-              {["live", "upcoming", "ended", "cancelled"].map((s) => {
-                const count = allAuctions.filter((a) => a.status === s).length;
-                const colors = { live: "#10B981", upcoming: "#3B82F6", ended: "#8B5CF6", cancelled: "#EF4444" };
-                const bgs    = { live: "#D1FAE5", upcoming: "#DBEAFE", ended: "#EDE9FE", cancelled: "#FEE2E2" };
-                return (
-                  <div key={s} style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px 16px", borderTop: `3px solid ${colors[s]}` }}>
-                    <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>{s}</div>
-                    <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--text-1)" }}>{count}</div>
-                  </div>
-                );
-              })}
-            </div>
-
             <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap", alignItems: "flex-end", marginBottom: "0.75rem" }}>
-              <SearchInput value={auctionSearch} onChange={(v) => { setAuctionSearch(v); setAuctionPage(1); }} placeholder="Search by title, seller…" theme="admin" style={{ flex: 1, minWidth: 220 }} />
+              <SearchInput value={auctionSearch} onChange={(v) => { setAuctionSearch(v); setAuctionPage(1); }} placeholder="Search by title or seller…" theme="admin" style={{ flex: 1, minWidth: 220 }} />
               <SortSelect theme="admin" value={auctionSort} onChange={(v) => { setAuctionSort(v); setAuctionPage(1); }}
-                options={[{ value: "newest", label: "Newest first" }, { value: "oldest", label: "Oldest first" }, { value: "highest", label: "Highest bid" }, { value: "most_bids", label: "Most bids" }]} />
+                options={[{ value: "newest", label: "Newest first" }, { value: "oldest", label: "Oldest first" }, { value: "bid_high", label: "Highest bid" }, { value: "bid_low", label: "Lowest bid" }]} />
             </div>
             <div style={{ marginBottom: "1rem" }}>
               <FilterBar theme="admin" active={auctionFilter} onChange={(f) => { setAuctionFilter(f); setAuctionPage(1); }}
                 filters={[
                   { key: "all",       label: "All",       count: allAuctions.length },
-                  { key: "live",      label: "Live",      count: allAuctions.filter((a) => a.status === "live").length },
+                  { key: "live",      label: "🔴 Live",   count: allAuctions.filter((a) => a.status === "live").length },
                   { key: "upcoming",  label: "Upcoming",  count: allAuctions.filter((a) => a.status === "upcoming").length },
                   { key: "ended",     label: "Ended",     count: allAuctions.filter((a) => a.status === "ended").length },
                   { key: "cancelled", label: "Cancelled", count: allAuctions.filter((a) => a.status === "cancelled").length },
                 ]}
               />
             </div>
-
             {filteredAuctions.length === 0 ? (
               <div className="empty-state"><p>No auctions found.</p></div>
             ) : (
               <>
                 <div className="table-wrap">
                   <table className="admin-table">
-                    <thead>
-                      <tr><th>Image</th><th>Title</th><th>Seller</th><th>Starting Bid</th><th>Current Bid</th><th>Total Bids</th><th>Status</th><th>Start</th><th>End</th><th>Action</th></tr>
-                    </thead>
+                    {/* FIXED column order: Approval first, then Status */}
+                    <thead><tr><th>Image</th><th>Title</th><th>Seller</th><th>Starting Bid</th><th>Current Bid</th><th>Bids</th><th>Approval</th><th>Status</th><th>Start</th><th>End</th><th>Winner</th><th>Actions</th></tr></thead>
                     <tbody>
-                      {pagedAuctions.map((auction) => {
-                        const statusColor = { live: { bg: "#D1FAE5", color: "#065F46" }, upcoming: { bg: "#DBEAFE", color: "#1E40AF" }, ended: { bg: "#EDE9FE", color: "#6B21A8" }, cancelled: { bg: "#FEE2E2", color: "#991B1B" } }[auction.status] || { bg: "#F1F5F9", color: "#475569" };
-                        return (
-                          <tr key={auction.auction_id}>
-                            <td>
-                              {auction.images?.[0] ? (
-                                <img className="td-img" src={`${API_URL}${auction.images[0]}`} alt={auction.title} />
-                              ) : (
-                                <div className="td-img-placeholder">🔨</div>
+                      {pagedAuctions.map((auction) => (
+                        <tr key={auction.auction_id}>
+                          <td>
+                            {auction.images?.[0] ? (
+                              <img className="td-img" src={`${API_URL}${auction.images[0]}`} alt={auction.title} />
+                            ) : (
+                              <div className="td-img-placeholder">🔨</div>
+                            )}
+                          </td>
+                          <td className="td-name" style={{ maxWidth: 160 }}>{auction.title || "—"}</td>
+                          <td>
+                            <div style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-1)" }}>{auction.seller?.shop_name || "—"}</div>
+                            <div style={{ fontSize: "0.65rem", color: "var(--text-3)" }}>{auction.seller?.user?.full_name || ""}</div>
+                          </td>
+                          <td style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-2)" }}>Rs. {parseFloat(auction.starting_bid || 0).toLocaleString()}</td>
+                          <td style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--accent)" }}>
+                            {parseFloat(auction.current_bid || 0) > 0 ? `Rs. ${parseFloat(auction.current_bid).toLocaleString()}` : "—"}
+                          </td>
+                          <td style={{ fontSize: "0.78rem", textAlign: "center", color: "var(--text-2)" }}>{auction.total_bids || 0}</td>
+
+                          {/*  Column 7: Approval status */}
+                          <td>
+                            <span style={{
+                              padding: "2px 8px", borderRadius: 999, fontSize: "0.63rem", fontWeight: 700,
+                              background: { approved: "var(--green-bg)", pending: "var(--amber-bg)", rejected: "var(--red-bg)" }[auction.approval_status] || "var(--bg-muted)",
+                              color: { approved: "var(--green)", pending: "var(--amber)", rejected: "var(--red)" }[auction.approval_status] || "var(--text-3)",
+                            }}>
+                              {auction.approval_status?.charAt(0).toUpperCase() + auction.approval_status?.slice(1)}
+                            </span>
+                          </td>
+
+                          {/*  Column 8: Lifecycle status */}
+                          <td>
+                            <span style={{
+                              padding: "2px 8px", borderRadius: 999, fontSize: "0.63rem", fontWeight: 700,
+                              background: { live: "#D1FAE5", upcoming: "#DBEAFE", ended: "#F1F5F9", cancelled: "#FEE2E2" }[auction.status] || "#F1F5F9",
+                              color: { live: "#065F46", upcoming: "#1E40AF", ended: "#475569", cancelled: "#991B1B" }[auction.status] || "#475569",
+                            }}>
+                              {auction.status === "live" ? "🔴 Live" : auction.status?.charAt(0).toUpperCase() + auction.status?.slice(1)}
+                            </span>
+                          </td>
+
+                          <td style={{ fontSize: "0.68rem", color: "var(--text-3)" }}>{fmtDateTime(auction.auction_start)}</td>
+                          <td style={{ fontSize: "0.68rem", color: "var(--text-3)" }}>{fmtDateTime(auction.auction_end)}</td>
+                          <td style={{ fontSize: "0.72rem", color: "var(--text-2)" }}>
+                            {auction.winner?.full_name || (auction.status === "ended" ? "No bids" : "—")}
+                          </td>
+                          <td>
+                            <div className="actions-cell" style={{ flexDirection: "column", gap: 4 }}>
+                              {auction.approval_status === "pending" && (
+                                <>
+                                  <button className="btn-approve" onClick={() => setConfirmModal({ isOpen: true, type: "approveAuction", id: auction.auction_id })}>Approve</button>
+                                  <button className="btn-reject"  onClick={() => setRejectModal({ isOpen: true, type: "rejectAuction", id: auction.auction_id })}>Reject</button>
+                                </>
                               )}
-                            </td>
-                            <td>
-                              <div className="td-name">{auction.title || "—"}</div>
-                              {auction.winner && (
-                                <div style={{ fontSize: "0.65rem", color: "var(--green)", marginTop: 2 }}>
-                                  🏆 {auction.winner.full_name}
-                                </div>
+                              {auction.approval_status !== "pending" && (
+                                <span style={{ fontSize: "0.65rem", color: "var(--text-3)", fontStyle: "italic" }}>
+                                  {auction.approval_status === "approved" ? "✓ Approved" : "✗ Rejected"}
+                                </span>
                               )}
-                            </td>
-                            <td>
-                              <div style={{ fontSize: "0.78rem", fontWeight: 600 }}>{auction.seller?.shop_name || "—"}</div>
-                              <div style={{ fontSize: "0.65rem", color: "var(--text-3)" }}>{auction.seller?.user?.full_name || ""}</div>
-                            </td>
-                            <td style={{ fontSize: "0.78rem", fontWeight: 600 }}>Rs. {parseFloat(auction.starting_bid || 0).toLocaleString()}</td>
-                            <td style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--accent)" }}>
-                              {parseFloat(auction.current_bid || 0) > 0 ? `Rs. ${parseFloat(auction.current_bid).toLocaleString()}` : "—"}
-                            </td>
-                            <td style={{ textAlign: "center", fontWeight: 700, fontSize: "0.82rem" }}>{auction.total_bids || 0}</td>
-                            <td>
-                              <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: "0.65rem", fontWeight: 700, background: statusColor.bg, color: statusColor.color }}>
-                                {auction.status?.charAt(0).toUpperCase() + auction.status?.slice(1)}
-                              </span>
-                            </td>
-                            <td style={{ fontSize: "0.68rem", color: "var(--text-3)", whiteSpace: "nowrap" }}>{fmtAuctionDate(auction.auction_start)}</td>
-                            <td style={{ fontSize: "0.68rem", color: "var(--text-3)", whiteSpace: "nowrap" }}>{fmtAuctionDate(auction.auction_end)}</td>
-                            <td>
-                              <button className="btn-reject" onClick={() => setConfirmModal({ isOpen: true, type: "deleteAuction", id: auction.auction_id })}>Remove</button>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                              <button className="btn-reject" style={{ marginTop: 2 }} onClick={() => setConfirmModal({ isOpen: true, type: "deleteAuction", id: auction.auction_id })}>Delete</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -1564,14 +1570,18 @@ const AdminDashboard = () => {
         {/* ══ CONTACT MESSAGES ══ */}
         {activeTab === "contacts" && (
           <div>
-            <div className="page-header"><div><h1>Contact Messages</h1><p>{contactMessages.length} message{contactMessages.length !== 1 ? "s" : ""}</p></div></div>
+            <div className="page-header">
+              <div><h1>Contact Messages</h1><p>{contactMessages.length} message{contactMessages.length !== 1 ? "s" : ""} · {contactMessages.filter((m) => m.status === "pending").length} pending</p></div>
+            </div>
             <div className="filter-bar" style={{ marginBottom: "1rem" }}>
-              {["all", "pending", "in_progress", "resolved"].map((f) => (
-                <button key={f} className={`filter-chip ${msgFilter === f ? "active" : ""}`} onClick={() => setMsgFilter(f)}>
-                  {f === "all"         ? `All (${contactMessages.length})`
-                  : f === "in_progress" ? `In Progress (${contactMessages.filter((m) => m.status === "in_progress").length})`
-                  : f === "pending"     ? `Pending (${contactMessages.filter((m) => m.status === "pending").length})`
-                  :                       `Resolved (${contactMessages.filter((m) => m.status === "resolved").length})`}
+              {[
+                { key: "all",         label: `All (${contactMessages.length})` },
+                { key: "pending",     label: `Pending (${contactMessages.filter((m) => m.status === "pending").length})` },
+                { key: "in_progress", label: `In Progress (${contactMessages.filter((m) => m.status === "in_progress").length})` },
+                { key: "resolved",    label: `Resolved (${contactMessages.filter((m) => m.status === "resolved").length})` },
+              ].map((f) => (
+                <button key={f.key} className={`filter-chip ${msgFilter === f.key ? "active" : ""}`} onClick={() => setMsgFilter(f.key)}>
+                  {f.label}
                 </button>
               ))}
             </div>
@@ -1587,52 +1597,38 @@ const AdminDashboard = () => {
                       </div>
                       <div className="msg-meta">
                         <span className={`status-pill s-${contact.status}`}>
-                          {contact.status === "in_progress" ? "In Progress"
-                          : contact.status === "pending"     ? "Pending"
-                          :                                    "Resolved"}
+                          {contact.status === "in_progress" ? "In Progress" : contact.status?.charAt(0).toUpperCase() + contact.status?.slice(1)}
                         </span>
                         {contact.created_at && <span className="msg-date">{fmtDate(contact.created_at || contact.createdAt)}</span>}
-                        {contact.replied_at && (
-                          <span className="msg-date" style={{ color: "var(--green)" }}>
-                            Replied {fmtDate(contact.replied_at)}
-                          </span>
-                        )}
+                        {contact.replied_at && <span className="msg-date" style={{ color: "var(--green)" }}>Replied {fmtDate(contact.replied_at)}</span>}
                       </div>
                     </div>
                     <div className="msg-body">
                       <div className="msg-subject"><strong>Subject:</strong> {contact.subject}</div>
                       <div className="msg-text">{contact.message}</div>
                       {contact.admin_reply && (
-                        <div style={{ marginTop: 8, padding: "8px 12px", background: "var(--accent-bg)", border: "1px solid var(--accent-border)", borderRadius: 6, fontSize: "0.78rem" }}>
-                          <strong style={{ color: "var(--accent)" }}>Your reply:</strong>
-                          <p style={{ margin: "4px 0 0", color: "var(--text-2)", lineHeight: 1.5 }}>{contact.admin_reply}</p>
+                        <div style={{ marginTop: 8, padding: "10px 14px", background: "var(--accent-bg)", border: "1px solid var(--accent-border)", borderRadius: 8, fontSize: "0.78rem" }}>
+                          <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5 }}>
+                            ✉ Admin Reply · {fmtDate(contact.replied_at)}
+                          </div>
+                          <p style={{ margin: 0, color: "var(--text-2)", lineHeight: 1.6 }}>{contact.admin_reply}</p>
                         </div>
                       )}
                     </div>
                     <div className="msg-actions">
-                      {/* ── Reply button (always visible) ── */}
                       <button className="btn-inprogress" onClick={() => handleOpenReply(contact)}>
                         {contact.admin_reply ? "Edit Reply" : "Reply"}
                       </button>
-                      {/* ── Status buttons ── */}
                       {contact.status === "pending" && (
-                        <button className="btn-inprogress" onClick={() => handleContactStatus(contact.contact_id, "in_progress")}>
-                          Mark In Progress
-                        </button>
+                        <button className="btn-inprogress" onClick={() => handleContactStatus(contact.contact_id, "in_progress")}>Mark In Progress</button>
                       )}
                       {(contact.status === "pending" || contact.status === "in_progress") && (
-                        <button className="btn-resolve" onClick={() => handleContactStatus(contact.contact_id, "resolved")}>
-                          Mark Resolved
-                        </button>
+                        <button className="btn-resolve" onClick={() => handleContactStatus(contact.contact_id, "resolved")}>Mark Resolved</button>
                       )}
                       {contact.status === "resolved" && (
-                        <button className="btn-reopen" onClick={() => handleContactStatus(contact.contact_id, "pending")}>
-                          Reopen
-                        </button>
+                        <button className="btn-reopen" onClick={() => handleContactStatus(contact.contact_id, "pending")}>Reopen</button>
                       )}
-                      <button className="btn-delete" onClick={() => setConfirmModal({ isOpen: true, type: "deleteContact", id: contact.contact_id })}>
-                        Delete
-                      </button>
+                      <button className="btn-delete" onClick={() => setConfirmModal({ isOpen: true, type: "deleteContact", id: contact.contact_id })}>Delete</button>
                     </div>
                   </div>
                 ))}
@@ -1640,6 +1636,11 @@ const AdminDashboard = () => {
             )}
           </div>
         )}
+
+        {/*  Footer */}
+        <div style={{ marginTop: 48, paddingTop: "1rem", borderTop: "1px solid var(--border-light)", textAlign: "center", fontSize: "0.72rem", color: "var(--text-3)" }}>
+          © {new Date().getFullYear()} हस्तKrafts Nepal. All rights reserved.
+        </div>
 
       </main>
     </div>
