@@ -9,29 +9,29 @@ import '../styles/NavBar.css';
 const NavBar = () => {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
-  const [isLoggedIn, setIsLoggedIn]       = useState(false);
-  const [user, setUser]                   = useState(null);
-  const [cartCount, setCartCount]         = useState(0);
-  const [wishlistCount, setWishlistCount] = useState(0);
+  const [isLoggedIn, setIsLoggedIn]         = useState(false);
+  const [user, setUser]                     = useState(null);
+  const [cartCount, setCartCount]           = useState(0);
+  const [wishlistCount, setWishlistCount]   = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
-  const [userPoints, setUserPoints]       = useState(0);
-  const [showDropdown, setShowDropdown]   = useState(false);
+  const [userPoints, setUserPoints]         = useState(0);
+  const [showDropdown, setShowDropdown]     = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   useEffect(() => {
     checkLoginStatus();
 
-    window.addEventListener('userLoggedIn', checkLoginStatus);
-    window.addEventListener('cartUpdated', fetchCartCount);
+    window.addEventListener('userLoggedIn',    checkLoginStatus);
+    window.addEventListener('cartUpdated',     fetchCartCount);
     window.addEventListener('wishlistUpdated', fetchWishlistCount);
-    window.addEventListener('pointsUpdated', fetchPoints);
+    window.addEventListener('pointsUpdated',   fetchPoints);
     window.addEventListener('messagesUpdated', fetchUnreadMessages);
 
     return () => {
-      window.removeEventListener('userLoggedIn', checkLoginStatus);
-      window.removeEventListener('cartUpdated', fetchCartCount);
+      window.removeEventListener('userLoggedIn',    checkLoginStatus);
+      window.removeEventListener('cartUpdated',     fetchCartCount);
       window.removeEventListener('wishlistUpdated', fetchWishlistCount);
-      window.removeEventListener('pointsUpdated', fetchPoints);
+      window.removeEventListener('pointsUpdated',   fetchPoints);
       window.removeEventListener('messagesUpdated', fetchUnreadMessages);
     };
   }, []);
@@ -54,8 +54,11 @@ const NavBar = () => {
         fetchWishlistCount();
         fetchPoints();
       }
-      // All roles get message count
-      fetchUnreadMessages();
+
+      // ✅ FIX: Admin does not use messages — skip the API call entirely
+      if (parsedUser.role !== 'admin') {
+        fetchUnreadMessages();
+      }
     } else {
       setIsLoggedIn(false);
       setUser(null);
@@ -68,7 +71,7 @@ const NavBar = () => {
 
   const fetchCartCount = async () => {
     try {
-      const res = await cartAPI.getCart();
+      const res   = await cartAPI.getCart();
       const items = res.data?.data?.cart?.items || [];
       setCartCount(items.reduce((sum, item) => sum + (item.quantity || 0), 0));
     } catch {
@@ -78,7 +81,7 @@ const NavBar = () => {
 
   const fetchWishlistCount = async () => {
     try {
-      const res = await wishlistAPI.getWishlist();
+      const res   = await wishlistAPI.getWishlist();
       const items = res.data?.data || [];
       setWishlistCount(Array.isArray(items) ? items.length : 0);
     } catch {
@@ -135,6 +138,7 @@ const NavBar = () => {
           <span className="logo-text">हस्तKrafts</span>
         </Link>
 
+        {/* ── Desktop nav links ── */}
         <div className="navbar-links">
           <Link to="/"         className="nav-link"><Icons.Home size={18} /><span>{t('nav.home')}</span></Link>
           <Link to="/products" className="nav-link"><Icons.Package size={18} /><span>{t('nav.products')}</span></Link>
@@ -143,6 +147,7 @@ const NavBar = () => {
           <Link to="/contact"  className="nav-link"><Icons.Mail size={18} /><span>{t('nav.contact')}</span></Link>
         </div>
 
+        {/* ── Desktop action icons ── */}
         <div className="navbar-actions">
           <LanguageSwitcher />
 
@@ -156,7 +161,7 @@ const NavBar = () => {
                     <span className="points-badge">{userPoints}</span>
                   </Link>
 
-                  {/* Wishlist with count */}
+                  {/* Wishlist */}
                   <Link to="/wishlist" className="nav-icon-btn" title={t('nav.wishlist')}>
                     <Icons.Heart size={22} />
                     {wishlistCount > 0 && (
@@ -164,7 +169,7 @@ const NavBar = () => {
                     )}
                   </Link>
 
-                  {/* Cart with count */}
+                  {/* Cart */}
                   <Link to="/cart" className="nav-icon-btn cart-btn" title={t('nav.cart')}>
                     <Icons.Cart size={22} />
                     {cartCount > 0 && (
@@ -174,17 +179,23 @@ const NavBar = () => {
                 </>
               )}
 
-              {/* Messages with unread count — all roles */}
-              <Link to="/messages" className="nav-icon-btn" title={t('nav.messages')}>
-                <Icons.Messages size={22} />
-                {unreadMessages > 0 && (
-                  <span className="cart-badge">{unreadMessages}</span>
-                )}
-              </Link>
+              {/* ✅ FIX: Messages — buyers and sellers only, NOT admin */}
+              {user?.role !== 'admin' && (
+                <Link to="/messages" className="nav-icon-btn" title={t('nav.messages')}>
+                  <Icons.Messages size={22} />
+                  {unreadMessages > 0 && (
+                    <span className="cart-badge">{unreadMessages}</span>
+                  )}
+                </Link>
+              )}
 
               {/* User dropdown */}
               <div className="user-dropdown-container">
-                <button className="user-dropdown-btn" onClick={() => setShowDropdown(!showDropdown)} title="Account">
+                <button
+                  className="user-dropdown-btn"
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  title="Account"
+                >
                   <Icons.User size={22} />
                   <span className="user-name">{user?.full_name}</span>
                 </button>
@@ -196,16 +207,28 @@ const NavBar = () => {
                       <p className="dropdown-user-role">{user?.role}</p>
                     </div>
 
-                    <Link to={getDashboardLink()} className="dropdown-item" onClick={() => setShowDropdown(false)}>
+                    <Link
+                      to={getDashboardLink()}
+                      className="dropdown-item"
+                      onClick={() => setShowDropdown(false)}
+                    >
                       <Icons.Home size={18} /><span>{t('nav.dashboard')}</span>
                     </Link>
 
-                    <Link to="/profile" className="dropdown-item" onClick={() => setShowDropdown(false)}>
+                    <Link
+                      to="/profile"
+                      className="dropdown-item"
+                      onClick={() => setShowDropdown(false)}
+                    >
                       <Icons.User size={18} /><span>{t('nav.profile')}</span>
                     </Link>
 
                     {user?.role === 'seller' && (
-                      <Link to="/seller/create-blog" className="dropdown-item" onClick={() => setShowDropdown(false)}>
+                      <Link
+                        to="/seller/create-blog"
+                        className="dropdown-item"
+                        onClick={() => setShowDropdown(false)}
+                      >
                         <Icons.Book size={18} /><span>Write Blog Post</span>
                       </Link>
                     )}
@@ -224,13 +247,16 @@ const NavBar = () => {
             </>
           )}
 
-          <button className="mobile-menu-btn" onClick={() => setShowMobileMenu(!showMobileMenu)}>
+          <button
+            className="mobile-menu-btn"
+            onClick={() => setShowMobileMenu(!showMobileMenu)}
+          >
             {showMobileMenu ? <Icons.CloseCircle size={24} /> : '☰'}
           </button>
         </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* ── Mobile menu ── */}
       {showMobileMenu && (
         <div className="mobile-menu">
           <Link to="/"         className="mobile-link" onClick={() => setShowMobileMenu(false)}><Icons.Home size={20} /><span>{t('nav.home')}</span></Link>
@@ -243,20 +269,38 @@ const NavBar = () => {
             <>
               {user?.role === 'buyer' && (
                 <>
-                  <Link to="/profile"  className="mobile-link" onClick={() => setShowMobileMenu(false)}><Icons.Gift size={20} /><span>{t('nav.points')} ({userPoints})</span></Link>
-                  <Link to="/wishlist" className="mobile-link" onClick={() => setShowMobileMenu(false)}><Icons.Heart size={20} /><span>{t('nav.wishlist')}{wishlistCount > 0 ? ` (${wishlistCount})` : ''}</span></Link>
-                  <Link to="/cart"     className="mobile-link" onClick={() => setShowMobileMenu(false)}><Icons.Cart size={20} /><span>{t('nav.cart')}{cartCount > 0 ? ` (${cartCount})` : ''}</span></Link>
+                  <Link to="/profile"  className="mobile-link" onClick={() => setShowMobileMenu(false)}>
+                    <Icons.Gift size={20} /><span>{t('nav.points')} ({userPoints})</span>
+                  </Link>
+                  <Link to="/wishlist" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
+                    <Icons.Heart size={20} /><span>{t('nav.wishlist')}{wishlistCount > 0 ? ` (${wishlistCount})` : ''}</span>
+                  </Link>
+                  <Link to="/cart"     className="mobile-link" onClick={() => setShowMobileMenu(false)}>
+                    <Icons.Cart size={20} /><span>{t('nav.cart')}{cartCount > 0 ? ` (${cartCount})` : ''}</span>
+                  </Link>
                 </>
               )}
+
               {user?.role === 'seller' && (
-                <Link to="/seller/create-blog" className="mobile-link" onClick={() => setShowMobileMenu(false)}><Icons.Book size={20} /><span>Write Blog Post</span></Link>
+                <Link to="/seller/create-blog" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
+                  <Icons.Book size={20} /><span>Write Blog Post</span>
+                </Link>
               )}
-              <Link to="/messages" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
-                <Icons.Messages size={20} />
-                <span>{t('nav.messages')}{unreadMessages > 0 ? ` (${unreadMessages})` : ''}</span>
+
+              {/* ✅ FIX: Messages in mobile — buyers and sellers only, NOT admin */}
+              {user?.role !== 'admin' && (
+                <Link to="/messages" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
+                  <Icons.Messages size={20} />
+                  <span>{t('nav.messages')}{unreadMessages > 0 ? ` (${unreadMessages})` : ''}</span>
+                </Link>
+              )}
+
+              <Link to="/profile" className="mobile-link" onClick={() => setShowMobileMenu(false)}>
+                <Icons.User size={20} /><span>{t('nav.profile')}</span>
               </Link>
-              <Link to="/profile" className="mobile-link" onClick={() => setShowMobileMenu(false)}><Icons.User size={20} /><span>{t('nav.profile')}</span></Link>
-              <button onClick={handleLogout} className="mobile-link logout-link"><Icons.LogOut size={20} /><span>{t('nav.logout')}</span></button>
+              <button onClick={handleLogout} className="mobile-link logout-link">
+                <Icons.LogOut size={20} /><span>{t('nav.logout')}</span>
+              </button>
             </>
           )}
         </div>

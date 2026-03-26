@@ -35,7 +35,7 @@ const getCart = async (req, res) => {
       cart.items = [];
     }
 
-    // ✅ Subtotal uses discounted prices
+    // Subtotal uses discounted prices
     let subtotal = 0;
     if (cart.items) {
       cart.items.forEach((item) => {

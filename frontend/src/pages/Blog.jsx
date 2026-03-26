@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { storyAPI } from '../api/axios';
 import { useToast } from '../context/ToastContext';
 import { useTranslation } from 'react-i18next';
 import ConfirmModal from '../components/ConfirmModal';
+import { Pagination } from '../components/SharedComponents';
 import '../styles/Blog.css';
 
-const API_URL = 'http://localhost:5000';
+const API_URL     = 'http://localhost:5000';
+const POSTS_PER_PAGE = 6;
 
-// shop_logo → user profile_image → initials
 const SellerAvatar = ({ seller, className = 'blog-avatar', initClass = 'blog-avatar-init' }) => {
   const name = seller?.shop_name || '??';
   const initials = name.substring(0, 2).toUpperCase();
@@ -24,17 +25,16 @@ const SellerAvatar = ({ seller, className = 'blog-avatar', initClass = 'blog-ava
 
 const Blog = () => {
   const toast = useToast();
-  const { t } = useTranslation();
+  const { t }  = useTranslation();
 
-  // Build categories using translation keys
   const CATEGORIES = [
-    { value: 'all',              labelKey: 'blog.all_stories'     },
-    { value: 'craft_process',    labelKey: 'blog.craft_process'   },
-    { value: 'heritage',         labelKey: 'blog.heritage'        },
-    { value: 'personal_journey', labelKey: 'blog.personal_journey'},
-    { value: 'tips_tricks',      labelKey: 'blog.tips_tricks'     },
-    { value: 'behind_scenes',    labelKey: 'blog.behind_scenes'   },
-    { value: 'other',            labelKey: 'blog.other'           },
+    { value: 'all',              labelKey: 'blog.all_stories'      },
+    { value: 'craft_process',    labelKey: 'blog.craft_process'    },
+    { value: 'heritage',         labelKey: 'blog.heritage'         },
+    { value: 'personal_journey', labelKey: 'blog.personal_journey' },
+    { value: 'tips_tricks',      labelKey: 'blog.tips_tricks'      },
+    { value: 'behind_scenes',    labelKey: 'blog.behind_scenes'    },
+    { value: 'other',            labelKey: 'blog.other'            },
   ];
 
   const getCategoryLabel = (val) => {
@@ -42,21 +42,25 @@ const Blog = () => {
     return cat ? t(cat.labelKey) : val;
   };
 
-  const [stories, setStories] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [stories, setStories]           = useState([]);
+  const [loading, setLoading]           = useState(true);
   const [activeCategory, setActiveCategory] = useState('all');
-  const [deletingId, setDeletingId] = useState(null);
+  const [deletingId, setDeletingId]     = useState(null);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, storyId: null });
+  const [page, setPage]                 = useState(1);
 
   const user = JSON.parse(localStorage.getItem('user') || 'null');
 
   useEffect(() => { fetchStories(); }, [activeCategory]);
 
+  // Reset page when category changes
+  useEffect(() => { setPage(1); }, [activeCategory]);
+
   const fetchStories = async () => {
     try {
       setLoading(true);
       const params = activeCategory !== 'all' ? { category: activeCategory } : {};
-      const res = await storyAPI.getAllStories(params);
+      const res    = await storyAPI.getAllStories(params);
       setStories(res.data.data.stories || []);
     } catch (err) {
       console.error('Error fetching stories:', err);
@@ -92,6 +96,12 @@ const Blog = () => {
   const fmtDate = (d) =>
     new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
+  // Pagination
+  const totalPages   = Math.ceil(stories.length / POSTS_PER_PAGE);
+  const pagedStories = useMemo(
+    () => stories.slice((page - 1) * POSTS_PER_PAGE, page * POSTS_PER_PAGE),
+    [stories, page]
+  );
   const latestStories = stories.slice(0, 5);
 
   return (
@@ -140,58 +150,78 @@ const Blog = () => {
               <p>{t('blog.no_stories_desc')}</p>
             </div>
           ) : (
-            <div className="blog-feed">
-              {stories.map((story) => (
-                <article key={story.story_id} className="blog-row">
-                  <Link to={`/blog/${story.story_id}`} className="blog-row-img-wrap">
-                    {story.featured_image
-                      ? <img src={`${API_URL}${story.featured_image}`} alt={story.title} />
-                      : <div className="blog-img-placeholder" />
-                    }
-                  </Link>
-
-                  <div className="blog-row-body">
-                    <div className="blog-row-top">
-                      <span className="blog-chip">{getCategoryLabel(story.category)}</span>
-                      {isAuthor(story) && (
-                        <div className="blog-actions">
-                          <Link to={`/seller/edit-blog/${story.story_id}`} className="blog-action-btn edit" onClick={(e) => e.stopPropagation()}>
-                            {t('blog.edit')}
-                          </Link>
-                          <button className="blog-action-btn delete" onClick={(e) => handleDeleteClick(e, story.story_id)} disabled={deletingId === story.story_id}>
-                            {deletingId === story.story_id ? '…' : t('blog.delete')}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    <Link to={`/blog/${story.story_id}`} className="blog-row-title-link">
-                      <h2 className="blog-row-title">{story.title}</h2>
+            <>
+              <div className="blog-feed">
+                {pagedStories.map((story) => (
+                  <article key={story.story_id} className="blog-row">
+                    <Link to={`/blog/${story.story_id}`} className="blog-row-img-wrap">
+                      {story.featured_image
+                        ? <img src={`${API_URL}${story.featured_image}`} alt={story.title} />
+                        : <div className="blog-img-placeholder" />
+                      }
                     </Link>
 
-                    <p className="blog-row-excerpt">{story.excerpt}</p>
+                    <div className="blog-row-body">
+                      <div className="blog-row-top">
+                        <span className="blog-chip">{getCategoryLabel(story.category)}</span>
+                        {isAuthor(story) && (
+                          <div className="blog-actions">
+                            <Link to={`/seller/edit-blog/${story.story_id}`} className="blog-action-btn edit" onClick={(e) => e.stopPropagation()}>
+                              {t('blog.edit')}
+                            </Link>
+                            <button className="blog-action-btn delete" onClick={(e) => handleDeleteClick(e, story.story_id)} disabled={deletingId === story.story_id}>
+                              {deletingId === story.story_id ? '…' : t('blog.delete')}
+                            </button>
+                          </div>
+                        )}
+                      </div>
 
-                    <div className="blog-row-footer">
-                      <div className="blog-author">
-                        <SellerAvatar seller={story.seller} />
-                        <div>
-                          <p className="blog-author-name">{story.seller?.shop_name}</p>
-                          <p className="blog-author-city">
-                            {story.seller?.user?.full_name}
-                            {story.seller?.city ? ` · ${story.seller.city}` : ''}
-                          </p>
+                      <Link to={`/blog/${story.story_id}`} className="blog-row-title-link">
+                        <h2 className="blog-row-title">{story.title}</h2>
+                      </Link>
+
+                      <p className="blog-row-excerpt">{story.excerpt}</p>
+
+                      <div className="blog-row-footer">
+                        <div className="blog-author">
+                          <SellerAvatar seller={story.seller} />
+                          <div>
+                            <p className="blog-author-name">{story.seller?.shop_name}</p>
+                            <p className="blog-author-city">
+                              {story.seller?.user?.full_name}
+                              {story.seller?.city ? ` · ${story.seller.city}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="blog-row-meta">
+                          <span>{fmtDate(story.published_at)}</span>
+                          <span className="blog-sep">·</span>
+                          <span>{story.views_count} {t('blog.views')}</span>
                         </div>
                       </div>
-                      <div className="blog-row-meta">
-                        <span>{fmtDate(story.published_at)}</span>
-                        <span className="blog-sep">·</span>
-                        <span>{story.views_count} {t('blog.views')}</span>
-                      </div>
                     </div>
-                  </div>
-                </article>
-              ))}
-            </div>
+                  </article>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div style={{ marginTop: '2rem' }}>
+                  <Pagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    onPageChange={(p) => {
+                      setPage(p);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    theme="seller"
+                  />
+                  <p style={{ textAlign: 'center', fontSize: '0.8rem', color: '#9a8268', marginTop: '0.5rem' }}>
+                    {(page - 1) * POSTS_PER_PAGE + 1}–{Math.min(page * POSTS_PER_PAGE, stories.length)} of {stories.length} stories
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </main>
 

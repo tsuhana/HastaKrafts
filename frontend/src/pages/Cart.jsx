@@ -28,7 +28,7 @@ const Cart = () => {
       const res = await cartAPI.getCart();
       if (res.data.success) {
         setCart(res.data.data.cart);
-        // ✅ Always sync navbar badge when cart page loads
+        //  Always sync navbar badge when cart page loads
         window.dispatchEvent(new Event('cartUpdated'));
       }
     } catch (err) {
@@ -46,7 +46,7 @@ const Cart = () => {
       const res = await cartAPI.updateCartItem(cartItemId, { quantity: newQuantity });
       if (res.data.success) {
         await fetchCart();
-        // ✅ Update navbar badge
+        //  Update navbar badge
         window.dispatchEvent(new Event('cartUpdated'));
       }
     } catch (err) {
@@ -66,7 +66,7 @@ const Cart = () => {
       const res = await cartAPI.removeFromCart(cartItemId);
       if (res.data.success) {
         await fetchCart();
-        // ✅ Update navbar badge
+        //  Update navbar badge
         window.dispatchEvent(new Event('cartUpdated'));
       }
     } catch {

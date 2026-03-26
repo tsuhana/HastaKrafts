@@ -159,7 +159,7 @@ const SellerDashboard = () => {
     ordersByStatus: [], revenueByDow: [], stockHealth: [],
   });
   const [analyticsLoaded, setAnalyticsLoaded] = useState(false);
-  const [confirmModal, setConfirmModal]       = useState({ isOpen: false, productId: null });
+  const [confirmModal, setConfirmModal]       = useState({ isOpen: false, productId: null, type: "product", auctionId: null, auctionAction: null });
 
   // ✅ NEW: Auction action loading state
   const [auctionActionLoading, setAuctionActionLoading] = useState({});
@@ -263,8 +263,28 @@ const SellerDashboard = () => {
   };
 
   const handleDeleteConfirm = async () => {
+    if (confirmModal.type === "auction") {
+      const { auctionId, auctionAction } = confirmModal;
+      setConfirmModal({ isOpen: false, productId: null, type: "product", auctionId: null, auctionAction: null });
+      setAuctionActionLoading((prev) => ({ ...prev, [auctionId]: auctionAction === "cancel" ? "cancelling" : "deleting" }));
+      try {
+        if (auctionAction === "cancel") {
+          const res = await auctionAPI.cancelAuction(auctionId);
+          if (res.data.success) { toast.success("Auction cancelled"); fetchAuctions(); }
+        } else if (auctionAction === "delete") {
+          const res = await auctionAPI.deleteSellerAuction(auctionId);
+          if (res.data.success) { toast.success("Auction deleted"); fetchAuctions(); }
+        }
+      } catch (err) {
+        toast.error(err.response?.data?.message || `Failed to ${auctionAction} auction`);
+      } finally {
+        setAuctionActionLoading((prev) => ({ ...prev, [auctionId]: null }));
+      }
+      return;
+    }
+    // Product delete
     const { productId } = confirmModal;
-    setConfirmModal({ isOpen: false, productId: null });
+    setConfirmModal({ isOpen: false, productId: null, type: "product", auctionId: null, auctionAction: null });
     try { await productAPI.deleteProduct(productId); toast.success("Product deleted"); fetchAll(); }
     catch { toast.error("Failed to delete product"); }
   };
@@ -279,25 +299,14 @@ const SellerDashboard = () => {
     finally { setAuctionActionLoading((prev) => ({ ...prev, [auctionId]: null })); }
   };
 
-  const handleCancelAuction = async (auctionId) => {
-    if (!window.confirm("Cancel this auction? This cannot be undone.")) return;
-    setAuctionActionLoading((prev) => ({ ...prev, [auctionId]: "cancelling" }));
-    try {
-      const res = await auctionAPI.cancelAuction(auctionId);
-      if (res.data.success) { toast.success("Auction cancelled"); fetchAuctions(); }
-    } catch (err) { toast.error(err.response?.data?.message || "Failed to cancel auction"); }
-    finally { setAuctionActionLoading((prev) => ({ ...prev, [auctionId]: null })); }
+  const handleCancelAuction = (auctionId) => {
+    setConfirmModal({ isOpen: true, type: "auction", auctionId, auctionAction: "cancel", productId: null });
   };
 
-  const handleDeleteSellerAuction = async (auctionId) => {
-    if (!window.confirm("Delete this auction permanently?")) return;
-    setAuctionActionLoading((prev) => ({ ...prev, [auctionId]: "deleting" }));
-    try {
-      const res = await auctionAPI.deleteSellerAuction(auctionId);
-      if (res.data.success) { toast.success("Auction deleted"); fetchAuctions(); }
-    } catch (err) { toast.error(err.response?.data?.message || "Failed to delete auction"); }
-    finally { setAuctionActionLoading((prev) => ({ ...prev, [auctionId]: null })); }
+  const handleDeleteSellerAuction = (auctionId) => {
+    setConfirmModal({ isOpen: true, type: "auction", auctionId, auctionAction: "delete", productId: null });
   };
+
 
   // ✅ Review reply handler
   const handleReviewReply = async () => {
@@ -923,7 +932,7 @@ const SellerDashboard = () => {
                           </div>
                           <div className="sd-product-actions">
                             <Link to={`/seller/edit-product/${product.product_id}`} className="sd-btn-icon">{t("seller.edit")}</Link>
-                            <button onClick={() => setConfirmModal({ isOpen: true, productId: product.product_id })} className="sd-btn-icon sd-btn-icon-danger">{t("seller.delete")}</button>
+                            <button onClick={() => setConfirmModal({ isOpen: true, productId: product.product_id, type: "product", auctionId: null, auctionAction: null })} className="sd-btn-icon sd-btn-icon-danger">{t("seller.delete")}</button>
                           </div>
                         </div>
                       );
@@ -1229,13 +1238,29 @@ const SellerDashboard = () => {
 
       <ConfirmModal
         isOpen={confirmModal.isOpen}
-        title="Delete this product?"
-        message="This action cannot be undone."
-        confirmText={t("common.delete")}
+        title={
+          confirmModal.type === "auction" && confirmModal.auctionAction === "cancel"
+            ? "Cancel this auction?"
+            : confirmModal.type === "auction" && confirmModal.auctionAction === "delete"
+            ? "Delete this auction?"
+            : "Delete this product?"
+        }
+        message={
+          confirmModal.type === "auction" && confirmModal.auctionAction === "cancel"
+            ? "This will cancel the auction. Bidders will be notified. This cannot be undone."
+            : confirmModal.type === "auction" && confirmModal.auctionAction === "delete"
+            ? "This will permanently delete the auction. This cannot be undone."
+            : "This action cannot be undone."
+        }
+        confirmText={
+          confirmModal.type === "auction" && confirmModal.auctionAction === "cancel"
+            ? "Yes, Cancel Auction"
+            : t("common.delete")
+        }
         cancelText={t("common.cancel")}
         confirmVariant="danger"
         onConfirm={handleDeleteConfirm}
-        onCancel={() => setConfirmModal({ isOpen: false, productId: null })}
+        onCancel={() => setConfirmModal({ isOpen: false, productId: null, type: "product", auctionId: null, auctionAction: null })}
       />
     </div>
   );

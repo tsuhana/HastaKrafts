@@ -1,18 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { productAPI } from '../api/axios';
 import { useTranslation } from 'react-i18next';
 import ProductCard from '../components/ProductCard';
+import { Pagination } from '../components/SharedComponents';
 import '../styles/Products.css';
+
+const PRODUCTS_PER_PAGE = 12;
 
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useTranslation();
-  const [products, setProducts] = useState([]);
+  const [products, setProducts]     = useState([]);
   const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [filters, setFilters] = useState({
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState('');
+  const [page, setPage]             = useState(1);
+  const [filters, setFilters]       = useState({
     categories: searchParams.get('category') ? [searchParams.get('category')] : [],
     search: '',
     minPrice: '',
@@ -21,6 +25,9 @@ const Products = () => {
 
   useEffect(() => { fetchCategories(); }, []);
   useEffect(() => { fetchProducts(); }, [filters.categories]);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => { setPage(1); }, [filters]);
 
   const fetchCategories = async () => {
     try {
@@ -38,27 +45,22 @@ const Products = () => {
         status: 'approved',
         ...(filters.search && { search: filters.search }),
       };
-
       if (filters.categories.length === 1) {
         params.category_id = filters.categories[0];
       }
-
       const res = await productAPI.getAllProducts(params);
       let fetchedProducts = res.data.data.products || [];
-
       if (filters.categories.length > 1) {
         fetchedProducts = fetchedProducts.filter(p =>
           filters.categories.includes(p.category_id?.toString())
         );
       }
-
       if (filters.minPrice) {
         fetchedProducts = fetchedProducts.filter(p => parseFloat(p.price) >= parseFloat(filters.minPrice));
       }
       if (filters.maxPrice) {
         fetchedProducts = fetchedProducts.filter(p => parseFloat(p.price) <= parseFloat(filters.maxPrice));
       }
-
       setProducts(fetchedProducts);
       setError('');
     } catch (err) {
@@ -68,6 +70,13 @@ const Products = () => {
       setLoading(false);
     }
   };
+
+  // Client-side pagination on the already-fetched+filtered products
+  const totalPages  = Math.ceil(products.length / PRODUCTS_PER_PAGE);
+  const pagedProducts = useMemo(
+    () => products.slice((page - 1) * PRODUCTS_PER_PAGE, page * PRODUCTS_PER_PAGE),
+    [products, page]
+  );
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -95,14 +104,13 @@ const Products = () => {
   const clearFilters = () => {
     setFilters({ categories: [], search: '', minPrice: '', maxPrice: '' });
     setSearchParams({});
+    setPage(1);
   };
 
   const getCountLabel = () => {
     const count = products.length;
     const productWord = count === 1 ? t('products.product_in') : t('products.products_in');
-    if (filters.categories.length === 0) {
-      return `${count} ${productWord} ${t('products.found')}`;
-    }
+    if (filters.categories.length === 0) return `${count} ${productWord} ${t('products.found')}`;
     if (filters.categories.length === 1) {
       const cat = categories.find(c => c.category_id.toString() === filters.categories[0]);
       return `${count} ${productWord} ${cat?.name || t('products.category')}`;
@@ -196,7 +204,14 @@ const Products = () => {
         <main className="products-main">
           <div className="products-header">
             <h1>{t('products.all_products')}</h1>
-            <p className="products-count">{getCountLabel()}</p>
+            <p className="products-count">
+              {getCountLabel()}
+              {totalPages > 1 && (
+                <span style={{ marginLeft: 8, color: 'var(--text-3, #9a8268)', fontSize: '0.85em' }}>
+                  · Page {page} of {totalPages}
+                </span>
+              )}
+            </p>
           </div>
 
           {error && <div className="error-message">{error}</div>}
@@ -207,11 +222,30 @@ const Products = () => {
               <p>{t('products.loading')}</p>
             </div>
           ) : products.length > 0 ? (
-            <div className="products-grid">
-              {products.map((product) => (
-                <ProductCard key={product.product_id} product={product} />
-              ))}
-            </div>
+            <>
+              <div className="products-grid">
+                {pagedProducts.map((product) => (
+                  <ProductCard key={product.product_id} product={product} />
+                ))}
+              </div>
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div style={{ marginTop: '2rem' }}>
+                  <Pagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    onPageChange={(p) => {
+                      setPage(p);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    theme="seller"
+                  />
+                  <p style={{ textAlign: 'center', fontSize: '0.8rem', color: '#9a8268', marginTop: '0.5rem' }}>
+                    Showing {(page - 1) * PRODUCTS_PER_PAGE + 1}–{Math.min(page * PRODUCTS_PER_PAGE, products.length)} of {products.length} products
+                  </p>
+                </div>
+              )}
+            </>
           ) : (
             <div className="empty-state">
               <div className="empty-icon">📦</div>
