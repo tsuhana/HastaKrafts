@@ -5,13 +5,14 @@ const registerBuyerRules = [
   body("full_name")
     .trim()
     .notEmpty().withMessage("Full name is required")
-    .isLength({ min: 2, max: 100 }).withMessage("Full name must be between 2 and 100 characters"),
+    .isLength({ min: 2, max: 100 }).withMessage("Full name must be between 2 and 100 characters")
+    .matches(/^[A-Za-z\s\u0900-\u097F'-]+$/).withMessage("Full name must contain only letters"),
 
   body("email")
     .trim()
     .notEmpty().withMessage("Email is required")
     .isEmail().withMessage("Please provide a valid email address")
-    .normalizeEmail(),
+    .customSanitizer((value) => value.toLowerCase()),
 
   body("password")
     .notEmpty().withMessage("Password is required")
@@ -20,7 +21,7 @@ const registerBuyerRules = [
     .matches(/[0-9]/).withMessage("Password must contain at least one number"),
 
   body("phone")
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
     .matches(/^[0-9+\-\s]{7,15}$/).withMessage("Please provide a valid phone number"),
 
@@ -31,19 +32,25 @@ const registerSellerRules = [
   body("full_name")
     .trim()
     .notEmpty().withMessage("Full name is required")
-    .isLength({ min: 2, max: 100 }).withMessage("Full name must be between 2 and 100 characters"),
+    .isLength({ min: 2, max: 100 }).withMessage("Full name must be between 2 and 100 characters")
+    .matches(/^[A-Za-z\s\u0900-\u097F'-]+$/).withMessage("Full name must contain only letters"),
 
   body("email")
     .trim()
     .notEmpty().withMessage("Email is required")
     .isEmail().withMessage("Please provide a valid email address")
-    .normalizeEmail(),
+    .customSanitizer((value) => value.toLowerCase()),
 
   body("password")
     .notEmpty().withMessage("Password is required")
     .isLength({ min: 6 }).withMessage("Password must be at least 6 characters")
     .matches(/[A-Za-z]/).withMessage("Password must contain at least one letter")
     .matches(/[0-9]/).withMessage("Password must contain at least one number"),
+
+  body("phone")
+    .trim()
+    .notEmpty().withMessage("Phone number is required for sellers")
+    .matches(/^[0-9+\-\s]{7,15}$/).withMessage("Please provide a valid phone number"),
 
   body("shop_name")
     .trim()
@@ -70,7 +77,7 @@ const loginRules = [
     .trim()
     .notEmpty().withMessage("Email is required")
     .isEmail().withMessage("Please provide a valid email address")
-    .normalizeEmail(),
+    .customSanitizer((value) => value.toLowerCase()),
 
   body("password")
     .notEmpty().withMessage("Password is required"),
@@ -83,17 +90,17 @@ const forgotPasswordRules = [
     .trim()
     .notEmpty().withMessage("Email is required")
     .isEmail().withMessage("Please provide a valid email address")
-    .normalizeEmail(),
+    .customSanitizer((value) => value.toLowerCase()),
 
   handleValidation,
 ];
 
-const resetPasswordRules = [
+const verifyOTPRules = [
   body("email")
     .trim()
     .notEmpty().withMessage("Email is required")
     .isEmail().withMessage("Please provide a valid email address")
-    .normalizeEmail(),
+    .customSanitizer((value) => value.toLowerCase()),
 
   body("otp")
     .trim()
@@ -101,7 +108,15 @@ const resetPasswordRules = [
     .isLength({ min: 6, max: 6 }).withMessage("OTP must be 6 digits")
     .isNumeric().withMessage("OTP must contain only numbers"),
 
-  body("new_password")
+  handleValidation,
+];
+
+const resetPasswordRules = [
+  body("resetToken")
+    .trim()
+    .notEmpty().withMessage("Reset token is required"),
+
+  body("newPassword")
     .notEmpty().withMessage("New password is required")
     .isLength({ min: 6 }).withMessage("Password must be at least 6 characters")
     .matches(/[A-Za-z]/).withMessage("Password must contain at least one letter")
@@ -115,5 +130,6 @@ module.exports = {
   registerSellerRules,
   loginRules,
   forgotPasswordRules,
+  verifyOTPRules,
   resetPasswordRules,
 };

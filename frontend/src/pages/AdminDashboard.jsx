@@ -78,12 +78,18 @@ const initials = (name) => {
 };
 
 /* ─── Sub-components ─── */
-const DonutLabel = ({ cx, cy, value, label }) => (
-  <g>
-    <text x={cx} y={cy - 8} textAnchor="middle" fill="var(--text-1)" fontSize="1.5rem" fontWeight="800" fontFamily="inherit">{value}</text>
-    <text x={cx} y={cy + 12} textAnchor="middle" fill="var(--text-3)" fontSize="0.62rem" fontWeight="600" fontFamily="inherit" letterSpacing="0.05em">{label}</text>
-  </g>
-);
+// cx/cy come from Recharts as numbers (not strings) when used inside <Pie> label
+// but when passed as props from outside they can be strings — parse defensively
+const DonutLabel = ({ cx, cy, value, label }) => {
+  const x = parseFloat(cx) || 0;
+  const y = parseFloat(cy) || 0;
+  return (
+    <g>
+      <text x={x} y={y - 8} textAnchor="middle" fill="var(--text-1)" fontSize="24" fontWeight="800" fontFamily="inherit">{value}</text>
+      <text x={x} y={y + 14} textAnchor="middle" fill="var(--text-3)" fontSize="10" fontWeight="600" fontFamily="inherit" letterSpacing="0.05em">{label}</text>
+    </g>
+  );
+};
 
 const ChartTooltip = ({ active, payload, label, prefix = "" }) => {
   if (!active || !payload?.length) return null;
@@ -275,6 +281,8 @@ const AdminDashboard = () => {
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: null, id: null });
   const [rejectModal, setRejectModal]   = useState({ isOpen: false, type: null, id: null });
   const [replyModal, setReplyModal]     = useState({ isOpen: false, contact: null });
+  const [contactSearch, setContactSearch] = useState("");
+  const [contactDate, setContactDate]     = useState({ startDate: "", endDate: "" });
 
   /* ── Tab filter/sort/page state ── */
   const [orderSearch, setOrderSearch]       = useState("");
@@ -383,7 +391,7 @@ const AdminDashboard = () => {
     try { const res = await adminAPI.getAllReviews(); if (res.data.success) setAllReviews(res.data.data || []); } catch {}
   };
 
-  //  FIX: Uses adminAPI (sees ALL auctions regardless of approval_status)
+  // ✅ FIX: Uses adminAPI (sees ALL auctions regardless of approval_status)
   const fetchAllAuctions = async () => {
     try { const res = await adminAPI.getAllAuctions(); if (res.data.success) setAllAuctions(res.data.data || []); }
     catch (err) { console.error("fetchAllAuctions:", err); }
@@ -658,7 +666,20 @@ const AdminDashboard = () => {
 
   const sellerRate  = stats.totalSellerProfiles > 0 ? Math.round((stats.approvedSellers / stats.totalSellerProfiles) * 100) : 0;
   const productRate = stats.totalProducts > 0 ? Math.round((stats.approvedProducts / stats.totalProducts) * 100) : 0;
-  const filteredMsgs = msgFilter === "all" ? contactMessages : contactMessages.filter((m) => m.status === msgFilter);
+  const filteredMsgs = (() => {
+    let list = msgFilter === "all" ? contactMessages : contactMessages.filter((m) => m.status === msgFilter);
+    if (contactSearch.trim()) {
+      const q = contactSearch.toLowerCase();
+      list = list.filter((m) =>
+        (m.name || "").toLowerCase().includes(q) ||
+        (m.email || "").toLowerCase().includes(q) ||
+        (m.subject || "").toLowerCase().includes(q) ||
+        (m.message || "").toLowerCase().includes(q)
+      );
+    }
+    list = filterByDateRange(list, "created_at", contactDate.startDate, contactDate.endDate);
+    return list;
+  })();
   const activeCfg    = confirmConfig[confirmModal.type] || {};
   const activeRejCfg = rejectConfig[rejectModal.type] || {};
   const chartData    = revenueView === "weekly" ? analytics.dailySales : analytics.monthlySales;
@@ -979,7 +1000,7 @@ const AdminDashboard = () => {
                         <td><PriceCell product={product} /></td>
                         <td><DiscountCell product={product} /></td>
                         <td><span className={product.stock_quantity > 10 ? "stock-good" : product.stock_quantity > 0 ? "stock-low" : "stock-out"}>{product.stock_quantity || 0} units</span></td>
-                        <td style={{ color: "var(--text-3)", fontSize: "0.72rem" }}>{fmtDate(product.created_at || product.createdAt)}</td>
+                        <td style={{ color: "var(--text-3)", fontSize: "0.72rem" }}>{fmtDate(product.created_at || product.createdAt || product.updatedAt)}</td>
                         <td>
                           <div className="actions-cell">
                             <button className="btn-approve" onClick={() => setConfirmModal({ isOpen: true, type: "approveProduct", id: product.product_id })}>Approve</button>
@@ -1161,7 +1182,7 @@ const AdminDashboard = () => {
                             </span>
                           </td>
                           <td>{product.is_featured ? <span className="featured-tag">★ Featured</span> : <span style={{ color: "var(--text-3)", fontSize: "0.7rem" }}>—</span>}</td>
-                          <td style={{ color: "var(--text-3)", fontSize: "0.68rem" }}>{fmtDate(product.created_at || product.createdAt)}</td>
+                          <td style={{ color: "var(--text-3)", fontSize: "0.68rem" }}>{fmtDate(product.created_at || product.createdAt || product.updatedAt)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1321,7 +1342,14 @@ const AdminDashboard = () => {
                                   <button className="btn-reject"  onClick={() => setRejectModal({ isOpen: true, type: "rejectSeller", id: seller.seller_id })}>Reject</button>
                                 </div>
                               )}
-                              {seller.approval_status !== "pending" && <span style={{ fontSize: "0.7rem", color: "var(--text-3)" }}>—</span>}
+                              {seller.approval_status === "rejected" && (
+                                <div className="actions-cell">
+                                  <button className="btn-approve" onClick={() => setConfirmModal({ isOpen: true, type: "approveSeller", id: seller.seller_id })}>Re-Approve</button>
+                                </div>
+                              )}
+                              {seller.approval_status === "approved" && (
+                                <span style={{ fontSize: "0.7rem", color: "var(--text-3)" }}>—</span>
+                              )}
                             </td>
                           </tr>
                         );
@@ -1364,7 +1392,7 @@ const AdminDashboard = () => {
               <>
                 <div className="table-wrap">
                   <table className="admin-table">
-                    {/* FIXED column order: Approval first, then Status */}
+                    {/* ✅ FIXED column order: Approval first, then Status */}
                     <thead><tr><th>Image</th><th>Title</th><th>Seller</th><th>Starting Bid</th><th>Current Bid</th><th>Bids</th><th>Approval</th><th>Status</th><th>Start</th><th>End</th><th>Winner</th><th>Actions</th></tr></thead>
                     <tbody>
                       {pagedAuctions.map((auction) => (
@@ -1387,18 +1415,26 @@ const AdminDashboard = () => {
                           </td>
                           <td style={{ fontSize: "0.78rem", textAlign: "center", color: "var(--text-2)" }}>{auction.total_bids || 0}</td>
 
-                          {/*  Column 7: Approval status */}
+                          {/* Column 7: Approval — buttons if pending, badge if not */}
                           <td>
-                            <span style={{
-                              padding: "2px 8px", borderRadius: 999, fontSize: "0.63rem", fontWeight: 700,
-                              background: { approved: "var(--green-bg)", pending: "var(--amber-bg)", rejected: "var(--red-bg)" }[auction.approval_status] || "var(--bg-muted)",
-                              color: { approved: "var(--green)", pending: "var(--amber)", rejected: "var(--red)" }[auction.approval_status] || "var(--text-3)",
-                            }}>
-                              {auction.approval_status?.charAt(0).toUpperCase() + auction.approval_status?.slice(1)}
-                            </span>
+                            {auction.approval_status === "pending" && (
+                              <div className="actions-cell" style={{ flexDirection: "column", gap: 4 }}>
+                                <button className="btn-approve" onClick={() => setConfirmModal({ isOpen: true, type: "approveAuction", id: auction.auction_id })}>Approve</button>
+                                <button className="btn-reject"  onClick={() => setRejectModal({ isOpen: true, type: "rejectAuction", id: auction.auction_id })}>Reject</button>
+                              </div>
+                            )}
+                            {auction.approval_status !== "pending" && (
+                              <span style={{
+                                padding: "2px 8px", borderRadius: 999, fontSize: "0.63rem", fontWeight: 700,
+                                background: { approved: "var(--green-bg)", rejected: "var(--red-bg)" }[auction.approval_status] || "var(--bg-muted)",
+                                color: { approved: "var(--green)", rejected: "var(--red)" }[auction.approval_status] || "var(--text-3)",
+                              }}>
+                                {auction.approval_status?.charAt(0).toUpperCase() + auction.approval_status?.slice(1)}
+                              </span>
+                            )}
                           </td>
 
-                          {/*  Column 8: Lifecycle status */}
+                          {/* Column 8: Lifecycle status */}
                           <td>
                             <span style={{
                               padding: "2px 8px", borderRadius: 999, fontSize: "0.63rem", fontWeight: 700,
@@ -1415,20 +1451,7 @@ const AdminDashboard = () => {
                             {auction.winner?.full_name || (auction.status === "ended" ? "No bids" : "—")}
                           </td>
                           <td>
-                            <div className="actions-cell" style={{ flexDirection: "column", gap: 4 }}>
-                              {auction.approval_status === "pending" && (
-                                <>
-                                  <button className="btn-approve" onClick={() => setConfirmModal({ isOpen: true, type: "approveAuction", id: auction.auction_id })}>Approve</button>
-                                  <button className="btn-reject"  onClick={() => setRejectModal({ isOpen: true, type: "rejectAuction", id: auction.auction_id })}>Reject</button>
-                                </>
-                              )}
-                              {auction.approval_status !== "pending" && (
-                                <span style={{ fontSize: "0.65rem", color: "var(--text-3)", fontStyle: "italic" }}>
-                                  {auction.approval_status === "approved" ? "✓ Approved" : "✗ Rejected"}
-                                </span>
-                              )}
-                              <button className="btn-reject" style={{ marginTop: 2 }} onClick={() => setConfirmModal({ isOpen: true, type: "deleteAuction", id: auction.auction_id })}>Delete</button>
-                            </div>
+                            <button className="btn-reject" onClick={() => setConfirmModal({ isOpen: true, type: "deleteAuction", id: auction.auction_id })}>Delete</button>
                           </td>
                         </tr>
                       ))}
@@ -1585,6 +1608,12 @@ const AdminDashboard = () => {
                 </button>
               ))}
             </div>
+            <div style={{ display: "flex", gap: "0.65rem", flexWrap: "wrap", alignItems: "flex-end", marginBottom: "0.75rem" }}>
+              <SearchInput value={contactSearch} onChange={(v) => setContactSearch(v)} placeholder="Search by name, email, subject…" theme="admin" style={{ flex: 1, minWidth: 220 }} />
+            </div>
+            <div style={{ marginBottom: "1rem" }}>
+              <DateRangePicker theme="admin" startDate={contactDate.startDate} endDate={contactDate.endDate} onChange={(v) => setContactDate(v)} label="Date:" />
+            </div>
             {filteredMsgs.length === 0 ? <div className="no-messages">No messages found.</div> : (
               <div className="msg-list">
                 {filteredMsgs.map((contact) => (
@@ -1637,7 +1666,7 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/*  Footer */}
+        {/* Footer */}
         <div style={{ marginTop: 48, paddingTop: "1rem", borderTop: "1px solid var(--border-light)", textAlign: "center", fontSize: "0.72rem", color: "var(--text-3)" }}>
           © {new Date().getFullYear()} हस्तKrafts Nepal. All rights reserved.
         </div>

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
 import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -12,6 +11,7 @@ import ConfirmModal from "../components/ConfirmModal";
 import { Pagination, FilterBar, SearchInput, SortSelect, DateRangePicker, filterByDateRange } from "../components/SharedComponents";
 import "../styles/SellerDashboard.css";
 import SellerMyBlogs from "../components/SellerMyBlogs";
+import { Link } from "react-router-dom";
 
 const API_URL = "http://localhost:5000";
 
@@ -93,7 +93,7 @@ const StarRating = ({ rating }) => {
   );
 };
 
-// ✅ Review Reply Modal
+// ✅ Review Reply Modal — maxLength={500} added to textarea
 const ReviewReplyModal = ({ modal, setModal, onSubmit, loading }) => {
   if (!modal.open || !modal.review) return null;
   return (
@@ -113,10 +113,12 @@ const ReviewReplyModal = ({ modal, setModal, onSubmit, loading }) => {
           <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "#9a8268", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5 }}>Their Review</div>
           {modal.review.comment || "(no comment)"}
         </div>
+        {/* FIX 1: maxLength={500} added */}
         <textarea
           value={modal.text}
           onChange={(e) => setModal((m) => ({ ...m, text: e.target.value }))}
           rows={4}
+          maxLength={500}
           placeholder="Write your reply…"
           autoFocus
           style={{ width: "100%", padding: "0.65rem 0.875rem", border: "1.5px solid #ddd5c4", borderRadius: 8, fontSize: "0.875rem", fontFamily: "inherit", resize: "vertical", outline: "none", boxSizing: "border-box", color: "#2C1810" }}
@@ -161,10 +163,8 @@ const SellerDashboard = () => {
   const [analyticsLoaded, setAnalyticsLoaded] = useState(false);
   const [confirmModal, setConfirmModal]       = useState({ isOpen: false, productId: null, type: "product", auctionId: null, auctionAction: null });
 
-  // ✅ NEW: Auction action loading state
   const [auctionActionLoading, setAuctionActionLoading] = useState({});
 
-  // ✅ NEW: Review reply modal
   const [reviewReplyModal, setReviewReplyModal]   = useState({ open: false, review: null, text: "" });
   const [reviewReplyLoading, setReviewReplyLoading] = useState(false);
 
@@ -245,7 +245,6 @@ const SellerDashboard = () => {
     finally { setReviewsLoading(false); }
   };
 
-  // ✅ FIXED: fetchAuctions uses auctionAPI.getSellerAuctions
   const fetchAuctions = async () => {
     try {
       setAuctionsLoading(true);
@@ -282,14 +281,12 @@ const SellerDashboard = () => {
       }
       return;
     }
-    // Product delete
     const { productId } = confirmModal;
     setConfirmModal({ isOpen: false, productId: null, type: "product", auctionId: null, auctionAction: null });
     try { await productAPI.deleteProduct(productId); toast.success("Product deleted"); fetchAll(); }
     catch { toast.error("Failed to delete product"); }
   };
 
-  // ✅ Auction action handlers
   const handleEndEarly = async (auctionId) => {
     setAuctionActionLoading((prev) => ({ ...prev, [auctionId]: "ending" }));
     try {
@@ -307,8 +304,6 @@ const SellerDashboard = () => {
     setConfirmModal({ isOpen: true, type: "auction", auctionId, auctionAction: "delete", productId: null });
   };
 
-
-  // ✅ Review reply handler
   const handleReviewReply = async () => {
     if (!reviewReplyModal.text.trim()) return;
     setReviewReplyLoading(true);
@@ -435,7 +430,6 @@ const SellerDashboard = () => {
     ? (reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length).toFixed(1)
     : "—";
 
-  // Auction status styles helper
   const auctionStatusStyle = (status) => ({
     live:      { background: "#D1FAE5", color: "#065F46" },
     upcoming:  { background: "#DBEAFE", color: "#1E40AF" },
@@ -459,7 +453,6 @@ const SellerDashboard = () => {
 
   return (
     <div className="seller-page-wrap">
-      {/* ✅ Review Reply Modal */}
       <ReviewReplyModal
         modal={reviewReplyModal}
         setModal={setReviewReplyModal}
@@ -960,7 +953,6 @@ const SellerDashboard = () => {
                 <Link to="/seller/create-auction" className="sd-btn-primary">+ Create Auction</Link>
               </div>
 
-              {/* ✅ Approval notice banner */}
               {auctions.filter((a) => a.approval_status === "pending").length > 0 && (
                 <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem", background: "#fdf5e0", border: "1.5px solid #e0cc80", borderRadius: 10, padding: "0.875rem 1.1rem", marginBottom: "1.25rem" }}>
                   <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>⏳</span>
@@ -1022,7 +1014,6 @@ const SellerDashboard = () => {
 
                       return (
                         <div key={auction.auction_id} className="sd-order-row sd-order-row-full">
-                          {/* Image */}
                           <div className="sd-order-img" style={{ width: 64, height: 64, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: "#f5e6d3" }}>
                             {auction.images?.[0] ? (
                               <img src={`${API_URL}${auction.images[0]}`} alt={auction.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -1031,11 +1022,9 @@ const SellerDashboard = () => {
                             )}
                           </div>
 
-                          {/* Info */}
                           <div className="sd-order-info sd-order-info-full">
                             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.3rem", flexWrap: "wrap" }}>
                               <div className="sd-order-num" style={{ fontSize: "0.95rem" }}>{auction.title}</div>
-                              {/* Approval badge */}
                               <span style={{ ...approvalStatusStyle(auction.approval_status), padding: "2px 8px", borderRadius: 999, fontSize: "0.62rem", fontWeight: 700 }}>
                                 {auction.approval_status === "pending" ? "⏳ Awaiting Approval"
                                   : auction.approval_status === "approved" ? "✓ Approved"
@@ -1043,7 +1032,6 @@ const SellerDashboard = () => {
                               </span>
                             </div>
 
-                            {/* Rejection reason */}
                             {auction.approval_status === "rejected" && auction.rejection_reason && (
                               <div style={{ fontSize: "0.75rem", color: "#991B1B", background: "#FEE2E2", padding: "4px 8px", borderRadius: 6, marginBottom: "0.3rem" }}>
                                 Reason: {auction.rejection_reason}
@@ -1071,14 +1059,11 @@ const SellerDashboard = () => {
                             )}
                           </div>
 
-                          {/* Actions */}
                           <div className="sd-order-actions" style={{ alignItems: "flex-end", gap: "0.4rem", minWidth: 130 }}>
-                            {/* Lifecycle status */}
                             <span style={{ ...auctionStatusStyle(auction.status), padding: "3px 10px", borderRadius: 999, fontSize: "0.68rem", fontWeight: 700 }}>
                               {auction.status === "live" ? "🔴 Live" : auction.status?.charAt(0).toUpperCase() + auction.status?.slice(1)}
                             </span>
 
-                            {/* End Early */}
                             {canEndEarly && (
                               <button
                                 className="sd-btn-outline"
@@ -1090,7 +1075,6 @@ const SellerDashboard = () => {
                               </button>
                             )}
 
-                            {/* Cancel */}
                             {canCancel && (
                               <button
                                 style={{ fontSize: "0.72rem", padding: "4px 10px", color: "#92400E", borderColor: "#FDE68A", background: "#FEF3C7", border: "1.5px solid #FDE68A", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
@@ -1101,7 +1085,6 @@ const SellerDashboard = () => {
                               </button>
                             )}
 
-                            {/* Delete */}
                             {canDelete && (
                               <button
                                 className="sd-btn-icon sd-btn-icon-danger"
@@ -1209,7 +1192,6 @@ const SellerDashboard = () => {
                             ))}
                           </div>
                         )}
-                        {/* ✅ Reply button */}
                         <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.5rem" }}>
                           <button
                             className="sd-btn-outline"
@@ -1231,7 +1213,6 @@ const SellerDashboard = () => {
           {activeTab === "shop"  && <ShopManagement toast={toast} t={t} />}
           {activeTab === "blogs" && <SellerMyBlogs toast={toast} t={t} />}
 
-          {/* ✅ Footer */}
           <div className="sd-footer">© {new Date().getFullYear()} हस्तKrafts Nepal. All rights reserved.</div>
         </main>
       </div>
@@ -1367,7 +1348,8 @@ const ShopManagement = ({ toast, t }) => {
           <form onSubmit={handleSave} className="sd-edit-form">
             <div className="sd-form-grid">
               <div className="sd-form-field"><label>Shop Name *</label><input type="text" value={form.shop_name} onChange={(e) => setForm({ ...form, shop_name: e.target.value })} required /></div>
-              <div className="sd-form-field sd-form-full"><label>Shop Description</label><textarea rows={3} value={form.shop_description} onChange={(e) => setForm({ ...form, shop_description: e.target.value })} /></div>
+              {/* FIX 2: maxLength={1000} added to shop_description textarea */}
+              <div className="sd-form-field sd-form-full"><label>Shop Description</label><textarea rows={3} maxLength={1000} value={form.shop_description} onChange={(e) => setForm({ ...form, shop_description: e.target.value })} /></div>
               <div className="sd-form-field"><label>City *</label><input type="text" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} required /></div>
               <div className="sd-form-field sd-form-full"><label>Address *</label><textarea rows={2} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} required /></div>
             </div>

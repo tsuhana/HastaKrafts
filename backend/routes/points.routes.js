@@ -4,14 +4,11 @@ const { getUserPoints, getPointsHistory } = require("../controllers/points.contr
 const { authenticate } = require("../middlewares/auth.middleware");
 const { checkRole } = require("../middlewares/roleCheck.middleware");
 
-// All points routes require buyer role
+// All points routes require buyer authentication
 router.use(authenticate);
 router.use(checkRole("buyer"));
 
-// Get user points balance
 router.get("/balance", getUserPoints);
-
-// Get points transaction history
 router.get("/history", getPointsHistory);
 
 module.exports = router;

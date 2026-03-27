@@ -111,12 +111,17 @@ const UserProfile = () => {
     return Object.keys(e).length === 0;
   };
 
+  // FIX 1: Added letter + number check to match backend user.validator.js
   const validatePasswordForm = () => {
     const e = {};
-    if (!passwordData.currentPassword) e.currentPassword = 'Current password is required';
-    if (!passwordData.newPassword)     e.newPassword     = 'New password is required';
+    if (!passwordData.currentPassword)
+      e.currentPassword = 'Current password is required';
+    if (!passwordData.newPassword)
+      e.newPassword = 'New password is required';
     else if (passwordData.newPassword.length < 6)
       e.newPassword = 'Password must be at least 6 characters';
+    else if (!/[A-Za-z]/.test(passwordData.newPassword) || !/[0-9]/.test(passwordData.newPassword))
+      e.newPassword = 'Password must contain at least one letter and one number';
     if (passwordData.newPassword !== passwordData.confirmPassword)
       e.confirmPassword = 'Passwords do not match';
     setErrors(e);
@@ -142,14 +147,15 @@ const UserProfile = () => {
     }
   };
 
+  // FIX 2: Send current_password and new_password (snake_case) to match backend
   const handleChangePassword = async (e) => {
     e.preventDefault();
     if (!validatePasswordForm()) return;
     setSaving(true);
     try {
       const res = await userAPI.changePassword({
-        currentPassword: passwordData.currentPassword,
-        newPassword:     passwordData.newPassword,
+        current_password: passwordData.currentPassword,
+        new_password:     passwordData.newPassword,
       });
       if (res.data.success) {
         toast.success('Password changed successfully!');
@@ -443,6 +449,9 @@ const UserProfile = () => {
                     className={errors.newPassword ? 'error' : ''}
                   />
                   {errors.newPassword && <span className="error-msg">{errors.newPassword}</span>}
+                  <span style={{ fontSize: '0.72rem', color: '#9a8268', marginTop: 3, display: 'block' }}>
+                    Min 6 characters, must include a letter and a number
+                  </span>
                 </div>
                 <div className="form-field">
                   <label>{t('profile.confirm_password')} *</label>
@@ -481,13 +490,11 @@ const UserProfile = () => {
 };
 
 // ══════════════════════════════════════════════════════════════
-// ORDER HISTORY — full filter + search + date + sort + pagination
+// ORDER HISTORY
 // ══════════════════════════════════════════════════════════════
 const OrderHistory = ({ t }) => {
   const [orders, setOrders]     = useState([]);
   const [loading, setLoading]   = useState(true);
-
-  // ── filter / search / date / sort / page state ──
   const [statusFilter, setStatusFilter]   = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [search, setSearch]               = useState('');
@@ -502,30 +509,18 @@ const OrderHistory = ({ t }) => {
       .finally(() => setLoading(false));
   }, []);
 
-  // Reset page when any filter changes
   useEffect(() => { setPage(1); }, [statusFilter, paymentFilter, search, dateRange, sort]);
 
-  // ── derive counts for filter chips ──
   const statusCounts = useMemo(() => {
     const c = { all: orders.length };
-    orders.forEach((o) => {
-      const s = o.order_status;
-      c[s] = (c[s] || 0) + 1;
-    });
+    orders.forEach((o) => { const s = o.order_status; c[s] = (c[s] || 0) + 1; });
     return c;
   }, [orders]);
 
-  // ── apply all filters ──
   const filtered = useMemo(() => {
     let list = [...orders];
-
-    // status filter
     if (statusFilter !== 'all') list = list.filter((o) => o.order_status === statusFilter);
-
-    // payment filter
     if (paymentFilter !== 'all') list = list.filter((o) => o.payment_status === paymentFilter);
-
-    // search by order number or product name
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((o) =>
@@ -533,21 +528,16 @@ const OrderHistory = ({ t }) => {
         o.items?.some((i) => (i.product_name || '').toLowerCase().includes(q))
       );
     }
-
-    // date range
     list = filterByDateRange(list, 'created_at', dateRange.startDate, dateRange.endDate);
-
-    // sort
     list.sort((a, b) => {
       const da = new Date(a.created_at || a.createdAt);
       const db = new Date(b.created_at || b.createdAt);
-      if (sort === 'newest') return db - da;
-      if (sort === 'oldest') return da - db;
+      if (sort === 'newest')  return db - da;
+      if (sort === 'oldest')  return da - db;
       if (sort === 'highest') return parseFloat(b.total) - parseFloat(a.total);
       if (sort === 'lowest')  return parseFloat(a.total) - parseFloat(b.total);
       return 0;
     });
-
     return list;
   }, [orders, statusFilter, paymentFilter, search, dateRange, sort]);
 
@@ -555,28 +545,20 @@ const OrderHistory = ({ t }) => {
   const paged      = filtered.slice((page - 1) * ORDERS_PER_PAGE, page * ORDERS_PER_PAGE);
 
   const getStatusColor = (status) => ({
-    pending:    '#F59E0B',
-    processing: '#3B82F6',
-    shipped:    '#8B5CF6',
-    delivered:  '#10B981',
-    cancelled:  '#EF4444',
+    pending: '#F59E0B', processing: '#3B82F6', shipped: '#8B5CF6',
+    delivered: '#10B981', cancelled: '#EF4444',
   }[status] || '#6B7280');
 
   const clearAll = () => {
-    setStatusFilter('all');
-    setPaymentFilter('all');
-    setSearch('');
-    setDateRange({ startDate: '', endDate: '' });
-    setSort('newest');
-    setPage(1);
+    setStatusFilter('all'); setPaymentFilter('all');
+    setSearch(''); setDateRange({ startDate: '', endDate: '' });
+    setSort('newest'); setPage(1);
   };
 
-  const hasActiveFilters =
-    statusFilter !== 'all' || paymentFilter !== 'all' ||
+  const hasActiveFilters = statusFilter !== 'all' || paymentFilter !== 'all' ||
     search || dateRange.startDate || dateRange.endDate;
 
   if (loading) return <div className="loading">{t('common.loading')}</div>;
-
   if (orders.length === 0) {
     return (
       <div className="empty-state">
@@ -590,195 +572,83 @@ const OrderHistory = ({ t }) => {
 
   return (
     <div className="oh-wrap">
-      {/* ── Header row ── */}
       <div className="oh-header">
         <div>
-          <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#2C1810' }}>
-            Order History
-          </h2>
-          <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#8B6F5E' }}>
-            {filtered.length} of {orders.length} orders
-          </p>
+          <h2 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#2C1810' }}>Order History</h2>
+          <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#8B6F5E' }}>{filtered.length} of {orders.length} orders</p>
         </div>
-        {hasActiveFilters && (
-          <button onClick={clearAll} className="oh-clear-btn">✕ Clear filters</button>
-        )}
+        {hasActiveFilters && <button onClick={clearAll} className="oh-clear-btn">✕ Clear filters</button>}
       </div>
-
-      {/* ── Toolbar ── */}
       <div className="oh-toolbar">
-        {/* Search */}
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder="Search by order # or product…"
-          theme="seller"
-          style={{ flex: 1, minWidth: 200 }}
-        />
-
-        {/* Sort */}
-        <SortSelect
-          theme="seller"
-          value={sort}
-          onChange={setSort}
-          options={[
-            { value: 'newest',  label: 'Newest first' },
-            { value: 'oldest',  label: 'Oldest first' },
-            { value: 'highest', label: 'Highest amount' },
-            { value: 'lowest',  label: 'Lowest amount' },
-          ]}
-        />
+        <SearchInput value={search} onChange={setSearch} placeholder="Search by order # or product…" theme="seller" style={{ flex: 1, minWidth: 200 }} />
+        <SortSelect theme="seller" value={sort} onChange={setSort}
+          options={[{ value: 'newest', label: 'Newest first' }, { value: 'oldest', label: 'Oldest first' }, { value: 'highest', label: 'Highest amount' }, { value: 'lowest', label: 'Lowest amount' }]} />
       </div>
-
-      {/* ── Date range ── */}
       <div style={{ marginBottom: '0.85rem' }}>
-        <DateRangePicker
-          theme="seller"
-          startDate={dateRange.startDate}
-          endDate={dateRange.endDate}
-          onChange={setDateRange}
-          label="Date:"
-        />
+        <DateRangePicker theme="seller" startDate={dateRange.startDate} endDate={dateRange.endDate} onChange={setDateRange} label="Date:" />
       </div>
-
-      {/* ── Status filter chips ── */}
       <div style={{ marginBottom: '0.5rem' }}>
-        <FilterBar
-          theme="seller"
-          active={statusFilter}
-          onChange={setStatusFilter}
+        <FilterBar theme="seller" active={statusFilter} onChange={setStatusFilter}
           filters={[
-            { key: 'all',        label: 'All',        count: statusCounts.all || 0 },
-            { key: 'pending',    label: 'Pending',    count: statusCounts.pending    || 0 },
+            { key: 'all', label: 'All', count: statusCounts.all || 0 },
+            { key: 'pending', label: 'Pending', count: statusCounts.pending || 0 },
             { key: 'processing', label: 'Processing', count: statusCounts.processing || 0 },
-            { key: 'shipped',    label: 'Shipped',    count: statusCounts.shipped    || 0 },
-            { key: 'delivered',  label: 'Delivered',  count: statusCounts.delivered  || 0 },
-            { key: 'cancelled',  label: 'Cancelled',  count: statusCounts.cancelled  || 0 },
-          ]}
-        />
+            { key: 'shipped', label: 'Shipped', count: statusCounts.shipped || 0 },
+            { key: 'delivered', label: 'Delivered', count: statusCounts.delivered || 0 },
+            { key: 'cancelled', label: 'Cancelled', count: statusCounts.cancelled || 0 },
+          ]} />
       </div>
-
-      {/* ── Payment filter chips ── */}
       <div style={{ marginBottom: '1rem' }}>
-        <FilterBar
-          theme="seller"
-          active={paymentFilter}
-          onChange={setPaymentFilter}
-          filters={[
-            { key: 'all',     label: 'All payments' },
-            { key: 'paid',    label: 'Paid' },
-            { key: 'pending', label: 'Unpaid' },
-          ]}
-        />
+        <FilterBar theme="seller" active={paymentFilter} onChange={setPaymentFilter}
+          filters={[{ key: 'all', label: 'All payments' }, { key: 'paid', label: 'Paid' }, { key: 'pending', label: 'Unpaid' }]} />
       </div>
-
-      {/* ── No results ── */}
       {paged.length === 0 ? (
-        <div className="oh-no-results">
-          <p>No orders match your filters.</p>
-          <button onClick={clearAll} className="oh-clear-btn">Clear all filters</button>
-        </div>
+        <div className="oh-no-results"><p>No orders match your filters.</p><button onClick={clearAll} className="oh-clear-btn">Clear all filters</button></div>
       ) : (
         <>
-          {/* ── Order cards ── */}
           <div className="orders-list">
             {paged.map((order) => (
               <div key={order.order_id} className="order-card">
                 <div className="order-header">
                   <div>
                     <h3>Order #{order.order_number}</h3>
-                    <p className="order-date">
-                      {new Date(order.created_at || order.createdAt).toLocaleDateString('en-US', {
-                        year: 'numeric', month: 'long', day: 'numeric',
-                      })}
-                    </p>
+                    <p className="order-date">{new Date(order.created_at || order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                   </div>
                   <div className="order-status-badges">
-                    <span
-                      className="status-badge"
-                      style={{
-                        background: `${getStatusColor(order.order_status)}20`,
-                        color: getStatusColor(order.order_status),
-                      }}
-                    >
+                    <span className="status-badge" style={{ background: `${getStatusColor(order.order_status)}20`, color: getStatusColor(order.order_status) }}>
                       {order.order_status?.charAt(0).toUpperCase() + order.order_status?.slice(1)}
                     </span>
-                    <span
-                      className="payment-badge"
-                      style={{
-                        background: order.payment_status === 'paid' ? '#10B98120' : '#F59E0B20',
-                        color:      order.payment_status === 'paid' ? '#10B981'   : '#F59E0B',
-                      }}
-                    >
-                      {order.payment_status === 'paid'
-                        ? (order.payment_method === 'khalti' ? '✓ Paid (Khalti)' : '✓ Paid (COD)')
-                        : '⏳ Unpaid'}
+                    <span className="payment-badge" style={{ background: order.payment_status === 'paid' ? '#10B98120' : '#F59E0B20', color: order.payment_status === 'paid' ? '#10B981' : '#F59E0B' }}>
+                      {order.payment_status === 'paid' ? (order.payment_method === 'khalti' ? '✓ Paid (Khalti)' : '✓ Paid (COD)') : '⏳ Unpaid'}
                     </span>
-                    <span
-                      className="payment-badge"
-                      style={{ background: '#EFF6FF', color: '#1D4ED8' }}
-                    >
-                      {order.payment_method?.toUpperCase()}
-                    </span>
+                    <span className="payment-badge" style={{ background: '#EFF6FF', color: '#1D4ED8' }}>{order.payment_method?.toUpperCase()}</span>
                   </div>
                 </div>
-
-                {/* Items preview */}
                 <div className="order-items">
                   {order.items?.slice(0, 3).map((item) => (
                     <div key={item.order_item_id} className="order-item-preview">
-                      <img
-                        src={item.product_image ? `${API_URL}${item.product_image}` : '/placeholder.png'}
-                        alt={item.product_name}
-                      />
+                      <img src={item.product_image ? `${API_URL}${item.product_image}` : '/placeholder.png'} alt={item.product_name} />
                       <div>
                         <p className="item-name">{item.product_name}</p>
-                        <p className="item-qty">
-                          Qty: {item.quantity} × Rs. {parseFloat(item.product_price).toLocaleString()}
-                        </p>
+                        <p className="item-qty">Qty: {item.quantity} × Rs. {parseFloat(item.product_price).toLocaleString()}</p>
                       </div>
                     </div>
                   ))}
-                  {(order.items?.length || 0) > 3 && (
-                    <p className="more-items">+{order.items.length - 3} more item(s)</p>
-                  )}
+                  {(order.items?.length || 0) > 3 && <p className="more-items">+{order.items.length - 3} more item(s)</p>}
                 </div>
-
-                {/* Delivery info row */}
                 <div className="oh-delivery-row">
                   <span>📍 {order.delivery_city}{order.delivery_state ? `, ${order.delivery_state}` : ''}</span>
-                  {order.delivery_fee > 0
-                    ? <span>Delivery: Rs. {parseFloat(order.delivery_fee).toLocaleString()}</span>
-                    : <span style={{ color: '#10B981' }}>Free delivery</span>}
-                  {order.points_earned > 0 && (
-                    <span style={{ color: '#b86e38' }}>🏆 +{order.points_earned} pts earned</span>
-                  )}
+                  {order.delivery_fee > 0 ? <span>Delivery: Rs. {parseFloat(order.delivery_fee).toLocaleString()}</span> : <span style={{ color: '#10B981' }}>Free delivery</span>}
+                  {order.points_earned > 0 && <span style={{ color: '#b86e38' }}>🏆 +{order.points_earned} pts earned</span>}
                 </div>
-
                 <div className="order-footer">
-                  <div className="order-total">
-                    <span>Total:</span>
-                    <span className="amount">Rs. {parseFloat(order.total).toLocaleString()}</span>
-                  </div>
-                  <button
-                    onClick={() => (window.location.href = `/order-confirmation/${order.order_id}`)}
-                    className="btn-view-order"
-                  >
-                    View Details →
-                  </button>
+                  <div className="order-total"><span>Total:</span><span className="amount">Rs. {parseFloat(order.total).toLocaleString()}</span></div>
+                  <button onClick={() => (window.location.href = `/order-confirmation/${order.order_id}`)} className="btn-view-order">View Details →</button>
                 </div>
               </div>
             ))}
           </div>
-
-          {/* ── Pagination ── */}
-          <Pagination
-            currentPage={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-            theme="seller"
-          />
-
+          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} theme="seller" />
           <p style={{ textAlign: 'center', fontSize: '0.72rem', color: '#B09070', marginTop: '0.5rem' }}>
             Showing {(page - 1) * ORDERS_PER_PAGE + 1}–{Math.min(page * ORDERS_PER_PAGE, filtered.length)} of {filtered.length}
           </p>
@@ -789,7 +659,7 @@ const OrderHistory = ({ t }) => {
 };
 
 // ══════════════════════════════════════════
-// SELLER SHOP INFO (read-only in profile)
+// SELLER SHOP INFO
 // ══════════════════════════════════════════
 const SellerShopInfo = ({ t, navigate }) => {
   const [seller, setSeller]   = useState(null);
@@ -812,9 +682,7 @@ const SellerShopInfo = ({ t, navigate }) => {
           {seller.shop_logo ? (
             <img src={`${API_URL}${seller.shop_logo}`} alt={seller.shop_name} className="shop-logo-img" />
           ) : (
-            <div className="shop-logo-placeholder">
-              {seller.shop_name?.[0]?.toUpperCase() || 'S'}
-            </div>
+            <div className="shop-logo-placeholder">{seller.shop_name?.[0]?.toUpperCase() || 'S'}</div>
           )}
         </div>
         <div className="shop-header-info">
@@ -827,44 +695,17 @@ const SellerShopInfo = ({ t, navigate }) => {
           </span>
         </div>
       </div>
-
       <div className="info-grid" style={{ marginTop: '1.5rem' }}>
-        <div className="info-item full-width">
-          <label>Shop Description</label>
-          <p>{seller.shop_description || t('profile.not_provided')}</p>
-        </div>
-        <div className="info-item">
-          <label>City</label>
-          <p>{seller.city || t('profile.not_provided')}</p>
-        </div>
-        <div className="info-item full-width">
-          <label>Address</label>
-          <p>{seller.address || t('profile.not_provided')}</p>
-        </div>
-        <div className="info-item">
-          <label>Citizenship Number</label>
-          <p>{seller.citizenship_number || t('profile.not_provided')}</p>
-        </div>
-        <div className="info-item">
-          <label>Bank Name</label>
-          <p>{seller.bank_name || t('profile.not_provided')}</p>
-        </div>
-        <div className="info-item">
-          <label>Account Number</label>
-          <p>{seller.bank_account_number || t('profile.not_provided')}</p>
-        </div>
+        <div className="info-item full-width"><label>Shop Description</label><p>{seller.shop_description || t('profile.not_provided')}</p></div>
+        <div className="info-item"><label>City</label><p>{seller.city || t('profile.not_provided')}</p></div>
+        <div className="info-item full-width"><label>Address</label><p>{seller.address || t('profile.not_provided')}</p></div>
+        <div className="info-item"><label>Citizenship Number</label><p>{seller.citizenship_number || t('profile.not_provided')}</p></div>
+        <div className="info-item"><label>Bank Name</label><p>{seller.bank_name || t('profile.not_provided')}</p></div>
+        <div className="info-item"><label>Account Number</label><p>{seller.bank_account_number || t('profile.not_provided')}</p></div>
       </div>
-
-      {seller.rejection_reason && (
-        <div className="rejection-notice">
-          <strong>Rejection Reason:</strong> {seller.rejection_reason}
-        </div>
-      )}
-
+      {seller.rejection_reason && <div className="rejection-notice"><strong>Rejection Reason:</strong> {seller.rejection_reason}</div>}
       <div style={{ marginTop: '1.5rem' }}>
-        <button className="btn-save" onClick={() => navigate('/seller/dashboard')}>
-          🏪 Manage Shop in Dashboard →
-        </button>
+        <button className="btn-save" onClick={() => navigate('/seller/dashboard')}>🏪 Manage Shop in Dashboard →</button>
       </div>
     </div>
   );

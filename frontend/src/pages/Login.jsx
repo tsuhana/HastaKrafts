@@ -1,53 +1,79 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { authAPI } from '../api/axios';
 import { useTranslation } from 'react-i18next';
 import BrandLogo from '../components/BrandLogo';
 import '../styles/Login.css';
 
 const Login = () => {
-  const navigate = useNavigate();
-  const { t } = useTranslation();
+  const navigate   = useNavigate();
+  const { t }      = useTranslation();
   const [formData, setFormData] = useState({ email: '', password: '' });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [error, setError]       = useState('');
+  const [loading, setLoading]   = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError('');
+    if (error) setError('');
+  };
+
+  // Basic client-side checks before hitting the server
+  const validate = () => {
+    const { email, password } = formData;
+    if (!email.trim())    return 'Email is required';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return 'Please provide a valid email address';
+    if (!password)        return 'Password is required';
+    return null;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation(); // ✅ FIXED: prevent any parent handlers firing
+
+    const validationError = validate();
+    if (validationError) { setError(validationError); return; }
+
     setLoading(true);
     setError('');
+
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', formData);
+      const response = await authAPI.login({
+        email:    formData.email.trim().toLowerCase(),
+        password: formData.password,
+      });
+
       if (response.data.success) {
-        localStorage.setItem('token', response.data.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.data.user));
+        const { token, user } = response.data.data;
+
+        // ✅ FIXED: Set localStorage BEFORE calling navigate
+        // so the 401 interceptor in axios.js doesn't fire on
+        // the first dashboard API calls (token must exist first)
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
         window.dispatchEvent(new Event('userLoggedIn'));
-        const userRole = response.data.data.user.role;
-        if (userRole === 'admin') navigate('/admin/dashboard');
-        else if (userRole === 'seller') navigate('/seller/dashboard');
-        else navigate('/');
+
+        const role = user.role;
+        // ✅ FIXED: replace:true prevents back-button returning to login
+        if (role === 'admin')        navigate('/admin/dashboard', { replace: true });
+        else if (role === 'seller')  navigate('/seller/dashboard', { replace: true });
+        else                         navigate('/', { replace: true });
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      setError(err.response?.data?.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = 'http://localhost:5000/api/auth/google';
+    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/google`;
   };
 
   return (
     <div className="auth-page">
       <div className="auth-container">
 
-        {/* Left Side - Form */}
+        {/* Left — Form */}
         <div className="auth-form-section">
           <div className="auth-form-wrapper">
             <div className="auth-header">
@@ -71,14 +97,30 @@ const Login = () => {
 
             {error && <div className="error-message">{error}</div>}
 
-            <form onSubmit={handleSubmit} className="auth-form">
+            <form onSubmit={handleSubmit} className="auth-form" noValidate>
               <div className="form-group">
                 <label>{t('auth.email')}</label>
-                <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Enter your email" required />
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="Enter your email"
+                  autoComplete="email"
+                  disabled={loading}
+                />
               </div>
               <div className="form-group">
                 <label>{t('auth.password')}</label>
-                <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="Enter your password" required />
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                  disabled={loading}
+                />
               </div>
               <div className="form-options">
                 <label className="remember-me">
@@ -99,7 +141,7 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Right Side - Decorative */}
+        {/* Right — Decorative */}
         <div className="auth-decoration">
           <div className="decoration-content">
             <h2>Hello, User!</h2>

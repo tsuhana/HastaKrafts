@@ -412,14 +412,18 @@ const toggleBlockUser = async (req, res) => {
     if (parseInt(id) === req.user.user_id) {
       return res.status(400).json({ success: false, message: "You cannot block yourself" });
     }
+    
     const user = await db.User.findByPk(id);
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
     if (user.role === "admin") return res.status(400).json({ success: false, message: "Cannot block an admin account" });
-    await user.update({ is_active: !user.is_active });
+    
+    const newStatus = !user.is_active; // ✅ capture BEFORE update
+    await user.update({ is_active: newStatus });
+    
     res.status(200).json({
       success: true,
-      message: user.is_active ? "User unblocked successfully" : "User blocked successfully",
-      data: { user_id: user.user_id, is_active: user.is_active },
+      message: newStatus ? "User unblocked successfully" : "User blocked successfully", // ✅ correct now
+      data: { user_id: user.user_id, is_active: newStatus },
     });
   } catch (error) {
     console.error("Toggle block user error:", error);

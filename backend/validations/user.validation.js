@@ -12,7 +12,7 @@ const updateProfileRules = [
     .optional()
     .trim()
     .isEmail().withMessage("Please provide a valid email address")
-    .normalizeEmail(),
+    .customSanitizer((value) => value.toLowerCase()),
 
   body("phone")
     .optional()

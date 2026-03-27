@@ -5,7 +5,7 @@ const createProductRules = [
   body("name")
     .trim()
     .notEmpty().withMessage("Product name is required")
-    .isLength({ min: 2, max: 200 }).withMessage("Product name must be between 2 and 200 characters"),
+    .isLength({ min: 3, max: 200 }).withMessage("Product name must be between 3 and 200 characters"),
 
   body("description")
     .trim()
@@ -26,7 +26,7 @@ const createProductRules = [
 
   body("discount_percentage")
     .optional()
-    .isInt({ min: 0, max: 100 }).withMessage("Discount percentage must be between 0 and 100"),
+    .isInt({ min: 0, max: 99 }).withMessage("Discount percentage must be between 0 and 99"),
 
   body("sku")
     .optional()
@@ -40,7 +40,7 @@ const updateProductRules = [
   body("name")
     .optional()
     .trim()
-    .isLength({ min: 2, max: 200 }).withMessage("Product name must be between 2 and 200 characters"),
+    .isLength({ min: 3, max: 200 }).withMessage("Product name must be between 3 and 200 characters"),
 
   body("price")
     .optional()
@@ -52,7 +52,7 @@ const updateProductRules = [
 
   body("discount_percentage")
     .optional()
-    .isInt({ min: 0, max: 100 }).withMessage("Discount percentage must be between 0 and 100"),
+    .isInt({ min: 0, max: 99 }).withMessage("Discount percentage must be between 0 and 99"),
 
   handleValidation,
 ];

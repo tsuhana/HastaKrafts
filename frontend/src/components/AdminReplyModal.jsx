@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./AdminReplyModal.css";
 
-const MAX_CHARS = 5000;
+const MAX_CHARS = 500;
 
 const AdminReplyModal = ({ isOpen, contact, onClose, onSend }) => {
   const [reply, setReply]     = useState("");

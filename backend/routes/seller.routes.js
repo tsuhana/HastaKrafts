@@ -1,30 +1,16 @@
 const express = require("express");
 const router = express.Router();
-const {
-  getSellerProfile,
-  updateSellerProfile,
-  uploadShopLogo,
-  uploadCitizenship,
-  getSellerAnalytics,
-} = require("../controllers/seller.controller");
+const { getSellerProfile, updateSellerProfile, uploadShopLogo, uploadCitizenship, getSellerAnalytics } = require("../controllers/seller.controller");
 const { authenticate } = require("../middlewares/auth.middleware");
-const {
-  uploadShopLogo: uploadShopLogoMiddleware,
-  uploadCitizenship: uploadCitizenshipMiddleware,
-} = require("../middlewares/upload.middleware");
+const { uploadShopLogo: uploadShopLogoMiddleware, uploadCitizenship: uploadCitizenshipMiddleware } = require("../middlewares/upload.middleware");
+const { updateSellerProfileRules } = require("../validations/seller.validation");
 
-// All routes require authentication
 router.use(authenticate);
 
-// GET seller profile
-router.get("/profile", getSellerProfile);
+router.get("/profile",    getSellerProfile);
+router.put("/profile",    updateSellerProfileRules, updateSellerProfile);
 
-// PUT update seller profile (shop info + bank info)
-router.put("/profile", updateSellerProfile);
-
-// POST upload shop logo
-router.post(
-  "/upload-logo",
+router.post("/upload-logo",
   (req, res, next) => {
     uploadShopLogoMiddleware(req, res, (err) => {
       if (err) return res.status(400).json({ success: false, message: err.message || "Logo upload failed" });
@@ -34,9 +20,7 @@ router.post(
   uploadShopLogo
 );
 
-// POST upload citizenship document
-router.post(
-  "/upload-citizenship",
+router.post("/upload-citizenship",
   (req, res, next) => {
     uploadCitizenshipMiddleware(req, res, (err) => {
       if (err) return res.status(400).json({ success: false, message: err.message || "Citizenship upload failed" });
@@ -46,7 +30,6 @@ router.post(
   uploadCitizenship
 );
 
-// GET seller analytics
 router.get("/analytics", getSellerAnalytics);
 
 module.exports = router;

@@ -31,6 +31,7 @@ API.interceptors.response.use(
 export const authAPI = {
   login: (data) => API.post('/auth/login', data),
   register: (data) => API.post('/auth/register/buyer', data),
+  registerBuyer: (data) => API.post('/auth/register/buyer', data),
   registerSeller: (data) => API.post('/auth/register/seller', data),
   forgotPassword: (data) => API.post('/auth/forgot-password', data),
   verifyOTP: (data) => API.post('/auth/verify-otp', data),
@@ -81,7 +82,7 @@ export const adminAPI = {
   getAllOrders: () => API.get('/admin/orders'),
   getAllReviews: () => API.get('/admin/reviews'),
   deleteReview: (id) => API.delete(`/admin/reviews/${id}`),
-  // ✅ FIXED: Admin auctions use /admin/auctions (sees ALL approval statuses)
+  //  Admin auctions use /admin/auctions (sees ALL approval statuses)
   getAllAuctions: (params) => API.get('/admin/auctions', { params }),
   approveAuction: (id) => API.post(`/admin/auctions/${id}/approve`),
   rejectAuction: (id, data) => API.post(`/admin/auctions/${id}/reject`, data),
@@ -172,10 +173,9 @@ export const reviewAPI = {
   deleteReview: (review_id) => API.delete(`/reviews/${review_id}`),
   toggleHelpful: (review_id) => API.post(`/reviews/${review_id}/helpful`),
   createReply: (review_id, data) => API.post(`/reviews/${review_id}/reply`, data),
-  //  Seller reply to a review on their product
+  // Seller reply to a review on their product
   sellerReplyToReview: (review_id, data) => API.post(`/reviews/${review_id}/reply`, data),
-  //  Seller requests admin to remove a review
-  requestReviewRemoval: (review_id, data) => API.post(`/reviews/${review_id}/request-removal`, data),
+
 };
 
 // CONTACT

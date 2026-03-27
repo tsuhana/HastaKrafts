@@ -247,44 +247,31 @@ const deleteStory = async (req, res) => {
     const { id } = req.params;
 
     const story = await db.Story.findByPk(id);
-
     if (!story) {
-      return res.status(404).json({
-        success: false,
-        message: "Story not found",
-      });
+      return res.status(404).json({ success: false, message: "Story not found" });
     }
 
-    const seller = await db.Seller.findOne({
-      where: { user_id: req.user.user_id },
-    });
+    const seller = await db.Seller.findOne({ where: { user_id: req.user.user_id } });
+
+    if (!seller) {
+      return res.status(403).json({ success: false, message: "Seller profile not found" });
+    }
 
     if (story.seller_id !== seller.seller_id) {
-      return res.status(403).json({
-        success: false,
-        message: "You don't have permission to delete this story",
-      });
+      return res.status(403).json({ success: false, message: "You don't have permission to delete this story" });
     }
 
     (story.images || []).forEach((img) => {
       const filePath = path.join(__dirname, "..", img);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     });
 
     await story.destroy();
 
-    res.json({
-      success: true,
-      message: "Story deleted successfully",
-    });
+    res.json({ success: true, message: "Story deleted successfully" });
   } catch (error) {
     console.error("Delete story error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to delete story",
-    });
+    res.status(500).json({ success: false, message: "Failed to delete story" });
   }
 };
 

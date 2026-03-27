@@ -1,48 +1,27 @@
-const { body } = require("express-validator");
+const { body, param } = require("express-validator");
 const { handleValidation } = require("./validationindex");
 
-const createBannerRules = [
-  body("title")
-    .trim()
-    .notEmpty().withMessage("Banner title is required")
-    .isLength({ min: 2, max: 200 }).withMessage("Title must be between 2 and 200 characters"),
+const addToCartRules = [
+  body("product_id")
+    .notEmpty().withMessage("Product ID is required")
+    .isInt({ gt: 0 }).withMessage("Invalid product ID"),
 
-  body("link_type")
+  body("quantity")
     .optional()
-    .isIn(["none", "category", "product", "external"])
-    .withMessage("Link type must be none, category, product, or external"),
-
-  body("link_url")
-    .optional()
-    .trim()
-    .isLength({ max: 500 }).withMessage("Link URL must not exceed 500 characters"),
-
-  body("display_order")
-    .optional()
-    .isInt({ min: 0 }).withMessage("Display order must be a non-negative number"),
+    .isInt({ min: 1 }).withMessage("Quantity must be at least 1"),
 
   handleValidation,
 ];
 
-const updateBannerRules = [
-  body("title")
-    .optional()
-    .trim()
-    .isLength({ min: 2, max: 200 }).withMessage("Title must be between 2 and 200 characters"),
-
-  body("link_type")
-    .optional()
-    .isIn(["none", "category", "product", "external"])
-    .withMessage("Link type must be none, category, product, or external"),
-
-  body("display_order")
-    .optional()
-    .isInt({ min: 0 }).withMessage("Display order must be a non-negative number"),
+const updateCartItemRules = [
+  body("quantity")
+    .notEmpty().withMessage("Quantity is required")
+    .isInt({ min: 1 }).withMessage("Quantity must be at least 1"),
 
   handleValidation,
 ];
 
 module.exports = {
-  createBannerRules,
-  updateBannerRules,
+  addToCartRules,
+  updateCartItemRules,
 };

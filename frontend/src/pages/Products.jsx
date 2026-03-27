@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { productAPI } from '../api/axios';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +16,8 @@ const Products = () => {
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState('');
   const [page, setPage]             = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [filters, setFilters]       = useState({
     categories: searchParams.get('category') ? [searchParams.get('category')] : [],
     search: '',
@@ -24,10 +26,12 @@ const Products = () => {
   });
 
   useEffect(() => { fetchCategories(); }, []);
-  useEffect(() => { fetchProducts(); }, [filters.categories]);
 
-  // Reset to page 1 whenever filters change
-  useEffect(() => { setPage(1); }, [filters]);
+  // Re-fetch from server whenever page or server-side filters change
+  useEffect(() => { fetchProducts(); }, [filters.categories, filters.search, page]);
+
+  // Reset to page 1 when filters change (not page itself)
+  useEffect(() => { setPage(1); }, [filters.categories, filters.search, filters.minPrice, filters.maxPrice]);
 
   const fetchCategories = async () => {
     try {
@@ -41,27 +45,39 @@ const Products = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
+      // Build server-side params — page and limit sent to backend
       const params = {
         status: 'approved',
+        page,
+        limit: PRODUCTS_PER_PAGE,
         ...(filters.search && { search: filters.search }),
       };
       if (filters.categories.length === 1) {
         params.category_id = filters.categories[0];
       }
+
       const res = await productAPI.getAllProducts(params);
       let fetchedProducts = res.data.data.products || [];
+      const pagination    = res.data.data.pagination || {};
+
+      // Multi-category filter still needs client-side (backend supports only one category_id)
       if (filters.categories.length > 1) {
         fetchedProducts = fetchedProducts.filter(p =>
           filters.categories.includes(p.category_id?.toString())
         );
       }
+
+      // Price range filter — client-side since backend does not support min/max price params
       if (filters.minPrice) {
         fetchedProducts = fetchedProducts.filter(p => parseFloat(p.price) >= parseFloat(filters.minPrice));
       }
       if (filters.maxPrice) {
         fetchedProducts = fetchedProducts.filter(p => parseFloat(p.price) <= parseFloat(filters.maxPrice));
       }
+
       setProducts(fetchedProducts);
+      setTotalPages(pagination.totalPages || 1);
+      setTotalCount(pagination.total || fetchedProducts.length);
       setError('');
     } catch (err) {
       console.error('Fetch products error:', err);
@@ -71,12 +87,8 @@ const Products = () => {
     }
   };
 
-  // Client-side pagination on the already-fetched+filtered products
-  const totalPages  = Math.ceil(products.length / PRODUCTS_PER_PAGE);
-  const pagedProducts = useMemo(
-    () => products.slice((page - 1) * PRODUCTS_PER_PAGE, page * PRODUCTS_PER_PAGE),
-    [products, page]
-  );
+  // Products already paginated by server — no client-side slicing needed
+  const pagedProducts = products;
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -108,7 +120,7 @@ const Products = () => {
   };
 
   const getCountLabel = () => {
-    const count = products.length;
+    const count = totalCount;
     const productWord = count === 1 ? t('products.product_in') : t('products.products_in');
     if (filters.categories.length === 0) return `${count} ${productWord} ${t('products.found')}`;
     if (filters.categories.length === 1) {
@@ -241,7 +253,7 @@ const Products = () => {
                     theme="seller"
                   />
                   <p style={{ textAlign: 'center', fontSize: '0.8rem', color: '#9a8268', marginTop: '0.5rem' }}>
-                    Showing {(page - 1) * PRODUCTS_PER_PAGE + 1}–{Math.min(page * PRODUCTS_PER_PAGE, products.length)} of {products.length} products
+                    Showing {(page - 1) * PRODUCTS_PER_PAGE + 1}–{Math.min(page * PRODUCTS_PER_PAGE, totalCount)} of {totalCount} products
                   </p>
                 </div>
               )}

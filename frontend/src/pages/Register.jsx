@@ -1,62 +1,109 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { authAPI } from '../api/axios';
 import { useTranslation } from 'react-i18next';
 import BrandLogo from '../components/BrandLogo';
 import '../styles/Register.css';
 
 const Register = () => {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t }    = useTranslation();
   const [formData, setFormData] = useState({
-    full_name: '', email: '', password: '', confirmPassword: '', phone: ''
+    full_name: '', email: '', password: '', confirmPassword: '', phone: '',
   });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState('');
+  const [loading, setLoading]   = useState(false);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError('');
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear field error on change
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+    if (apiError) setApiError('');
+  };
+
+  const validate = () => {
+    const errs = {};
+    const { full_name, email, password, confirmPassword, phone } = formData;
+
+    // Full name — letters and spaces only, min 2 real characters
+    if (!full_name.trim()) {
+      errs.full_name = 'Full name is required';
+    } else if (full_name.trim().replace(/\s+/g, '').length < 2) {
+      errs.full_name = 'Please enter your full name';
+    } else if (!/^[A-Za-z\s\u0900-\u097F'-]+$/.test(full_name.trim())) {
+      errs.full_name = 'Full name must contain only letters and spaces';
+    }
+
+    // Email
+    if (!email.trim()) {
+      errs.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      errs.email = 'Please provide a valid email address';
+    }
+
+    // Phone — optional but must be valid if provided
+    if (phone && !/^[0-9+\-\s]{7,15}$/.test(phone.trim())) {
+      errs.phone = 'Please provide a valid phone number';
+    }
+
+    // Password
+    if (!password) {
+      errs.password = 'Password is required';
+    } else if (password.length < 6) {
+      errs.password = 'Password must be at least 6 characters';
+    } else if (!/[A-Za-z]/.test(password)) {
+      errs.password = 'Password must contain at least one letter';
+    } else if (!/[0-9]/.test(password)) {
+      errs.password = 'Password must contain at least one number';
+    }
+
+    // Confirm password
+    if (!confirmPassword) {
+      errs.confirmPassword = 'Please confirm your password';
+    } else if (password !== confirmPassword) {
+      errs.confirmPassword = 'Passwords do not match';
+    }
+
+    return errs;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
+    const errs = validate();
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+
     setLoading(true);
-    setError('');
+    setApiError('');
     try {
       const { confirmPassword, ...submitData } = formData;
-      const response = await axios.post('http://localhost:5000/api/auth/register/buyer', submitData);
+      submitData.full_name = submitData.full_name.trim();
+      submitData.email     = submitData.email.trim().toLowerCase();
+
+      const response = await authAPI.registerBuyer(submitData);
       if (response.data.success) {
         localStorage.setItem('token', response.data.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.data.user));
-        // ✅ Fire event so NavBar updates immediately
         window.dispatchEvent(new Event('userLoggedIn'));
         navigate('/');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+      setApiError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleSignup = () => {
-    window.location.href = 'http://localhost:5000/api/auth/google';
+    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/google`;
   };
 
   return (
     <div className="auth-page">
       <div className="auth-container register-container">
 
-        {/* Left Side - Decorative */}
+        {/* Left — Decorative */}
         <div className="auth-decoration">
           <div className="decoration-content">
             <h2>{t('auth.welcome_back')}</h2>
@@ -65,7 +112,7 @@ const Register = () => {
           </div>
         </div>
 
-        {/* Right Side - Form */}
+        {/* Right — Form */}
         <div className="auth-form-section">
           <div className="auth-form-wrapper">
             <div className="auth-header">
@@ -87,29 +134,85 @@ const Register = () => {
 
             <div className="divider"><span>{t('auth.or_email')}</span></div>
 
-            {error && <div className="error-message">{error}</div>}
+            {apiError && <div className="error-message">{apiError}</div>}
 
-            <form onSubmit={handleSubmit} className="auth-form">
+            <form onSubmit={handleSubmit} className="auth-form" noValidate>
+
               <div className="form-group">
                 <label>{t('auth.full_name')}</label>
-                <input type="text" name="full_name" value={formData.full_name} onChange={handleChange} placeholder="Enter your full name" required />
+                <input
+                  type="text"
+                  name="full_name"
+                  value={formData.full_name}
+                  onChange={handleChange}
+                  placeholder="Enter your full name"
+                  autoComplete="name"
+                  disabled={loading}
+                  className={errors.full_name ? 'input-error' : ''}
+                />
+                {errors.full_name && <span className="field-error">{errors.full_name}</span>}
               </div>
+
               <div className="form-group">
                 <label>{t('auth.email')}</label>
-                <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Enter your email" required />
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="Enter your email"
+                  autoComplete="email"
+                  disabled={loading}
+                  className={errors.email ? 'input-error' : ''}
+                />
+                {errors.email && <span className="field-error">{errors.email}</span>}
               </div>
+
               <div className="form-group">
-                <label>{t('auth.phone')}</label>
-                <input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="9800000000" pattern="[0-9]{10}" />
+                <label>{t('auth.phone')} <span className="optional">(optional)</span></label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="9800000000"
+                  autoComplete="tel"
+                  disabled={loading}
+                  className={errors.phone ? 'input-error' : ''}
+                />
+                {errors.phone && <span className="field-error">{errors.phone}</span>}
               </div>
+
               <div className="form-group">
                 <label>{t('auth.password')}</label>
-                <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="At least 6 characters" required minLength="6" />
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="At least 6 characters with a letter and number"
+                  autoComplete="new-password"
+                  disabled={loading}
+                  className={errors.password ? 'input-error' : ''}
+                />
+                {errors.password && <span className="field-error">{errors.password}</span>}
               </div>
+
               <div className="form-group">
                 <label>{t('auth.confirm_password')}</label>
-                <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder="Re-enter password" required />
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="Re-enter your password"
+                  autoComplete="new-password"
+                  disabled={loading}
+                  className={errors.confirmPassword ? 'input-error' : ''}
+                />
+                {errors.confirmPassword && <span className="field-error">{errors.confirmPassword}</span>}
               </div>
+
               <button type="submit" disabled={loading} className="submit-btn">
                 {loading ? t('auth.creating') : t('auth.sign_up').toUpperCase()}
               </button>

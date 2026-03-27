@@ -4,84 +4,60 @@ const productController = require("../controllers/product.controller");
 const { authenticate } = require("../middlewares/auth.middleware");
 const { checkRole, checkSellerApproval } = require("../middlewares/roleCheck.middleware");
 const { uploadProduct } = require("../middlewares/upload.middleware");
+const { createProductRules, updateProductRules } = require("../validations/product.validation");
 
-// ==================== PUBLIC ROUTES ====================
-// Homepage specific routes
-router.get('/featured', productController.getFeaturedProducts);
-router.get('/trending', productController.getTrendingProducts);
-router.get('/random', productController.getRandomProducts);
-router.get('/categories/top', productController.getTopCategories);
+const handleProductUpload = (req, res, next) => {
+  uploadProduct(req, res, (err) => {
+    if (err) return res.status(400).json({ success: false, message: err.message || "Image upload failed" });
+    next();
+  });
+};
 
-// Translation routes
-router.post('/:id/translate', productController.translateProduct);
-router.get('/languages/supported', productController.getSupportedLanguages);
+// ==================== PUBLIC ====================
+router.get("/featured",         productController.getFeaturedProducts);
+router.get("/trending",         productController.getTrendingProducts);
+router.get("/random",           productController.getRandomProducts);
+router.get("/categories/top",   productController.getTopCategories);
+router.get("/categories",       productController.getAllCategories);
+router.get("/languages/supported", productController.getSupportedLanguages);
+router.get("/",                 productController.getAllProducts);
+router.get("/:id/translated",   productController.getProductWithTranslations);
+router.get("/:id",              productController.getProductById);
+router.post("/:id/translate",   productController.translateProduct);
 
-// General public routes
-router.get("/", productController.getAllProducts);
-router.get("/categories", productController.getAllCategories);
-
-// Dynamic routes — translated version first, then plain
-router.get("/:id/translated", productController.getProductWithTranslations);
-router.get("/:id", productController.getProductById);
-
-// ==================== SELLER ROUTES (PROTECTED) ====================
+// ==================== SELLER ====================
 router.post(
   "/",
-  authenticate,
-  checkRole("seller"),
-  checkSellerApproval,
-  (req, res, next) => {
-    uploadProduct(req, res, (err) => {
-      if (err) {
-        return res.status(400).json({
-          success: false,
-          message: err.message || "Image upload failed",
-        });
-      }
-      next();
-    });
-  },
+  authenticate, checkRole("seller"), checkSellerApproval,
+  handleProductUpload,
+  createProductRules,
   productController.createProduct
 );
 
 router.get(
   "/seller/my-products",
-  authenticate,
-  checkRole("seller"),
-  checkSellerApproval,
+  authenticate, checkRole("seller"), checkSellerApproval,
   productController.getSellerProducts
 );
 
 router.put(
   "/:id",
-  authenticate,
-  checkRole("seller", "admin"),
-  (req, res, next) => {
-    uploadProduct(req, res, (err) => {
-      if (err) {
-        return res.status(400).json({
-          success: false,
-          message: err.message || "Image upload failed",
-        });
-      }
-      next();
-    });
-  },
+  authenticate, checkRole("seller", "admin"),
+  handleProductUpload,
+  updateProductRules,
   productController.updateProduct
 );
 
 router.delete(
   "/:id",
-  authenticate,
-  checkRole("seller", "admin"),
+  authenticate, checkRole("seller", "admin"),
   productController.deleteProduct
 );
 
-// ==================== ADMIN ROUTES (PROTECTED) ====================
+// ==================== ADMIN ====================
 router.patch(
   "/:id/toggle-featured",
-  authenticate,
-  checkRole("admin"),
+  authenticate, checkRole("admin"),
   productController.toggleFeatured
 );
 

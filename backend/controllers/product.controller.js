@@ -34,8 +34,8 @@ const createProduct = async (req, res) => {
     // ── Discount validation ──
     const hasDiscount = has_discount === 'true' || has_discount === true;
     const discountPct = hasDiscount ? (parseInt(discount_percentage) || 0) : 0;
-    if (hasDiscount && (discountPct < 0 || discountPct > 100)) {
-      return res.status(400).json({ success: false, message: "Discount percentage must be between 0 and 100" });
+    if (hasDiscount && (discountPct < 0 || discountPct > 99)) {
+      return res.status(400).json({ success: false, message: "Discount percentage must be between 0 and 99" });
     }
 
     // ── Find seller ──
@@ -317,8 +317,8 @@ const updateProduct = async (req, res) => {
 
     const hasDiscount = has_discount === 'true' || has_discount === true;
     const discountPct = hasDiscount ? (parseInt(discount_percentage) || 0) : 0;
-    if (hasDiscount && (discountPct < 0 || discountPct > 100)) {
-      return res.status(400).json({ success: false, message: "Discount percentage must be between 0 and 100" });
+    if (hasDiscount && (discountPct < 0 || discountPct > 99)) {
+      return res.status(400).json({ success: false, message: "Discount percentage must be between 0 and 99" });
     }
 
     // ── Image handling ──
