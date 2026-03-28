@@ -4,3 +4,19 @@ node_modules/
 *.log 
 .DS_Store 
 Thumbs.db 
+
+# ML Model (binary file — too large for git)
+ML/hastakrafts_model.pkl
+ML/__pycache__/
+ML/*.pyc
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# PWA (generated files)
+dist/

@@ -8,6 +8,7 @@ import Icons from "../utils/icons";
 import "../styles/ProductDetail.css";
 
 const API_URL = "http://localhost:5000";
+const ML_API  = "http://localhost:5001";
 
 const ProductDetail = () => {
   const { id }       = useParams();
@@ -23,10 +24,9 @@ const ProductDetail = () => {
   const [addingToCart, setAddingToCart]   = useState(false);
   const [reviewStats, setReviewStats]     = useState({ totalReviews: 0, averageRating: 0 });
 
-  const [selectedLanguage, setSelectedLanguage]       = useState("en");
-  const [translatedDescription, setTranslatedDescription] = useState("");
-  const [translating, setTranslating]                 = useState(false);
-  const [supportedLanguages, setSupportedLanguages]   = useState({});
+  // You may also like
+  const [similarProducts, setSimilarProducts] = useState([]);
+  const [similarLoading, setSimilarLoading]   = useState(false);
 
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const isLoggedIn  = !!localStorage.getItem("token");
@@ -36,7 +36,6 @@ const ProductDetail = () => {
 
   useEffect(() => {
     fetchProduct();
-    fetchSupportedLanguages();
   }, [id]);
 
   const fetchProduct = async () => {
@@ -44,8 +43,9 @@ const ProductDetail = () => {
       setLoading(true);
       const res = await productAPI.getProductById(id);
       setProduct(res.data.data);
-      setTranslatedDescription(res.data.data.description);
       setError("");
+      // Fetch similar products after product loads
+      fetchSimilarProducts(res.data.data.product_id);
     } catch (err) {
       console.error("Fetch product error:", err);
       setError("Product not found");
@@ -54,34 +54,33 @@ const ProductDetail = () => {
     }
   };
 
-  const fetchSupportedLanguages = async () => {
+  // ── You May Also Like ──────────────────────────────────
+  const fetchSimilarProducts = async (productId) => {
     try {
-      const res = await productAPI.getSupportedLanguages();
-      setSupportedLanguages(res.data.data || {});
-    } catch (err) {
-      console.error("Fetch languages error:", err);
-    }
-  };
+      setSimilarLoading(true);
+      // 1. Get similar product IDs from Flask ML API
+      const mlRes  = await fetch(`${ML_API}/recommend/similar/${productId}?n=4`);
+      const mlData = await mlRes.json();
+      const similarIds = mlData.similar_products?.map((r) => r.product_id) || [];
 
-  const handleLanguageChange = async (langCode) => {
-    if (langCode === "en") {
-      setSelectedLanguage("en");
-      setTranslatedDescription(product.description);
-      return;
-    }
-    setSelectedLanguage(langCode);
-    setTranslating(true);
-    try {
-      const res = await productAPI.translateProduct(product.product_id, { language: langCode });
-      if (res.data.success) setTranslatedDescription(res.data.data.translated);
+      if (similarIds.length === 0) return;
+
+      // 2. Fetch full product details from Node.js backend
+      const results = await Promise.all(
+        similarIds.map((sid) => productAPI.getProductById(sid).catch(() => null))
+      );
+      const full = results
+        .filter((r) => r && r.data?.data)
+        .map((r) => r.data.data);
+
+      setSimilarProducts(full);
     } catch (err) {
-      console.error("Translation error:", err);
-      toast.warning("Translation failed. Showing original text.");
-      setTranslatedDescription(product.description);
+      console.error("Similar products error:", err);
     } finally {
-      setTranslating(false);
+      setSimilarLoading(false);
     }
   };
+  // ────────────────────────────────────────────────────────
 
   const handleStatsChange = (stats) => {
     setReviewStats({
@@ -97,7 +96,10 @@ const ProductDetail = () => {
       setQuantity((prev) => prev - 1);
   };
 
-  const handleAddToCart = async () => {
+  const handleAddToCart = async (productToBuy = null, qty = null) => {
+    const targetProduct = productToBuy || product;
+    const targetQty     = qty || quantity;
+
     if (!isLoggedIn) {
       toast.error("Please login to add items to cart");
       navigate("/login");
@@ -107,17 +109,17 @@ const ProductDetail = () => {
       toast.error(isAdmin ? "Admins cannot purchase items" : "Sellers cannot purchase items");
       return;
     }
-    if (quantity > product.stock_quantity) {
-      toast.warning(`Only ${product.stock_quantity} items available`);
+    if (targetQty > targetProduct.stock_quantity) {
+      toast.warning(`Only ${targetProduct.stock_quantity} items available`);
       return;
     }
     setAddingToCart(true);
     try {
-      const res = await cartAPI.addToCart({ product_id: product.product_id, quantity });
+      const res = await cartAPI.addToCart({ product_id: targetProduct.product_id, quantity: targetQty });
       if (res.data.success) {
         toast.success("Item added to cart!");
         window.dispatchEvent(new Event("cartUpdated"));
-        setQuantity(1);
+        if (!productToBuy) setQuantity(1);
       }
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to add item to cart");
@@ -156,7 +158,6 @@ const ProductDetail = () => {
     </div>
   );
 
-  /* ── Loading / Error states ── */
   if (loading) {
     return (
       <div className="loading-container">
@@ -203,10 +204,7 @@ const ProductDetail = () => {
           <div className="product-gallery">
             <div className="main-image">
               {product.images?.length > 0 ? (
-                <img
-                  src={`${API_URL}${product.images[selectedImage]}`}
-                  alt={product.name}
-                />
+                <img src={`${API_URL}${product.images[selectedImage]}`} alt={product.name} />
               ) : (
                 <div className="no-image">No Image Available</div>
               )}
@@ -230,15 +228,12 @@ const ProductDetail = () => {
           <div className="product-info-section">
             <h1 className="product-title">{product.name}</h1>
 
-            {/* ── SELLER CARD ── */}
+            {/* Seller Card */}
             {product.seller && (
               <div className="seller-info">
                 <div className="seller-avatar">
                   {product.seller.shop_logo ? (
-                    <img
-                      src={`${API_URL}${product.seller.shop_logo}`}
-                      alt={product.seller.shop_name}
-                    />
+                    <img src={`${API_URL}${product.seller.shop_logo}`} alt={product.seller.shop_name} />
                   ) : (
                     <Icons.Shop size={32} />
                   )}
@@ -248,7 +243,6 @@ const ProductDetail = () => {
                   {product.seller.city && (
                     <p className="seller-location">{product.seller.city}</p>
                   )}
-                  {/* ✅ Shop description — public info, safe to show */}
                   {product.seller.shop_description && (
                     <p className="seller-description">{product.seller.shop_description}</p>
                   )}
@@ -260,13 +254,9 @@ const ProductDetail = () => {
             <div className="product-rating">
               {renderStars(reviewStats.averageRating)}
               <span className="rating-text">
-                {reviewStats.averageRating > 0
-                  ? reviewStats.averageRating.toFixed(1)
-                  : "0.0"}
+                {reviewStats.averageRating > 0 ? reviewStats.averageRating.toFixed(1) : "0.0"}
                 {" "}({reviewStats.totalReviews}{" "}
-                {reviewStats.totalReviews === 1
-                  ? t("product_detail.review")
-                  : t("product_detail.reviews")})
+                {reviewStats.totalReviews === 1 ? t("product_detail.review") : t("product_detail.reviews")})
               </span>
             </div>
 
@@ -306,40 +296,10 @@ const ProductDetail = () => {
               </div>
             </div>
 
-            {/* Language selector */}
-            <div className="language-selector-section">
-              <label className="language-label">{t("product_detail.language")}:</label>
-              <select
-                value={selectedLanguage}
-                onChange={(e) => handleLanguageChange(e.target.value)}
-                className="language-dropdown"
-                disabled={translating}
-              >
-                {Object.entries(supportedLanguages).map(([code, { name, flag }]) => (
-                  <option key={code} value={code}>{flag} {name}</option>
-                ))}
-              </select>
-              {translating && (
-                <span className="translating-indicator">
-                  ⏳ {t("product_detail.translating")}
-                </span>
-              )}
-            </div>
-
             {/* Description */}
             <div className="product-description">
               <h3>{t("product_detail.description")}</h3>
-              {translating ? (
-                <div className="translating-box">
-                  <div className="spinner-small"></div>
-                  <p>
-                    {t("product_detail.translating")}{" "}
-                    {supportedLanguages[selectedLanguage]?.name}...
-                  </p>
-                </div>
-              ) : (
-                <p>{translatedDescription}</p>
-              )}
+              <p>{product.description}</p>
             </div>
 
             {/* Details */}
@@ -353,15 +313,11 @@ const ProductDetail = () => {
                   </li>
                 )}
                 {product.sku && (
-                  <li>
-                    <strong>{t("product_detail.sku")}:</strong> {product.sku}
-                  </li>
+                  <li><strong>{t("product_detail.sku")}:</strong> {product.sku}</li>
                 )}
                 <li>
                   <strong>{t("product_detail.availability")}:</strong>{" "}
-                  {product.stock_quantity > 0
-                    ? t("products.in_stock")
-                    : t("products.out_of_stock")}
+                  {product.stock_quantity > 0 ? t("products.in_stock") : t("products.out_of_stock")}
                 </li>
               </ul>
             </div>
@@ -370,21 +326,11 @@ const ProductDetail = () => {
             {product.stock_quantity > 0 && canBuy && (
               <div className="product-actions">
                 <div className="quantity-selector">
-                  <button
-                    onClick={() => handleQuantityChange("decrement")}
-                    disabled={quantity <= 1}
-                  >-</button>
+                  <button onClick={() => handleQuantityChange("decrement")} disabled={quantity <= 1}>-</button>
                   <input type="number" value={quantity} readOnly />
-                  <button
-                    onClick={() => handleQuantityChange("increment")}
-                    disabled={quantity >= product.stock_quantity}
-                  >+</button>
+                  <button onClick={() => handleQuantityChange("increment")} disabled={quantity >= product.stock_quantity}>+</button>
                 </div>
-                <button
-                  className="btn-add-to-cart"
-                  onClick={handleAddToCart}
-                  disabled={addingToCart}
-                >
+                <button className="btn-add-to-cart" onClick={() => handleAddToCart()} disabled={addingToCart}>
                   {addingToCart ? t("common.loading") : t("products.add_to_cart")}
                 </button>
               </div>
@@ -400,6 +346,126 @@ const ProductDetail = () => {
           </div>
         </div>
 
+        {/* ── You May Also Like ── */}
+        {(similarProducts.length > 0 || similarLoading) && (
+          <section style={{ marginTop: '3rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '1.5rem' }}>
+              <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '600' }}>
+                You May Also Like
+              </h2>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: '600',
+                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                color: 'white',
+                padding: '3px 10px',
+                borderRadius: '20px',
+                letterSpacing: '0.5px',
+              }}>
+                Powered by AI
+              </span>
+            </div>
+
+            {similarLoading ? (
+              <div className="loading-container" style={{ minHeight: '120px' }}>
+                <div className="spinner"></div>
+                <p>Finding similar products...</p>
+              </div>
+            ) : (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                gap: '1.5rem',
+              }}>
+                {similarProducts.map((p) => {
+                  const discounted = p.has_discount && p.discount_percentage > 0
+                    ? Math.round(p.price * (1 - p.discount_percentage / 100))
+                    : null;
+                  return (
+                    <Link
+                      key={p.product_id}
+                      to={`/products/${p.product_id}`}
+                      style={{ textDecoration: 'none', color: 'inherit' }}
+                    >
+                      <div style={{
+                        border: '1px solid var(--border-color, #e5e7eb)',
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        transition: 'transform 0.2s, box-shadow 0.2s',
+                        background: 'var(--card-bg, white)',
+                        cursor: 'pointer',
+                      }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.transform = 'translateY(-4px)';
+                          e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)';
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                      >
+                        {/* Image */}
+                        <div style={{ position: 'relative', height: '180px', background: '#f9f5f0' }}>
+                          {p.images?.length > 0 ? (
+                            <img
+                              src={`${API_URL}${p.images[0]}`}
+                              alt={p.name}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                              <Icons.Package size={40} />
+                            </div>
+                          )}
+                          {p.has_discount && p.discount_percentage > 0 && (
+                            <span style={{
+                              position: 'absolute', top: '8px', left: '8px',
+                              background: '#DC2626', color: 'white',
+                              fontSize: '11px', fontWeight: '700',
+                              padding: '2px 8px', borderRadius: '20px',
+                            }}>
+                              -{p.discount_percentage}%
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Info */}
+                        <div style={{ padding: '12px' }}>
+                          <h4 style={{ margin: '0 0 4px', fontSize: '0.9rem', fontWeight: '600',
+                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {p.name}
+                          </h4>
+                          {p.seller && (
+                            <p style={{ margin: '0 0 8px', fontSize: '0.75rem', color: '#9a8268' }}>
+                              {p.seller.shop_name}
+                            </p>
+                          )}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {discounted ? (
+                              <>
+                                <span style={{ fontSize: '0.8rem', color: '#9a8268', textDecoration: 'line-through' }}>
+                                  Rs. {parseFloat(p.price).toLocaleString()}
+                                </span>
+                                <span style={{ fontSize: '1rem', fontWeight: '700', color: '#DC2626' }}>
+                                  Rs. {discounted.toLocaleString()}
+                                </span>
+                              </>
+                            ) : (
+                              <span style={{ fontSize: '1rem', fontWeight: '700' }}>
+                                Rs. {parseFloat(p.price).toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
+
         {/* Reviews */}
         <Reviews
           productId={product.product_id}
@@ -408,6 +474,7 @@ const ProductDetail = () => {
           canBuy={canBuy}
           onStatsChange={handleStatsChange}
         />
+
       </div>
     </div>
   );

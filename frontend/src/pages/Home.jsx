@@ -7,6 +7,9 @@ import Icons from '../utils/icons';
 import BannerCarousel from '../components/BannerCarousel';
 import '../styles/Home.css';
 
+const ML_API = 'http://localhost:5001';
+const API_URL = 'http://localhost:5000';
+
 const calculateDiscountedPrice = (price, hasDiscount, discountPercentage) => {
   if (!hasDiscount || !discountPercentage) return null;
   return Math.round(price * (1 - discountPercentage / 100));
@@ -24,20 +27,57 @@ const Home = () => {
   const [addingToCart, setAddingToCart] = useState({});
   const [wishlistItems, setWishlistItems] = useState(new Set());
 
-  const API_URL = 'http://localhost:5000';
+  // AI Recommendations state
+  const [recommendedProducts, setRecommendedProducts] = useState([]);
+  const [recLoading, setRecLoading] = useState(false);
+
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
   const isLoggedIn = !!localStorage.getItem('token');
   const isBuyer = currentUser?.role === 'buyer';
 
   useEffect(() => {
     fetchHomeData();
-    if (isLoggedIn && isBuyer) fetchWishlist();
+    if (isLoggedIn && isBuyer) {
+      fetchWishlist();
+      fetchAIRecommendations();
+    }
   }, []);
+
+  // ── AI Recommendations ──────────────────────────────────
+  const fetchAIRecommendations = async () => {
+    try {
+      setRecLoading(true);
+      const userId = currentUser?.user_id;
+      if (!userId) return;
+
+      // 1. Get recommended product IDs from Flask ML API
+      const mlRes = await fetch(`${ML_API}/recommend/user/${userId}?n=6`);
+      const mlData = await mlRes.json();
+      const recProductIds = mlData.recommendations?.map((r) => r.product_id) || [];
+
+      if (recProductIds.length === 0) return;
+
+      // 2. Fetch full product details from Node.js backend
+      const productPromises = recProductIds.map((id) =>
+        productAPI.getProductById(id).catch(() => null)
+      );
+      const results = await Promise.all(productPromises);
+      const fullProducts = results
+        .filter((r) => r && r.data?.data)
+        .map((r) => r.data.data);
+
+      setRecommendedProducts(fullProducts);
+    } catch (err) {
+      console.error('AI recommendation error:', err);
+    } finally {
+      setRecLoading(false);
+    }
+  };
+  // ────────────────────────────────────────────────────────
 
   const fetchHomeData = async () => {
     try {
       setLoading(true);
-
       const [featured, trending, categories] = await Promise.all([
         productAPI.getFeaturedProducts().catch(() => ({ data: { data: [] } })),
         productAPI.getTrendingProducts().catch(() => ({ data: { data: [] } })),
@@ -52,7 +92,6 @@ const Home = () => {
         const random = await productAPI.getRandomProducts();
         setFeaturedProducts(random.data.data || []);
       }
-
       if (trending.data.data.length === 0) {
         const random = await productAPI.getRandomProducts();
         setTrendingProducts(random.data.data || []);
@@ -88,7 +127,6 @@ const Home = () => {
       toast.error('Product is out of stock');
       return;
     }
-
     setAddingToCart((prev) => ({ ...prev, [product.product_id]: true }));
     try {
       await cartAPI.addToCart({ product_id: product.product_id, quantity: 1 });
@@ -104,7 +142,6 @@ const Home = () => {
   const toggleWishlist = async (e, productId) => {
     e.preventDefault();
     e.stopPropagation();
-
     if (!isLoggedIn) {
       toast.error('Please login to use wishlist');
       navigate('/login');
@@ -114,7 +151,6 @@ const Home = () => {
       toast.error('Only buyers can use wishlist');
       return;
     }
-
     try {
       if (wishlistItems.has(productId)) {
         await wishlistAPI.removeFromWishlist(productId);
@@ -149,11 +185,9 @@ const Home = () => {
             ) : (
               <div className="no-image"><Icons.Package size={48} /></div>
             )}
-
             {product.has_discount && product.discount_percentage > 0 && (
               <span className="home-discount-badge">-{product.discount_percentage}%</span>
             )}
-
             {isLoggedIn && isBuyer && (
               <button
                 className={`wishlist-btn-home ${inWishlist ? 'active' : ''}`}
@@ -164,7 +198,6 @@ const Home = () => {
               </button>
             )}
           </div>
-
           <div className="card-content">
             <h3 className="card-title">{product.name}</h3>
             {product.seller && (
@@ -177,12 +210,8 @@ const Home = () => {
               <div className="card-price">
                 {discountedPrice ? (
                   <>
-                    <span className="home-original-price">
-                      Rs. {parseFloat(product.price).toLocaleString()}
-                    </span>
-                    <span className="home-discounted-price">
-                      Rs. {discountedPrice.toLocaleString()}
-                    </span>
+                    <span className="home-original-price">Rs. {parseFloat(product.price).toLocaleString()}</span>
+                    <span className="home-discounted-price">Rs. {discountedPrice.toLocaleString()}</span>
                   </>
                 ) : (
                   <>
@@ -194,7 +223,6 @@ const Home = () => {
             </div>
           </div>
         </Link>
-
         {isLoggedIn && isBuyer && (
           <button
             className="btn-add-cart"
@@ -254,13 +282,52 @@ const Home = () => {
               className="category-card"
             >
               <h3 className="category-name">{category.name}</h3>
-              <p className="category-count">
-                {category.product_count || 0} {t('home.products')}
-              </p>
+              <p className="category-count">{category.product_count || 0} {t('home.products')}</p>
             </Link>
           ))}
         </div>
       </section>
+
+      {/* ── AI: Recommended for You ── */}
+      {isLoggedIn && isBuyer && (
+        <section className="products-section ai-recommended-section">
+          <div className="section-header">
+            <div>
+              <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                ✨ Recommended for You
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  color: 'white',
+                  padding: '3px 10px',
+                  borderRadius: '20px',
+                  letterSpacing: '0.5px',
+                }}>
+                  Powered by AI
+                </span>
+              </h2>
+              <p>Personalized picks based on your taste</p>
+            </div>
+            <Link to="/products" className="view-all">
+              {t('home.view_all')} <Icons.ChevronRight size={18} />
+            </Link>
+          </div>
+
+          {recLoading ? (
+            <div className="loading-state">
+              <div className="spinner"></div>
+              <p>Finding your perfect matches...</p>
+            </div>
+          ) : recommendedProducts.length > 0 ? (
+            <div className="products-grid">
+              {recommendedProducts.map((product) => (
+                <ProductCard key={product.product_id} product={product} />
+              ))}
+            </div>
+          ) : null}
+        </section>
+      )}
 
       {/* Featured Products */}
       {featuredProducts.length > 0 && (
@@ -313,40 +380,28 @@ const Home = () => {
         <h2 className="section-title">{t('home.why_choose')}</h2>
         <div className="features-grid">
           <div className="feature-card">
-            <div
-              className="feature-icon"
-              style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}
-            >
+            <div className="feature-icon" style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}>
               <Icons.CheckCircle size={32} />
             </div>
             <h3>{t('home.authentic_products')}</h3>
             <p>{t('home.authentic_desc')}</p>
           </div>
           <div className="feature-card">
-            <div
-              className="feature-icon"
-              style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)' }}
-            >
+            <div className="feature-icon" style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)' }}>
               <Icons.Truck size={32} />
             </div>
             <h3>{t('home.nationwide_delivery')}</h3>
             <p>{t('home.delivery_desc')}</p>
           </div>
           <div className="feature-card">
-            <div
-              className="feature-icon"
-              style={{ background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)' }}
-            >
+            <div className="feature-icon" style={{ background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)' }}>
               <Icons.CheckCircle size={32} />
             </div>
             <h3>{t('home.secure_payment')}</h3>
             <p>{t('home.payment_desc')}</p>
           </div>
           <div className="feature-card">
-            <div
-              className="feature-icon"
-              style={{ background: 'linear-gradient(135deg, #EC4899 0%, #DB2777 100%)' }}
-            >
+            <div className="feature-icon" style={{ background: 'linear-gradient(135deg, #EC4899 0%, #DB2777 100%)' }}>
               <Icons.Heart size={32} />
             </div>
             <h3>{t('home.support_artisans')}</h3>
