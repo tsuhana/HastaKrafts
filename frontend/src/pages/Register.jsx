@@ -169,7 +169,7 @@ const Register = () => {
               </div>
 
               <div className="form-group">
-                <label>{t('auth.phone')} <span className="optional">(optional)</span></label>
+                <label>{t('auth.phone')} <span className="optional"></span></label>
                 <input
                   type="tel"
                   name="phone"

@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import './Footer.css';
 import logo from '../assets/logoo.png';
+import khaltiLogo from '../assets/khalti.png';
+import codLogo from '../assets/cod.png';
 
 const Footer = () => {
   const { t } = useTranslation();
@@ -10,7 +12,7 @@ const Footer = () => {
   return (
     <footer className="footer">
 
-      {/* Wave — paths close upward (L1440,0 L0,0 Z) to blend with page above */}
+      {/* Wave */}
       <div className="footer-wave">
         <svg viewBox="0 0 1440 55" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
           <path
@@ -32,10 +34,18 @@ const Footer = () => {
           <img src={logo} alt="HastaKrafts" className="footer-logo" />
           <p className="footer-tagline">{t('footer.tagline')}</p>
           <div className="footer-socials">
-            <a href="#" aria-label="Facebook"><i className="fab fa-facebook-f"></i></a>
-            <a href="#" aria-label="Instagram"><i className="fab fa-instagram"></i></a>
-            <a href="#" aria-label="YouTube"><i className="fab fa-youtube"></i></a>
-            <a href="#" aria-label="TikTok"><i className="fab fa-tiktok"></i></a>
+            <a href="https://www.facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+              <i className="fab fa-facebook-f"></i>
+            </a>
+            <a href="https://www.instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+              <i className="fab fa-instagram"></i>
+            </a>
+            <a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
+              <i className="fab fa-youtube"></i>
+            </a>
+            <a href="https://www.tiktok.com" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+              <i className="fab fa-tiktok"></i>
+            </a>
           </div>
         </div>
 
@@ -75,9 +85,12 @@ const Footer = () => {
       <div className="footer-bottom">
         <p>© {new Date().getFullYear()} HastaKrafts Nepal. {t('footer.rights')}.</p>
         <div className="footer-payments">
-          <div className="pay-badge"><img src="/khalti.png" alt="Khalti" /></div>
-          <div className="pay-badge"><img src="/visa.png" alt="Visa" /></div>
-          <div className="pay-badge"><img src="/cod.png" alt="Cash on Delivery" /></div>
+          <div className="pay-badge">
+            <img src={khaltiLogo} alt="Khalti" />
+          </div>
+          <div className="pay-badge">
+            <img src={codLogo} alt="Cash on Delivery" />
+          </div>
         </div>
       </div>
     </footer>
