@@ -96,6 +96,7 @@ export const userAPI = {
   changePassword: (data) => API.put('/users/change-password', data),
   uploadAvatar: (formData) => API.post('/users/upload-avatar', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   updateLanguagePreference: (data) => API.put('/users/language-preference', data),
+  savePushSid: (data) => API.post('/users/save-push-sid', data), 
   getCart: () => API.get('/cart'),
 };
 
@@ -200,6 +201,15 @@ export const storyAPI = {
   getMyStories: () => API.get('/stories/seller/my-stories'),
   updateStory: (id, data) => API.put(`/stories/${id}`, data),
   deleteStory: (id) => API.delete(`/stories/${id}`),
+};
+
+// NOTIFICATIONS
+export const notificationAPI = {
+  getAll:         () => API.get("/notifications"),
+  getUnreadCount: () => API.get("/notifications/unread-count"),
+  markAsRead:     (id) => API.patch(`/notifications/${id}/read`),
+  markAllRead:    () => API.patch("/notifications/mark-all-read"),
+  delete:         (id) => API.delete(`/notifications/${id}`),
 };
 
 export default API;

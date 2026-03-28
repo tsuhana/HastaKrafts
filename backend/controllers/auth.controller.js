@@ -1,7 +1,8 @@
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const db = require("../models");
-const { sendOTPEmail } = require("../utils/email");
+const { sendOTPEmail, sendWelcomeEmail } = require("../utils/email");
+const { createNotification } = require("../utils/notification.util");
 
 // ==================== REGISTER BUYER ====================
 const registerBuyer = async (req, res) => {
@@ -38,13 +39,15 @@ const registerBuyer = async (req, res) => {
       role: "buyer",
     });
 
+    sendWelcomeEmail(newUser.email, newUser.full_name).catch(() => {});
+
     const token = jwt.sign(
       { user_id: newUser.user_id, email: newUser.email, role: newUser.role },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "Buyer registered successfully",
       data: {
@@ -60,7 +63,7 @@ const registerBuyer = async (req, res) => {
     });
   } catch (error) {
     console.error("Register buyer error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message || "Registration failed",
     });
@@ -85,7 +88,16 @@ const registerSeller = async (req, res) => {
       bank_account_name,
     } = req.body;
 
-    if (!full_name || !email || !password || !phone || !shop_name || !address || !city || !citizenship_number) {
+    if (
+      !full_name ||
+      !email ||
+      !password ||
+      !phone ||
+      !shop_name ||
+      !address ||
+      !city ||
+      !citizenship_number
+    ) {
       return res.status(400).json({
         success: false,
         message: "Please provide all required fields",
@@ -154,7 +166,22 @@ const registerSeller = async (req, res) => {
       return { user, seller };
     });
 
-    res.status(201).json({
+    // ✅ Notify all admins of new seller application
+    try {
+      const admins = await db.User.findAll({ where: { role: "admin" } });
+      for (const admin of admins) {
+        createNotification(
+          admin.user_id,
+          "new_seller_application",
+          "🏪 New Seller Application",
+          `"${shop_name}" from ${city} submitted a seller application. Review citizenship and bank docs.`,
+          "/admin/dashboard",
+          { seller_id: result.seller.seller_id }
+        ).catch(() => {});
+      }
+    } catch (_) {}
+
+    return res.status(201).json({
       success: true,
       message: "Seller registration successful. Your account is pending admin approval.",
       data: {
@@ -173,7 +200,7 @@ const registerSeller = async (req, res) => {
     });
   } catch (error) {
     console.error("Register seller error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message || "Seller registration failed",
     });
@@ -264,8 +291,8 @@ const login = async (req, res) => {
         role: user.role,
         phone: user.phone,
         profile_image: user.profile_image,
-        // ✅ Include preferred_language so frontend can set i18n on login
-        preferred_language: user.preferred_language || 'en',
+        // Include preferred_language so frontend can set i18n on login
+        preferred_language: user.preferred_language || "en",
       },
       token,
     };
@@ -279,14 +306,14 @@ const login = async (req, res) => {
       };
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Login successful",
       data: responseData,
     });
   } catch (error) {
     console.error("Login error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Login failed",
     });
@@ -346,7 +373,7 @@ const requestPasswordReset = async (req, res) => {
     await sendOTPEmail(user.email, otp);
     console.log("[FORGOT PASSWORD] OTP email sent successfully");
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "OTP sent to your email. Please check your inbox.",
       data: {
@@ -355,7 +382,7 @@ const requestPasswordReset = async (req, res) => {
     });
   } catch (error) {
     console.error("[FORGOT PASSWORD] Error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to send OTP. Please try again later.",
     });
@@ -410,7 +437,7 @@ const verifyOTP = async (req, res) => {
     await otpRecord.save();
     console.log("[VERIFY OTP] OTP verified and reset token saved");
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "OTP verified successfully",
       data: {
@@ -419,7 +446,7 @@ const verifyOTP = async (req, res) => {
     });
   } catch (error) {
     console.error("[VERIFY OTP] Error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to verify OTP",
     });
@@ -481,13 +508,13 @@ const resetPassword = async (req, res) => {
     await resetRecord.save();
     console.log("[RESET PASSWORD] Reset token marked as used");
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Password reset successful. You can now login with your new password.",
     });
   } catch (error) {
     console.error("[RESET PASSWORD] Error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to reset password",
     });
@@ -560,13 +587,13 @@ const getCurrentUser = async (req, res) => {
       };
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: responseData,
     });
   } catch (error) {
     console.error("Get current user error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to fetch user data",
     });

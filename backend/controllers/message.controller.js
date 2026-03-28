@@ -2,14 +2,12 @@ const db = require("../models");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const { sendPushNotification, createNotification } = require("../utils/notification.util");
 
-// ==================== MULTER CONFIG (Message Images) ====================
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadPath = path.join(__dirname, "../uploads/messages");
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
+    if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath, { recursive: true });
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
@@ -20,17 +18,19 @@ const storage = multer.diskStorage({
 
 const uploadImage = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = /jpeg|jpg|png|webp|gif/;
-    const extOk = allowed.test(path.extname(file.originalname).toLowerCase());
-    const mimeOk = allowed.test(file.mimetype);
-    if (extOk && mimeOk) return cb(null, true);
-    cb(new Error("Only image files are allowed (jpeg, jpg, png, webp, gif)"));
+    if (
+      allowed.test(path.extname(file.originalname).toLowerCase()) &&
+      allowed.test(file.mimetype)
+    ) {
+      return cb(null, true);
+    }
+    cb(new Error("Only image files are allowed"));
   },
 }).single("image");
 
-// ==================== SEND MESSAGE ====================
 const sendMessage = async (req, res) => {
   try {
     const { receiver_id, message_text, auction_id } = req.body;
@@ -39,8 +39,6 @@ const sendMessage = async (req, res) => {
     if (!receiver_id) {
       return res.status(400).json({ success: false, message: "Receiver is required" });
     }
-
-    // Must have text OR image
     if (!message_text && !req.file) {
       return res.status(400).json({ success: false, message: "Message text or image is required" });
     }
@@ -66,7 +64,7 @@ const sendMessage = async (req, res) => {
         {
           model: db.User,
           as: "receiver",
-          attributes: ["user_id", "full_name", "profile_image"],
+          attributes: ["user_id", "full_name", "profile_image", "webpushr_sid"],
         },
       ],
     });
@@ -77,6 +75,34 @@ const sendMessage = async (req, res) => {
       console.log("Socket emit error:", err.message);
     }
 
+    // ✅ Push + in-app notification to receiver
+    if (messageWithUsers.receiver) {
+      const senderName = messageWithUsers.sender?.full_name || "Someone";
+      const preview = message_text
+        ? message_text.length > 50
+          ? message_text.substring(0, 50) + "..."
+          : message_text
+        : "📷 Sent you a photo";
+
+      if (messageWithUsers.receiver.webpushr_sid) {
+        sendPushNotification(
+          messageWithUsers.receiver.webpushr_sid,
+          `💬 New message from ${senderName}`,
+          preview,
+          "http://localhost:5173/messages"
+        ).catch(() => {});
+      }
+
+      createNotification(
+        parseInt(receiver_id),
+        "new_message",
+        `💬 New message from ${senderName}`,
+        preview,
+        "/messages",
+        { sender_id }
+      ).catch(() => {});
+    }
+
     return res.status(201).json({ success: true, data: messageWithUsers });
   } catch (error) {
     console.error("Send message error:", error);
@@ -84,7 +110,6 @@ const sendMessage = async (req, res) => {
   }
 };
 
-// ==================== SEND MESSAGE WITH IMAGE (multer wrapper) ====================
 const sendMessageWithImage = (req, res) => {
   uploadImage(req, res, (err) => {
     if (err) {
@@ -94,7 +119,6 @@ const sendMessageWithImage = (req, res) => {
   });
 };
 
-// ==================== GET CONVERSATIONS ====================
 const getConversations = async (req, res) => {
   try {
     const userId = req.user.user_id;
@@ -126,7 +150,6 @@ const getConversations = async (req, res) => {
       if (!partner) continue;
 
       if (!conversationsMap[partnerId]) {
-        // Show "📷 Photo" for image-only last messages
         const lastMsgText = msg.message_text
           ? msg.message_text
           : msg.image_url
@@ -154,12 +177,10 @@ const getConversations = async (req, res) => {
 
     return res.status(200).json({ success: true, data: conversations });
   } catch (error) {
-    console.error("Get conversations error:", error);
     return res.status(500).json({ success: false, message: "Failed to fetch conversations" });
   }
 };
 
-// ==================== GET MESSAGES WITH PARTNER ====================
 const getMessages = async (req, res) => {
   try {
     const userId = req.user.user_id;
@@ -194,23 +215,17 @@ const getMessages = async (req, res) => {
 
     return res.status(200).json({ success: true, data: messages });
   } catch (error) {
-    console.error("Get messages error:", error);
     return res.status(500).json({ success: false, message: "Failed to fetch messages" });
   }
 };
 
-// ==================== GET UNREAD COUNT ====================
 const getUnreadCount = async (req, res) => {
   try {
     const count = await db.Message.count({
       where: { receiver_id: req.user.user_id, is_read: false },
     });
-    return res.status(200).json({
-      success: true,
-      data: { unread_count: count, count }, // keep both keys for compatibility
-    });
+    return res.status(200).json({ success: true, data: { unread_count: count, count } });
   } catch (error) {
-    console.error("Get unread count error:", error);
     return res.status(500).json({ success: false, message: "Failed to get unread count" });
   }
 };

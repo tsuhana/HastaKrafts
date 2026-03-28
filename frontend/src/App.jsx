@@ -1,8 +1,11 @@
 import './i18n';
-import React from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { io } from "socket.io-client";
 
 import { ToastProvider } from "./context/ToastContext";
+
+import usePushNotifications from "./hooks/usePushNotifications";
 
 import NavBar from "./components/NavBar";
 import Footer from "./components/Footer";
@@ -47,12 +50,33 @@ import "./styles/variables.css";
 import "./context/Toast.css";
 import "./App.css";
 
-// FIXED: was ["/admin", "/seller/dashboard"] — /admin never matched /admin/dashboard
 const NO_FOOTER_PATHS = ["/admin/dashboard", "/seller/dashboard"];
 
 const AppContent = () => {
   const location = useLocation();
   const showFooter = !NO_FOOTER_PATHS.some((p) => location.pathname.startsWith(p));
+  usePushNotifications();
+
+  // Global socket setup — runs once on app load
+  // Sets window.__socket so NavBar notification bell gets real-time updates
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token && !window.__socket) {
+      window.__socket = io("http://localhost:5000");
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      if (user?.user_id) {
+        window.__socket.emit("join_user", user.user_id);
+      }
+    }
+
+    // Cleanup on unmount (rare but correct)
+    return () => {
+      if (window.__socket) {
+        window.__socket.disconnect();
+        window.__socket = null;
+      }
+    };
+  }, []);
 
   return (
     <div className="app">

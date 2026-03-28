@@ -1,6 +1,13 @@
 const express = require("express");
 const router = express.Router();
-const { getUserProfile, updateUserProfile, changePassword, uploadProfilePicture } = require("../controllers/user.controller");
+const {
+  getUserProfile,
+  updateUserProfile,
+  changePassword,
+  uploadProfilePicture,
+  savePushSid,
+  updateLanguagePreference,
+} = require("../controllers/user.controller");
 const { authenticate } = require("../middlewares/auth.middleware");
 const { uploadProfile } = require("../middlewares/upload.middleware");
 const { updateProfileRules, changePasswordRules } = require("../validations/user.validation");
@@ -8,10 +15,15 @@ const { updateProfileRules, changePasswordRules } = require("../validations/user
 router.use(authenticate);
 
 router.get("/profile",          getUserProfile);
-router.put("/profile",          updateProfileRules,    updateUserProfile);
-router.put("/change-password",  changePasswordRules,   changePassword);
+router.put("/profile",          updateProfileRules,  updateUserProfile);
+router.put("/change-password",  changePasswordRules, changePassword);
+router.put("/language-preference", updateLanguagePreference);
 
-router.post("/upload-avatar",
+// Save WebPushr subscriber ID
+router.post("/save-push-sid", savePushSid);
+
+router.post(
+  "/upload-avatar",
   (req, res, next) => {
     uploadProfile(req, res, (err) => {
       if (err) return res.status(400).json({ success: false, message: err.message || "Image upload failed" });

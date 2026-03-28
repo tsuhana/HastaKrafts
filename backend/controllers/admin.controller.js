@@ -1,6 +1,6 @@
 const db = require("../models");
 const { sendSellerApprovalEmail, sendSellerRejectionEmail } = require("../utils/email");
-
+const { sendPushNotification , createNotification } = require("../utils/notification.util");
 // ==================== DASHBOARD STATS ====================
 const getDashboardStats = async (req, res) => {
   try {
@@ -230,14 +230,22 @@ const approveSeller = async (req, res) => {
   try {
     const { id } = req.params;
     const seller = await db.Seller.findByPk(id, {
-      include: [{ model: db.User, as: "user", attributes: ["full_name", "email"] }],
+      include: [{ model: db.User, as: "user", attributes: ["user_id", "full_name", "email", "webpushr_sid"] }],
     });
     if (!seller) return res.status(404).json({ success: false, message: "Seller not found" });
     await seller.update({ approval_status: "approved", approved_at: new Date() });
+ 
     if (seller.user?.email) {
-      sendSellerApprovalEmail(seller.user.email, seller.user.full_name, seller.shop_name || "your shop")
-        .catch((err) => console.error("Approval email error (non-fatal):", err.message));
+      sendSellerApprovalEmail(seller.user.email, seller.user.full_name, seller.shop_name || "your shop").catch((err) => console.error("Approval email error:", err.message));
     }
+    if (seller.user?.webpushr_sid) {
+      sendPushNotification(seller.user.webpushr_sid, "🎉 Seller Account Approved!", `Your shop "${seller.shop_name}" is now live on HastaKrafts!`, "http://localhost:5173/seller/dashboard").catch(() => {});
+    }
+    // In-app
+    if (seller.user?.user_id) {
+      createNotification(seller.user.user_id, "seller_approved", "🎉 Seller Account Approved!", `Congratulations! Your shop "${seller.shop_name}" is now live. Start listing products!`, "/seller/dashboard").catch(() => {});
+    }
+ 
     res.status(200).json({ success: true, message: "Seller approved successfully", data: seller });
   } catch (error) {
     console.error("Approve seller error:", error);
@@ -254,20 +262,34 @@ const rejectSeller = async (req, res) => {
       return res.status(400).json({ success: false, message: "Please provide a rejection reason" });
     }
     const seller = await db.Seller.findByPk(id, {
-      include: [{ model: db.User, as: "user", attributes: ["full_name", "email"] }],
+      include: [{ model: db.User, as: "user", attributes: ["user_id", "full_name", "email", "webpushr_sid"] }],
     });
     if (!seller) return res.status(404).json({ success: false, message: "Seller not found" });
     await seller.update({ approval_status: "rejected", rejection_reason: rejection_reason.trim() });
+ 
+    // Email notification (existing)
     if (seller.user?.email) {
       sendSellerRejectionEmail(seller.user.email, seller.user.full_name, seller.shop_name || "your shop", rejection_reason.trim())
         .catch((err) => console.error("Rejection email error (non-fatal):", err.message));
     }
+ 
+    // Push notification
+    if (seller.user?.webpushr_sid) {
+      sendPushNotification(
+        seller.user.webpushr_sid,
+        "❌ Seller Application Update",
+        `Your seller application was not approved. Reason: ${rejection_reason.trim()}. Please contact support.`,
+        "http://localhost:5173/profile"
+      ).catch(() => {});
+    }
+ 
     res.status(200).json({ success: true, message: "Seller rejected", data: seller });
   } catch (error) {
     console.error("Reject seller error:", error);
     res.status(500).json({ success: false, message: "Failed to reject seller" });
   }
 };
+ 
 
 // ==================== GET PENDING PRODUCTS ====================
 const getPendingProducts = async (req, res) => {
@@ -296,9 +318,21 @@ const getPendingProducts = async (req, res) => {
 const approveProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const product = await db.Product.findByPk(id);
+    const product = await db.Product.findByPk(id, {
+      include: [{ model: db.Seller, as: "seller", include: [{ model: db.User, as: "user", attributes: ["user_id", "webpushr_sid"] }] }],
+    });
     if (!product) return res.status(404).json({ success: false, message: "Product not found" });
     await product.update({ status: "approved", approved_at: new Date(), approved_by: req.user.user_id });
+ 
+    if (product.seller?.user) {
+      // Push
+      if (product.seller.user.webpushr_sid) {
+        sendPushNotification(product.seller.user.webpushr_sid, "✅ Product Approved!", `Your product "${product.name}" is now live on HastaKrafts!`, "http://localhost:5173/seller/dashboard").catch(() => {});
+      }
+      // ✅ In-app
+      createNotification(product.seller.user.user_id, "product_approved", "✅ Product Approved!", `Your product "${product.name}" is now live. Buyers can discover it now!`, "/seller/dashboard", { product_id: product.product_id }).catch(() => {});
+    }
+ 
     res.status(200).json({ success: true, message: "Product approved successfully", data: product });
   } catch (error) {
     console.error("Approve product error:", error);
@@ -312,9 +346,22 @@ const rejectProduct = async (req, res) => {
     const { id } = req.params;
     const { rejection_reason } = req.body;
     if (!rejection_reason) return res.status(400).json({ success: false, message: "Please provide rejection reason" });
-    const product = await db.Product.findByPk(id);
+ 
+    const product = await db.Product.findByPk(id, {
+      include: [{ model: db.Seller, as: "seller", include: [{ model: db.User, as: "user", attributes: ["user_id", "webpushr_sid"] }] }],
+    });
     if (!product) return res.status(404).json({ success: false, message: "Product not found" });
     await product.update({ status: "rejected", rejection_reason });
+ 
+    if (product.seller?.user) {
+      // Push
+      if (product.seller.user.webpushr_sid) {
+        sendPushNotification(product.seller.user.webpushr_sid, "❌ Product Not Approved", `Your product "${product.name}" was not approved. Reason: ${rejection_reason}.`, "http://localhost:5173/seller/dashboard").catch(() => {});
+      }
+      //  In-app
+      createNotification(product.seller.user.user_id, "product_rejected", "❌ Product Not Approved", `"${product.name}" was rejected. Reason: ${rejection_reason}. Edit and resubmit.`, "/seller/dashboard", { product_id: product.product_id }).catch(() => {});
+    }
+ 
     res.status(200).json({ success: true, message: "Product rejected", data: product });
   } catch (error) {
     console.error("Reject product error:", error);
@@ -417,7 +464,7 @@ const toggleBlockUser = async (req, res) => {
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
     if (user.role === "admin") return res.status(400).json({ success: false, message: "Cannot block an admin account" });
     
-    const newStatus = !user.is_active; // ✅ capture BEFORE update
+    const newStatus = !user.is_active; //  capture BEFORE update
     await user.update({ is_active: newStatus });
     
     res.status(200).json({

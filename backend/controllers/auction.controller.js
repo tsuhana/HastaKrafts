@@ -2,6 +2,7 @@ const db = require("../models");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const { sendPushNotification, createNotification } = require("../utils/notification.util");
 
 // ==================== MULTER CONFIG ====================
 const storage = multer.diskStorage({
@@ -20,20 +21,16 @@ const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowedExt = /jpeg|jpg|png|webp/;
     const ok =
-      allowedExt.test(path.extname(file.originalname).toLowerCase()) &&
-      allowedExt.test(file.mimetype);
-    ok ? cb(null, true) : cb(new Error("Only image files allowed (jpeg, jpg, png, webp)"));
+      /jpeg|jpg|png|webp/.test(path.extname(file.originalname).toLowerCase()) &&
+      /jpeg|jpg|png|webp/.test(file.mimetype);
+    ok ? cb(null, true) : cb(new Error("Only image files allowed"));
   },
 }).array("images", 5);
 
 // ==================== HELPER: AUTO UPDATE STATUS ====================
-// Only auto-updates approved auctions
 const autoUpdateStatus = async (auction) => {
-  if (auction.approval_status !== "approved") return;
-  // Don't touch cancelled auctions
-  if (auction.status === "cancelled") return;
+  if (auction.approval_status !== "approved" || auction.status === "cancelled") return;
 
   const now   = new Date();
   const start = new Date(auction.auction_start);
@@ -44,11 +41,9 @@ const autoUpdateStatus = async (auction) => {
     auction.status = "live";
   } else if (now >= end && auction.status !== "ended") {
     let winnerId = null;
-    if (auction.bids && auction.bids.length > 0) {
-      const highest = [...auction.bids].sort(
-        (a, b) => parseFloat(b.bid_amount) - parseFloat(a.bid_amount)
-      )[0];
-      winnerId = highest.user_id;
+    if (auction.bids?.length > 0) {
+      winnerId = [...auction.bids]
+        .sort((a, b) => parseFloat(b.bid_amount) - parseFloat(a.bid_amount))[0].user_id;
     } else {
       const bids = await db.Bid.findAll({
         where: { auction_id: auction.auction_id },
@@ -66,8 +61,7 @@ const autoUpdateStatus = async (auction) => {
 // ==================== CREATE AUCTION ====================
 const createAuction = async (req, res) => {
   upload(req, res, async (err) => {
-    if (err)
-      return res.status(400).json({ success: false, message: err.message || "File upload error" });
+    if (err) return res.status(400).json({ success: false, message: err.message || "File upload error" });
 
     try {
       const {
@@ -81,17 +75,20 @@ const createAuction = async (req, res) => {
       } = req.body;
 
       const seller = await db.Seller.findOne({ where: { user_id: req.user.user_id } });
-      if (!seller)
+      if (!seller) {
         return res.status(403).json({ success: false, message: "Only sellers can create auctions" });
+      }
 
       const startDate = new Date(auction_start);
       const endDate   = new Date(auction_end);
       const now       = new Date();
 
-      if (endDate <= startDate)
+      if (endDate <= startDate) {
         return res.status(400).json({ success: false, message: "End date must be after start date" });
-      if (endDate <= now)
+      }
+      if (endDate <= now) {
         return res.status(400).json({ success: false, message: "End date must be in the future" });
+      }
 
       const imagePaths = req.files ? req.files.map((f) => `/uploads/auctions/${f.filename}`) : [];
 
@@ -111,9 +108,24 @@ const createAuction = async (req, res) => {
         total_bids:        0,
       });
 
+      // Notify admin of new pending auction
+      try {
+        const admins = await db.User.findAll({ where: { role: "admin" } });
+        for (const admin of admins) {
+          createNotification(
+            admin.user_id,
+            "new_auction_pending",
+            "🔨 New Auction Pending",
+            `Seller "${seller.shop_name}" submitted an auction: "${title}". Review now.`,
+            "/admin/dashboard",
+            { auction_id: auction.auction_id }
+          ).catch(() => {});
+        }
+      } catch (_) {}
+
       return res.status(201).json({
         success: true,
-        message: "Auction created! Awaiting admin approval before going live.",
+        message: "Auction created! Awaiting admin approval.",
         data: auction,
       });
     } catch (error) {
@@ -124,7 +136,6 @@ const createAuction = async (req, res) => {
 };
 
 // ==================== GET ALL AUCTIONS (PUBLIC) ====================
-// Public only sees approved auctions
 const getAllAuctions = async (req, res) => {
   try {
     const { status, search } = req.query;
@@ -181,10 +192,8 @@ const getAuctionById = async (req, res) => {
       ],
     });
 
-    if (!auction)
-      return res.status(404).json({ success: false, message: "Auction not found" });
+    if (!auction) return res.status(404).json({ success: false, message: "Auction not found" });
 
-    // Block public access to unapproved auctions
     if (auction.approval_status !== "approved") {
       const isAdmin  = req.user?.role === "admin";
       const isSeller = req.user && auction.seller?.user_id === req.user.user_id;
@@ -195,7 +204,7 @@ const getAuctionById = async (req, res) => {
 
     await autoUpdateStatus(auction);
     const auctionData = auction.toJSON();
-    auctionData.bids = (auctionData.bids || []).sort(
+    auctionData.bids  = (auctionData.bids || []).sort(
       (a, b) => parseFloat(b.bid_amount) - parseFloat(a.bid_amount)
     );
 
@@ -207,12 +216,10 @@ const getAuctionById = async (req, res) => {
 };
 
 // ==================== GET SELLER AUCTIONS ====================
-// Seller sees ALL their auctions (all approval statuses)
 const getSellerAuctions = async (req, res) => {
   try {
     const seller = await db.Seller.findOne({ where: { user_id: req.user.user_id } });
-    if (!seller)
-      return res.status(404).json({ success: false, message: "Seller not found" });
+    if (!seller) return res.status(404).json({ success: false, message: "Seller not found" });
 
     const auctions = await db.Auction.findAll({
       where: { seller_id: seller.seller_id },
@@ -239,44 +246,54 @@ const getSellerAuctions = async (req, res) => {
 const placeBid = async (req, res) => {
   try {
     const { auction_id } = req.params;
-    const { bid_amount }  = req.body;
+    const { bid_amount } = req.body;
 
-    if (req.user.role === "admin")
+    if (req.user.role === "admin") {
       return res.status(403).json({ success: false, message: "Admins cannot place bids" });
+    }
 
     const auction = await db.Auction.findByPk(auction_id, {
       include: [{ model: db.Seller, as: "seller" }],
     });
-    if (!auction)
-      return res.status(404).json({ success: false, message: "Auction not found" });
-
-    if (auction.approval_status !== "approved")
-      return res.status(400).json({ success: false, message: "This auction has not been approved yet" });
+    if (!auction) return res.status(404).json({ success: false, message: "Auction not found" });
+    if (auction.approval_status !== "approved") {
+      return res.status(400).json({ success: false, message: "Auction not approved yet" });
+    }
 
     await autoUpdateStatus(auction);
 
-    if (auction.status !== "live")
+    if (auction.status !== "live") {
       return res.status(400).json({ success: false, message: "Auction is not active" });
-    if (new Date() > new Date(auction.auction_end))
+    }
+    if (new Date() > new Date(auction.auction_end)) {
       return res.status(400).json({ success: false, message: "Auction has ended" });
-    if (auction.seller?.user_id === req.user.user_id)
+    }
+    if (auction.seller?.user_id === req.user.user_id) {
       return res.status(403).json({ success: false, message: "You cannot bid on your own auction" });
+    }
 
     const isSeller = await db.Seller.findOne({ where: { user_id: req.user.user_id } });
-    if (isSeller)
-      return res.status(403).json({ success: false, message: "Sellers cannot place bids" });
+    if (isSeller) return res.status(403).json({ success: false, message: "Sellers cannot place bids" });
 
     const currentBid = parseFloat(auction.current_bid) || parseFloat(auction.starting_bid);
     const minimumBid = currentBid + (parseFloat(auction.minimum_increment) || 100);
     const bidValue   = parseFloat(bid_amount);
 
-    if (!bidValue || Number.isNaN(bidValue))
+    if (!bidValue || Number.isNaN(bidValue)) {
       return res.status(400).json({ success: false, message: "Invalid bid amount" });
-    if (bidValue < minimumBid)
+    }
+    if (bidValue < minimumBid) {
       return res.status(400).json({
         success: false,
         message: `Minimum bid is Rs. ${minimumBid.toLocaleString()}`,
       });
+    }
+
+    // Get previous highest bidder BEFORE updating
+    const previousHighestBid = await db.Bid.findOne({
+      where: { auction_id, is_highest: true },
+      include: [{ model: db.User, as: "user", attributes: ["user_id", "webpushr_sid"] }],
+    });
 
     await db.Bid.update({ is_highest: false }, { where: { auction_id, is_highest: true } });
 
@@ -305,7 +322,41 @@ const placeBid = async (req, res) => {
         current_bid: bidValue,
       });
     } catch (e) {
-      console.log("Socket emit error (non-critical):", e.message);
+      console.log("Socket emit error:", e.message);
+    }
+
+    // Outbid — push + in-app to previous bidder
+    if (previousHighestBid && previousHighestBid.user_id !== req.user.user_id) {
+      if (previousHighestBid.user?.webpushr_sid) {
+        sendPushNotification(
+          previousHighestBid.user.webpushr_sid,
+          "😮 You've been outbid!",
+          `Someone bid Rs. ${bidValue.toLocaleString()} on "${auction.title}". Bid again!`,
+          `http://localhost:5173/auctions/${auction_id}`
+        ).catch(() => {});
+      }
+      if (previousHighestBid.user?.user_id) {
+        createNotification(
+          previousHighestBid.user.user_id,
+          "outbid",
+          "😮 You've been outbid!",
+          `Someone placed Rs. ${bidValue.toLocaleString()} on "${auction.title}". Current bid ends soon!`,
+          `/auctions/${auction_id}`,
+          { auction_id: parseInt(auction_id) }
+        ).catch(() => {});
+      }
+    }
+
+    // Notify seller of new bid on their auction
+    if (auction.seller?.user_id) {
+      createNotification(
+        auction.seller.user_id,
+        "auction_bid",
+        "🔨 New Bid on Your Auction",
+        `New bid of Rs. ${bidValue.toLocaleString()} placed on "${auction.title}".`,
+        "/seller/dashboard",
+        { auction_id: parseInt(auction_id) }
+      ).catch(() => {});
     }
 
     return res.status(201).json({ success: true, message: "Bid placed successfully", data: bidWithUser });
@@ -334,17 +385,24 @@ const getAuctionBids = async (req, res) => {
 const approveAuction = async (req, res) => {
   try {
     const { id } = req.params;
-    const auction = await db.Auction.findByPk(id);
-    if (!auction)
-      return res.status(404).json({ success: false, message: "Auction not found" });
+    const auction = await db.Auction.findByPk(id, {
+      include: [
+        {
+          model: db.Seller,
+          as: "seller",
+          include: [{ model: db.User, as: "user", attributes: ["user_id"] }],
+        },
+      ],
+    });
+    if (!auction) return res.status(404).json({ success: false, message: "Auction not found" });
 
-    const now   = new Date();
-    const start = new Date(auction.auction_start);
-    const end   = new Date(auction.auction_end);
-
+    const now = new Date();
     let lifecycleStatus = "upcoming";
-    if (now >= start && now < end) lifecycleStatus = "live";
-    else if (now >= end)           lifecycleStatus = "ended";
+    if (now >= new Date(auction.auction_start) && now < new Date(auction.auction_end)) {
+      lifecycleStatus = "live";
+    } else if (now >= new Date(auction.auction_end)) {
+      lifecycleStatus = "ended";
+    }
 
     await auction.update({ approval_status: "approved", status: lifecycleStatus });
     return res.status(200).json({ success: true, message: "Auction approved successfully", data: auction });
@@ -359,18 +417,20 @@ const rejectAuction = async (req, res) => {
   try {
     const { id } = req.params;
     const { rejection_reason } = req.body;
-    if (!rejection_reason || !rejection_reason.trim())
+
+    if (!rejection_reason?.trim()) {
       return res.status(400).json({ success: false, message: "Please provide a rejection reason" });
+    }
 
     const auction = await db.Auction.findByPk(id);
-    if (!auction)
-      return res.status(404).json({ success: false, message: "Auction not found" });
+    if (!auction) return res.status(404).json({ success: false, message: "Auction not found" });
 
     await auction.update({
       approval_status:  "rejected",
       rejection_reason: rejection_reason.trim(),
       status:           "cancelled",
     });
+
     return res.status(200).json({ success: true, message: "Auction rejected", data: auction });
   } catch (error) {
     console.error("Reject auction error:", error);
@@ -383,8 +443,7 @@ const deleteAuction = async (req, res) => {
   try {
     const { id } = req.params;
     const auction = await db.Auction.findByPk(id);
-    if (!auction)
-      return res.status(404).json({ success: false, message: "Auction not found" });
+    if (!auction) return res.status(404).json({ success: false, message: "Auction not found" });
 
     await db.Bid.destroy({ where: { auction_id: id } });
     await auction.destroy();
@@ -400,28 +459,61 @@ const deleteAuction = async (req, res) => {
 const endAuctionEarly = async (req, res) => {
   try {
     const { id } = req.params;
+
     const seller = await db.Seller.findOne({ where: { user_id: req.user.user_id } });
-    if (!seller)
-      return res.status(403).json({ success: false, message: "Seller not found" });
+    if (!seller) return res.status(403).json({ success: false, message: "Seller not found" });
 
     const auction = await db.Auction.findByPk(id);
-    if (!auction)
-      return res.status(404).json({ success: false, message: "Auction not found" });
-    if (auction.seller_id !== seller.seller_id)
+    if (!auction) return res.status(404).json({ success: false, message: "Auction not found" });
+    if (auction.seller_id !== seller.seller_id) {
       return res.status(403).json({ success: false, message: "You can only end your own auctions" });
-    if (auction.status !== "live" && auction.status !== "upcoming")
+    }
+    if (auction.status !== "live" && auction.status !== "upcoming") {
       return res.status(400).json({
         success: false,
         message: "Only live or upcoming auctions can be ended early",
       });
+    }
 
     const highestBid = await db.Bid.findOne({
       where: { auction_id: id },
       order: [["bid_amount", "DESC"]],
+      include: [{ model: db.User, as: "user", attributes: ["user_id", "webpushr_sid"] }],
     });
     const winnerId = highestBid?.user_id || null;
 
     await auction.update({ status: "ended", winner_id: winnerId, auction_end: new Date() });
+
+    // Push + in-app to winner
+    if (highestBid?.user) {
+      if (highestBid.user.webpushr_sid) {
+        sendPushNotification(
+          highestBid.user.webpushr_sid,
+          "🎉 You won the auction!",
+          `You won "${auction.title}" with Rs. ${parseFloat(highestBid.bid_amount).toLocaleString()}!`,
+          `http://localhost:5173/auctions/${id}`
+        ).catch(() => {});
+      }
+      createNotification(
+        highestBid.user.user_id,
+        "auction_won",
+        "🎉 You Won the Auction!",
+        `Congratulations! You won "${auction.title}" with Rs. ${parseFloat(highestBid.bid_amount).toLocaleString()}. Proceed to checkout!`,
+        `/auctions/${id}`,
+        { auction_id: parseInt(id) }
+      ).catch(() => {});
+    }
+
+    // In-app to seller — auction ended
+    createNotification(
+      req.user.user_id,
+      "auction_ended",
+      "🔔 Auction Ended",
+      `Your auction "${auction.title}" has ended. ${winnerId ? "Prepare shipment for the winner." : "No bids were placed."}`,
+      "/seller/dashboard",
+      { auction_id: parseInt(id) }
+    ).catch(() => {});
+
     return res.status(200).json({ success: true, message: "Auction ended early", data: auction });
   } catch (error) {
     console.error("End auction early error:", error);
@@ -430,24 +522,24 @@ const endAuctionEarly = async (req, res) => {
 };
 
 // ==================== CANCEL AUCTION (seller) ====================
-// Seller can cancel their own upcoming or live auction (no bids or with bids)
 const cancelAuction = async (req, res) => {
   try {
     const { id } = req.params;
+
     const seller = await db.Seller.findOne({ where: { user_id: req.user.user_id } });
-    if (!seller)
-      return res.status(403).json({ success: false, message: "Seller not found" });
+    if (!seller) return res.status(403).json({ success: false, message: "Seller not found" });
 
     const auction = await db.Auction.findByPk(id);
-    if (!auction)
-      return res.status(404).json({ success: false, message: "Auction not found" });
-    if (auction.seller_id !== seller.seller_id)
+    if (!auction) return res.status(404).json({ success: false, message: "Auction not found" });
+    if (auction.seller_id !== seller.seller_id) {
       return res.status(403).json({ success: false, message: "You can only cancel your own auctions" });
-    if (auction.status === "ended" || auction.status === "cancelled")
+    }
+    if (auction.status === "ended" || auction.status === "cancelled") {
       return res.status(400).json({
         success: false,
-        message: "Cannot cancel an auction that has already ended or is already cancelled",
+        message: "Cannot cancel an ended or already cancelled auction",
       });
+    }
 
     await auction.update({ status: "cancelled" });
     return res.status(200).json({ success: true, message: "Auction cancelled successfully", data: auction });
@@ -458,36 +550,33 @@ const cancelAuction = async (req, res) => {
 };
 
 // ==================== DELETE AUCTION (seller) ====================
-// Seller can delete their own auction ONLY if it's pending, cancelled, or ended with no bids
 const deleteSellerAuction = async (req, res) => {
   try {
     const { id } = req.params;
+
     const seller = await db.Seller.findOne({ where: { user_id: req.user.user_id } });
-    if (!seller)
-      return res.status(403).json({ success: false, message: "Seller not found" });
+    if (!seller) return res.status(403).json({ success: false, message: "Seller not found" });
 
     const auction = await db.Auction.findByPk(id, {
       include: [{ model: db.Bid, as: "bids", attributes: ["bid_id"] }],
     });
-    if (!auction)
-      return res.status(404).json({ success: false, message: "Auction not found" });
-    if (auction.seller_id !== seller.seller_id)
+    if (!auction) return res.status(404).json({ success: false, message: "Auction not found" });
+    if (auction.seller_id !== seller.seller_id) {
       return res.status(403).json({ success: false, message: "You can only delete your own auctions" });
+    }
 
-    // Allow delete if: pending approval, rejected, cancelled, or ended with no bids
-    const deletableStatuses = ["cancelled"];
     const isDeletable =
-      auction.approval_status === "pending" ||
+      auction.approval_status === "pending"  ||
       auction.approval_status === "rejected" ||
-      deletableStatuses.includes(auction.status) ||
+      auction.status === "cancelled"         ||
       (auction.status === "ended" && (auction.bids || []).length === 0);
 
-    if (!isDeletable)
+    if (!isDeletable) {
       return res.status(400).json({
         success: false,
-        message:
-          "You can only delete auctions that are pending approval, rejected, cancelled, or ended with no bids.",
+        message: "You can only delete pending, rejected, cancelled, or ended auctions with no bids.",
       });
+    }
 
     await db.Bid.destroy({ where: { auction_id: id } });
     await auction.destroy();
@@ -510,6 +599,6 @@ module.exports = {
   rejectAuction,
   deleteAuction,
   endAuctionEarly,
-  cancelAuction,         
-  deleteSellerAuction,   
+  cancelAuction,
+  deleteSellerAuction,
 };

@@ -421,9 +421,37 @@ const sendContactReplyEmail = async (email, name, subject, userMessage, adminRep
   }
 };
 
+// ==================== WELCOME EMAIL ====================
+const sendWelcomeEmail = async (email, fullName) => {
+  const mailOptions = {
+    from: `"HastaKrafts Nepal" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: "Welcome to HastaKrafts Nepal! 🎉",
+    html: `
+      <!DOCTYPE html><html><head><style>${baseStyles}</style></head>
+      <body><div class="container">
+        <div class="header"><h1>HastaKrafts Nepal</h1><p>Welcome!</p></div>
+        <div class="content">
+          <h2>Welcome, ${fullName}! 🎉</h2>
+          <p>Your account is ready. Start exploring authentic Nepali handicrafts.</p>
+          <center><a href="http://localhost:5173/products" class="btn" style="background:#D4813F;">Shop Now</a></center>
+        </div>
+        <div class="footer"><p>&copy; 2025 HastaKrafts Nepal</p></div>
+      </div></body></html>
+    `,
+  };
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log("Welcome email sent to:", email);
+  } catch (err) {
+    console.error("Welcome email failed (non-fatal):", err.message);
+  }
+};
+
 module.exports = {
   sendOTPEmail,
   sendSellerApprovalEmail,
   sendSellerRejectionEmail,
   sendContactReplyEmail,
+   sendWelcomeEmail,
 };

@@ -21,6 +21,7 @@ const Contact = require('./contact.model');
 const UserPoints = require('./userPoints.model');
 const PointTransaction = require('./pointTransaction.model');
 const Story = require('./story.model');
+const Notification = require('./notification.model');
 
 const db = {};
 db.Sequelize = Sequelize;
@@ -46,6 +47,8 @@ db.Contact = Contact;
 db.UserPoints = UserPoints;
 db.PointTransaction = PointTransaction;
 db.Story = Story;
+db.Notification = Notification;
+
 
 // ── User / Seller ─────────────────────────────────────────────
 User.hasOne(Seller, { foreignKey: "user_id", as: "sellerProfile" });
@@ -160,5 +163,9 @@ PointTransaction.belongsTo(Order, { foreignKey: "order_id", as: "order" });
 // ── Story ────────────────────────────────────────────────────
 Seller.hasMany(Story, { foreignKey: "seller_id", as: "stories" });
 Story.belongsTo(Seller, { foreignKey: "seller_id", as: "seller" });
+
+// ── Notifications ─────────────────────────────────────────────
+User.hasMany(Notification, { foreignKey: "user_id", as: "notifications" });
+Notification.belongsTo(User, { foreignKey: "user_id", as: "user" });
 
 module.exports = db;

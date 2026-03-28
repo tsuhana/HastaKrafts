@@ -8,26 +8,28 @@ const { Server } = require("socket.io");
 require("dotenv").config();
 
 const db = require("./models");
+const { sendPushNotification, createNotification } = require("./utils/notification.util");
 
-// ROUTES IMPORT
-const authRoutes = require("./routes/auth.routes");
-const productRoutes = require("./routes/product.routes");
-const adminRoutes = require("./routes/admin.routes");
-const userRoutes = require("./routes/user.routes");
-const sellerRoutes = require("./routes/seller.routes");
-const cartRoutes = require("./routes/cart.routes");
-const orderRoutes = require("./routes/order.routes");
-const auctionRoutes = require("./routes/auction.routes");
-const messageRoutes = require("./routes/message.routes");
-const reviewRoutes = require("./routes/review.routes");
-const wishlistRoutes = require("./routes/wishlist.routes");
-const bannerRoutes = require("./routes/banner.routes");
-const contactRoutes = require("./routes/contact.routes");
-const pointsRoutes = require("./routes/points.routes");
-const storyRoutes = require("./routes/story.routes");
+// ==================== ROUTES IMPORT ====================
+const authRoutes         = require("./routes/auth.routes");
+const productRoutes      = require("./routes/product.routes");
+const adminRoutes        = require("./routes/admin.routes");
+const userRoutes         = require("./routes/user.routes");
+const sellerRoutes       = require("./routes/seller.routes");
+const cartRoutes         = require("./routes/cart.routes");
+const orderRoutes        = require("./routes/order.routes");
+const auctionRoutes      = require("./routes/auction.routes");
+const messageRoutes      = require("./routes/message.routes");
+const reviewRoutes       = require("./routes/review.routes");
+const wishlistRoutes     = require("./routes/wishlist.routes");
+const bannerRoutes       = require("./routes/banner.routes");
+const contactRoutes      = require("./routes/contact.routes");
+const pointsRoutes       = require("./routes/points.routes");
+const storyRoutes        = require("./routes/story.routes");
+const notificationRoutes = require("./routes/notification.routes");
 
-// APP and SERVER SETUP
-const app = express();
+// ==================== APP AND SERVER SETUP ====================
+const app    = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -41,7 +43,7 @@ const io = new Server(server, {
 app.set("io", io);
 global.io = io;
 
-// MIDDLEWARE
+// ==================== MIDDLEWARE ====================
 app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:5173",
@@ -68,26 +70,27 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ROUTES
+// ==================== ROUTES ====================
 app.get("/", (req, res) => res.send("HastaKrafts Backend Running"));
 
-app.use("/api/auth", authRoutes);
-app.use("/api/products", productRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/sellers", sellerRoutes);
-app.use("/api/cart", cartRoutes);
-app.use("/api/orders", orderRoutes);
-app.use("/api/auctions", auctionRoutes);
-app.use("/api/messages", messageRoutes);
-app.use("/api/reviews", reviewRoutes);
-app.use("/api/wishlist", wishlistRoutes);
-app.use("/api/banners", bannerRoutes);
-app.use("/api/contact", contactRoutes);
-app.use("/api/points", pointsRoutes);
-app.use("/api/stories", storyRoutes);
+app.use("/api/auth",          authRoutes);
+app.use("/api/products",      productRoutes);
+app.use("/api/admin",         adminRoutes);
+app.use("/api/users",         userRoutes);
+app.use("/api/sellers",       sellerRoutes);
+app.use("/api/cart",          cartRoutes);
+app.use("/api/orders",        orderRoutes);
+app.use("/api/auctions",      auctionRoutes);
+app.use("/api/messages",      messageRoutes);
+app.use("/api/reviews",       reviewRoutes);
+app.use("/api/wishlist",      wishlistRoutes);
+app.use("/api/banners",       bannerRoutes);
+app.use("/api/contact",       contactRoutes);
+app.use("/api/points",        pointsRoutes);
+app.use("/api/stories",       storyRoutes);
+app.use("/api/notifications", notificationRoutes);
 
-// SOCKET.IO – Online Tracking + Messaging + Auctions
+// ==================== SOCKET.IO ====================
 const onlineUsers = new Map();
 
 io.on("connection", (socket) => {
@@ -132,7 +135,7 @@ io.on("connection", (socket) => {
   });
 });
 
-// ✅ AUTO END AUCTIONS (every 30 seconds)
+// ==================== AUTO END AUCTIONS (every 30 seconds) ====================
 const autoEndAuctions = async () => {
   try {
     const now = new Date();
@@ -143,8 +146,28 @@ const autoEndAuctions = async () => {
         auction_end: { [db.Sequelize.Op.lte]: now },
       },
       include: [
-        { model: db.Bid, as: "bids", include: [{ model: db.User, as: "user" }] },
-        { model: db.Seller, as: "seller" },
+        {
+          model: db.Bid,
+          as: "bids",
+          include: [
+            {
+              model: db.User,
+              as: "user",
+              attributes: ["user_id", "full_name", "webpushr_sid"],
+            },
+          ],
+        },
+        {
+          model: db.Seller,
+          as: "seller",
+          include: [
+            {
+              model: db.User,
+              as: "user",
+              attributes: ["user_id", "webpushr_sid"],
+            },
+          ],
+        },
       ],
     });
 
@@ -157,19 +180,91 @@ const autoEndAuctions = async () => {
         winner_id: highestBid?.user_id || null,
       });
 
+      // Socket emit — unchanged
       io.to(`auction_${auction.auction_id}`).emit("auction_ended", {
         auction_id: auction.auction_id,
         winner: highestBid || null,
       });
+
+      // ✅ Push + in-app to winner
+      if (highestBid?.user) {
+        if (highestBid.user.webpushr_sid) {
+          sendPushNotification(
+            highestBid.user.webpushr_sid,
+            "🎉 You won the auction!",
+            `You won "${auction.title}" with Rs. ${parseFloat(highestBid.bid_amount).toLocaleString()}!`,
+            `${process.env.FRONTEND_URL || "http://localhost:5173"}/auctions/${auction.auction_id}`
+          ).catch(() => {});
+        }
+        createNotification(
+          highestBid.user.user_id,
+          "auction_won",
+          "🎉 You Won the Auction!",
+          `Congratulations! You won "${auction.title}" with Rs. ${parseFloat(highestBid.bid_amount).toLocaleString()}. Proceed to checkout!`,
+          `/auctions/${auction.auction_id}`,
+          { auction_id: auction.auction_id }
+        ).catch(() => {});
+      }
+
+      // ✅ Push + in-app to seller
+      if (auction.seller?.user) {
+        const winnerName = highestBid?.user?.full_name || "No bidder";
+        const winAmount  = highestBid
+          ? `Rs. ${parseFloat(highestBid.bid_amount).toLocaleString()}`
+          : "No bids";
+
+        if (auction.seller.user.webpushr_sid) {
+          sendPushNotification(
+            auction.seller.user.webpushr_sid,
+            "🔔 Your auction has ended!",
+            `"${auction.title}" ended. Winner: ${winnerName} — ${winAmount}.`,
+            `${process.env.FRONTEND_URL || "http://localhost:5173"}/seller/dashboard`
+          ).catch(() => {});
+        }
+        createNotification(
+          auction.seller.user.user_id,
+          "auction_ended",
+          "🔔 Auction Ended",
+          `"${auction.title}" ended. ${
+            highestBid
+              ? `Winner: ${winnerName} — ${winAmount}. Prepare shipment!`
+              : "No bids were placed."
+          }`,
+          "/seller/dashboard",
+          { auction_id: auction.auction_id }
+        ).catch(() => {});
+      }
+
+      // ✅ In-app to all losing bidders
+      const losingBidders = (auction.bids || []).filter(
+        (b) => b.user_id !== highestBid?.user_id
+      );
+      const uniqueLosers = [
+        ...new Map(losingBidders.map((b) => [b.user_id, b])).values(),
+      ];
+
+      for (const loser of uniqueLosers) {
+        if (loser.user?.user_id) {
+          createNotification(
+            loser.user.user_id,
+            "auction_lost",
+            "😔 Auction Ended",
+            `The auction for "${auction.title}" has ended. You didn't win this time, but similar items are available!`,
+            "/auctions",
+            { auction_id: auction.auction_id }
+          ).catch(() => {});
+        }
+      }
     }
 
+    // Upcoming → live promotion
     await db.Auction.update(
       { status: "live" },
       {
         where: {
           status: "upcoming",
           auction_start: { [db.Sequelize.Op.lte]: now },
-          auction_end: { [db.Sequelize.Op.gt]: now },
+          auction_end:   { [db.Sequelize.Op.gt]:  now },
         },
       }
     );
@@ -178,8 +273,7 @@ const autoEndAuctions = async () => {
   }
 };
 
-// ✅ STARTUP WINNER RECOVERY
-// Fixes auctions that ended while backend was down (missed the cron window)
+// ==================== STARTUP WINNER RECOVERY ====================
 const recoverMissedWinners = async () => {
   try {
     const missedAuctions = await db.Auction.findAll({
@@ -199,7 +293,9 @@ const recoverMissedWinners = async () => {
         .sort((a, b) => parseFloat(b.bid_amount) - parseFloat(a.bid_amount))[0];
 
       await auction.update({ winner_id: highest.user_id });
-      console.log(`✅ Winner recovered — Auction #${auction.auction_id}: user_id ${highest.user_id} (Rs. ${highest.bid_amount})`);
+      console.log(
+        `✅ Winner recovered — Auction #${auction.auction_id}: user_id ${highest.user_id} (Rs. ${highest.bid_amount})`
+      );
     }
 
     console.log(`✅ Recovered winners for ${missedAuctions.length} auction(s)`);
@@ -208,7 +304,7 @@ const recoverMissedWinners = async () => {
   }
 };
 
-// ✅ ALSO: End any auctions that ended while backend was down
+// ==================== STARTUP: END MISSED AUCTIONS ====================
 const recoverMissedEndedAuctions = async () => {
   try {
     const now = new Date();
@@ -230,7 +326,9 @@ const recoverMissedEndedAuctions = async () => {
         winner_id: highest?.user_id || null,
       });
 
-      console.log(`✅ Ended missed auction #${auction.auction_id}, winner: user_id ${highest?.user_id || "none"}`);
+      console.log(
+        `✅ Ended missed auction #${auction.auction_id}, winner: user_id ${highest?.user_id || "none"}`
+      );
     }
 
     if (shouldBeEnded.length > 0) {
@@ -241,7 +339,7 @@ const recoverMissedEndedAuctions = async () => {
   }
 };
 
-// SERVER START
+// ==================== SERVER START ====================
 const PORT = process.env.PORT || 5000;
 
 db.sequelize
@@ -262,7 +360,6 @@ db.sequelize
     server.listen(PORT, async () => {
       console.log(`Server running on http://localhost:${PORT}`);
 
-      //  Run both recovery functions on every startup
       await recoverMissedEndedAuctions();
       await recoverMissedWinners();
     });

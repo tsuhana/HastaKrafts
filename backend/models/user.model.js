@@ -18,9 +18,7 @@ const User = sequelize.define(
       type: DataTypes.STRING(100),
       allowNull: false,
       unique: true,
-      validate: {
-        isEmail: true,
-      },
+      validate: { isEmail: true },
     },
     password: {
       type: DataTypes.STRING(255),
@@ -62,6 +60,11 @@ const User = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
+    //  WebPushr subscriber ID — saved after user allows push notifications
+    webpushr_sid: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
   },
   {
     tableName: "users",
@@ -70,7 +73,6 @@ const User = sequelize.define(
   }
 );
 
-// Hash password before creating user
 User.beforeCreate(async (user) => {
   if (user.password) {
     const salt = await bcrypt.genSalt(10);
@@ -78,7 +80,6 @@ User.beforeCreate(async (user) => {
   }
 });
 
-// Hash password before updating user
 User.beforeUpdate(async (user) => {
   if (user.changed("password") && user.password) {
     const salt = await bcrypt.genSalt(10);
@@ -86,15 +87,11 @@ User.beforeUpdate(async (user) => {
   }
 });
 
-// Method to compare passwords
 User.prototype.comparePassword = async function (candidatePassword) {
-  if (!this.password) {
-    return false;
-  }
+  if (!this.password) return false;
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Don't return password in JSON
 User.prototype.toJSON = function () {
   const values = { ...this.get() };
   delete values.password;
