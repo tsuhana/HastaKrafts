@@ -10,7 +10,7 @@ const createProductRules = [
   body("description")
     .trim()
     .notEmpty().withMessage("Product description is required")
-    .isLength({ min: 10 }).withMessage("Description must be at least 10 characters"),
+    .isLength({ min: 10, max: 2000 }).withMessage("Description must be between 10 and 2000 characters"),
 
   body("price")
     .notEmpty().withMessage("Price is required")
@@ -21,7 +21,7 @@ const createProductRules = [
     .isInt({ gt: 0 }).withMessage("Invalid category"),
 
   body("stock_quantity")
-    .optional()
+    .notEmpty().withMessage("Stock quantity is required")
     .isInt({ min: 0 }).withMessage("Stock quantity cannot be negative"),
 
   body("discount_percentage")
@@ -41,6 +41,11 @@ const updateProductRules = [
     .optional()
     .trim()
     .isLength({ min: 3, max: 200 }).withMessage("Product name must be between 3 and 200 characters"),
+
+  body("description")
+    .optional()
+    .trim()
+    .isLength({ min: 10, max: 2000 }).withMessage("Description must be between 10 and 2000 characters"),
 
   body("price")
     .optional()

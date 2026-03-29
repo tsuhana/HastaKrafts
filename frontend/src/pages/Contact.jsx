@@ -19,6 +19,20 @@ const Contact = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!formData.name.trim() || formData.name.trim().length < 2) {
+      toast.error('Please enter your full name'); return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      toast.error('Please provide a valid email address'); return;
+    }
+    if (!formData.subject.trim() || formData.subject.trim().length < 3) {
+      toast.error('Subject must be at least 3 characters'); return;
+    }
+    if (!formData.message.trim() || formData.message.trim().length < 10) {
+      toast.error('Message must be at least 10 characters'); return;
+    }
+
     setSubmitting(true);
     try {
       const res = await contactAPI.submitMessage(formData);
@@ -60,7 +74,6 @@ const Contact = () => {
                   </div>
                 </div>
               </div>
-              <div className="ct-hours">Mon – Fri &nbsp;·&nbsp; 9 AM – 6 PM</div>
             </div>
 
             {/* RIGHT: form panel */}

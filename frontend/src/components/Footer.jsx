@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import BrandLogo from './BrandLogo';
 import './Footer.css';
 import logo from '../assets/logoo.png';
 import khaltiLogo from '../assets/khalti.png';
@@ -31,7 +32,10 @@ const Footer = () => {
 
         {/* Brand */}
         <div className="footer-brand">
-          <img src={logo} alt="HastaKrafts" className="footer-logo" />
+          <div className="footer-logos">
+            <img src={logo} alt="HastaKrafts" className="footer-logo-img" />
+            <BrandLogo variant="dark" className="footer-brand-text" />
+          </div>
           <p className="footer-tagline">{t('footer.tagline')}</p>
           <div className="footer-socials">
             <a href="https://www.facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
@@ -74,7 +78,7 @@ const Footer = () => {
         <div className="footer-col footer-contact">
           <h4>{t('footer.contact_us')}</h4>
           <p><i className="fas fa-map-marker-alt"></i> Kathmandu, Nepal</p>
-          <p><i className="fas fa-phone-alt"></i> +977 97XXXXXXXX</p>
+          <p><i className="fas fa-phone-alt"></i> +977 9841234567</p>
           <a href="mailto:support@hastakrafts.com">
             <i className="fas fa-envelope"></i> support@hastakrafts.com
           </a>

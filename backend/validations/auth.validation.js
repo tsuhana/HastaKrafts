@@ -12,18 +12,19 @@ const registerBuyerRules = [
     .trim()
     .notEmpty().withMessage("Email is required")
     .isEmail().withMessage("Please provide a valid email address")
+    .isLength({ max: 254 }).withMessage("Email address is too long")
     .customSanitizer((value) => value.toLowerCase()),
 
   body("password")
     .notEmpty().withMessage("Password is required")
-    .isLength({ min: 6 }).withMessage("Password must be at least 6 characters")
+    .isLength({ min: 6, max: 128 }).withMessage("Password must be between 6 and 128 characters")
     .matches(/[A-Za-z]/).withMessage("Password must contain at least one letter")
     .matches(/[0-9]/).withMessage("Password must contain at least one number"),
 
   body("phone")
     .optional({ checkFalsy: true })
     .trim()
-    .matches(/^[0-9+\-\s]{7,15}$/).withMessage("Please provide a valid phone number"),
+    .matches(/^(\+977|977)?[0-9\-\s]{7,15}$/).withMessage("Please provide a valid Nepali phone number"),
 
   handleValidation,
 ];
@@ -39,18 +40,19 @@ const registerSellerRules = [
     .trim()
     .notEmpty().withMessage("Email is required")
     .isEmail().withMessage("Please provide a valid email address")
+    .isLength({ max: 254 }).withMessage("Email address is too long")
     .customSanitizer((value) => value.toLowerCase()),
 
   body("password")
     .notEmpty().withMessage("Password is required")
-    .isLength({ min: 6 }).withMessage("Password must be at least 6 characters")
+    .isLength({ min: 6, max: 128 }).withMessage("Password must be between 6 and 128 characters")
     .matches(/[A-Za-z]/).withMessage("Password must contain at least one letter")
     .matches(/[0-9]/).withMessage("Password must contain at least one number"),
 
   body("phone")
     .trim()
     .notEmpty().withMessage("Phone number is required for sellers")
-    .matches(/^[0-9+\-\s]{7,15}$/).withMessage("Please provide a valid phone number"),
+    .matches(/^(\+977|977)?[0-9\-\s]{7,15}$/).withMessage("Please provide a valid Nepali phone number"),
 
   body("shop_name")
     .trim()
@@ -59,15 +61,18 @@ const registerSellerRules = [
 
   body("address")
     .trim()
-    .notEmpty().withMessage("Address is required"),
+    .notEmpty().withMessage("Address is required")
+    .isLength({ min: 5 }).withMessage("Please enter a complete address"),
 
   body("city")
     .trim()
-    .notEmpty().withMessage("City is required"),
+    .notEmpty().withMessage("City is required")
+    .matches(/^[A-Za-z\s\u0900-\u097F-]+$/).withMessage("City name must contain only letters"),
 
   body("citizenship_number")
     .trim()
-    .notEmpty().withMessage("Citizenship number is required"),
+    .notEmpty().withMessage("Citizenship number is required")
+    .isLength({ min: 5, max: 20 }).withMessage("Please enter a valid citizenship number"),
 
   handleValidation,
 ];
@@ -77,10 +82,12 @@ const loginRules = [
     .trim()
     .notEmpty().withMessage("Email is required")
     .isEmail().withMessage("Please provide a valid email address")
+    .isLength({ max: 254 }).withMessage("Email address is too long")
     .customSanitizer((value) => value.toLowerCase()),
 
   body("password")
-    .notEmpty().withMessage("Password is required"),
+    .notEmpty().withMessage("Password is required")
+    .isLength({ max: 128 }).withMessage("Invalid credentials"),
 
   handleValidation,
 ];
@@ -90,6 +97,7 @@ const forgotPasswordRules = [
     .trim()
     .notEmpty().withMessage("Email is required")
     .isEmail().withMessage("Please provide a valid email address")
+    .isLength({ max: 254 }).withMessage("Email address is too long")
     .customSanitizer((value) => value.toLowerCase()),
 
   handleValidation,
@@ -118,7 +126,7 @@ const resetPasswordRules = [
 
   body("newPassword")
     .notEmpty().withMessage("New password is required")
-    .isLength({ min: 6 }).withMessage("Password must be at least 6 characters")
+    .isLength({ min: 6, max: 128 }).withMessage("Password must be between 6 and 128 characters")
     .matches(/[A-Za-z]/).withMessage("Password must contain at least one letter")
     .matches(/[0-9]/).withMessage("Password must contain at least one number"),
 

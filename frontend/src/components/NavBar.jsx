@@ -319,7 +319,8 @@ const NavBar = () => {
           <Link to="/auctions" className="mobile-link" onClick={() => setShowMobileMenu(false)}><Icons.TrendingUp size={20} /><span>{t('nav.auctions')}</span></Link>
           <Link to="/blog"     className="mobile-link" onClick={() => setShowMobileMenu(false)}><Icons.Book size={20} /><span>{t('nav.blog')}</span></Link>
           <Link to="/contact"  className="mobile-link" onClick={() => setShowMobileMenu(false)}><Icons.Mail size={20} /><span>{t('nav.contact')}</span></Link>
-          {isLoggedIn && (
+
+          {isLoggedIn ? (
             <>
               {user?.role === 'buyer' && (
                 <>
@@ -338,6 +339,15 @@ const NavBar = () => {
               )}
               <Link to="/profile" className="mobile-link" onClick={() => setShowMobileMenu(false)}><Icons.User size={20} /><span>{t('nav.profile')}</span></Link>
               <button onClick={handleLogout} className="mobile-link logout-link"><Icons.LogOut size={20} /><span>{t('nav.logout')}</span></button>
+            </>
+          ) : (
+            <>
+              {/* Language switcher in mobile menu for logged-out users */}
+              <div className="mobile-link" style={{ paddingTop: '0.5rem', paddingBottom: '0.5rem' }}>
+                <LanguageSwitcher />
+              </div>
+              <Link to="/login"    className="mobile-link" onClick={() => setShowMobileMenu(false)}><Icons.User size={20} /><span>{t('nav.login')}</span></Link>
+              <Link to="/register" className="mobile-link" onClick={() => setShowMobileMenu(false)}><Icons.User size={20} /><span>{t('nav.register')}</span></Link>
             </>
           )}
         </div>

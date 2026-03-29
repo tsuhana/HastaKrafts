@@ -19,8 +19,10 @@ API.interceptors.request.use(
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const isAuthRequest = error.config?.url?.includes('/auth/');  
+    if (error.response?.status === 401 && !isAuthRequest) {       
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -82,7 +84,6 @@ export const adminAPI = {
   getAllOrders: () => API.get('/admin/orders'),
   getAllReviews: () => API.get('/admin/reviews'),
   deleteReview: (id) => API.delete(`/admin/reviews/${id}`),
-  //  Admin auctions use /admin/auctions (sees ALL approval statuses)
   getAllAuctions: (params) => API.get('/admin/auctions', { params }),
   approveAuction: (id) => API.post(`/admin/auctions/${id}/approve`),
   rejectAuction: (id, data) => API.post(`/admin/auctions/${id}/reject`, data),
@@ -96,7 +97,7 @@ export const userAPI = {
   changePassword: (data) => API.put('/users/change-password', data),
   uploadAvatar: (formData) => API.post('/users/upload-avatar', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   updateLanguagePreference: (data) => API.put('/users/language-preference', data),
-  savePushSid: (data) => API.post('/users/save-push-sid', data), 
+  savePushSid: (data) => API.post('/users/save-push-sid', data),
   getCart: () => API.get('/cart'),
 };
 
@@ -132,17 +133,14 @@ export const orderAPI = {
 
 // AUCTIONS
 export const auctionAPI = {
-  // Public
   getAllAuctions: (params) => API.get('/auctions', { params }),
   getAuctionById: (id) => API.get(`/auctions/${id}`),
   getAuctionBids: (auctionId) => API.get(`/auctions/${auctionId}/bids`),
-  // Seller
   createAuction: (formData) => API.post('/auctions/create', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   getSellerAuctions: () => API.get('/auctions/seller/my-auctions'),
   endAuctionEarly: (id) => API.put(`/auctions/${id}/end-early`),
-  cancelAuction: (id) => API.put(`/auctions/${id}/cancel`),       // ✅ NEW
-  deleteSellerAuction: (id) => API.delete(`/auctions/${id}/seller`), // ✅ NEW
-  // Buyer
+  cancelAuction: (id) => API.put(`/auctions/${id}/cancel`),
+  deleteSellerAuction: (id) => API.delete(`/auctions/${id}/seller`),
   placeBid: (auctionId, data) => API.post(`/auctions/${auctionId}/bid`, data),
 };
 
@@ -174,9 +172,7 @@ export const reviewAPI = {
   deleteReview: (review_id) => API.delete(`/reviews/${review_id}`),
   toggleHelpful: (review_id) => API.post(`/reviews/${review_id}/helpful`),
   createReply: (review_id, data) => API.post(`/reviews/${review_id}/reply`, data),
-  // Seller reply to a review on their product
   sellerReplyToReview: (review_id, data) => API.post(`/reviews/${review_id}/reply`, data),
-
 };
 
 // CONTACT

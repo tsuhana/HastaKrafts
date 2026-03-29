@@ -11,14 +11,6 @@ const sendMessageRules = [
     .trim()
     .isLength({ max: 2000 }).withMessage("Message must not exceed 2000 characters"),
 
-  // Custom rule: must have text OR image (image checked via req.file in controller)
-  body("message_text").custom((value, { req }) => {
-    if (!value && !req.file) {
-      throw new Error("Message text or image is required");
-    }
-    return true;
-  }),
-
   handleValidation,
 ];
 

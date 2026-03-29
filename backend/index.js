@@ -34,7 +34,12 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+  origin: [
+  process.env.FRONTEND_URL || "http://localhost:5173",
+  "http://localhost:5173",
+  "http://localhost:4173",
+  "http://localhost:4174",
+],
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -46,7 +51,12 @@ global.io = io;
 // ==================== MIDDLEWARE ====================
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: [
+  process.env.FRONTEND_URL || "http://localhost:5173",
+  "http://localhost:5173",
+  "http://localhost:4173",
+  "http://localhost:4174",
+  ],
     credentials: true,
   })
 );

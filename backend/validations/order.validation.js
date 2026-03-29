@@ -10,7 +10,7 @@ const createOrderRules = [
   body("delivery_phone")
     .trim()
     .notEmpty().withMessage("Delivery phone number is required")
-    .matches(/^[0-9+\-\s]{7,15}$/).withMessage("Please provide a valid phone number"),
+    .matches(/^(\+977|977)?[9][6-9][0-9]{8}$/).withMessage("Please provide a valid Nepal phone number"),
 
   body("delivery_address")
     .trim()

@@ -75,8 +75,8 @@ const Checkout = () => {
     const newErrors = {};
     if (!shippingInfo.delivery_name.trim())    newErrors.delivery_name    = 'Name is required';
     if (!shippingInfo.delivery_phone.trim())   newErrors.delivery_phone   = 'Phone is required';
-    else if (!/^\d{10}$/.test(shippingInfo.delivery_phone.replace(/\D/g, '')))
-                                               newErrors.delivery_phone   = 'Phone must be 10 digits';
+    else if (!/^(\+977|977)?[9][6-9][0-9]{8}$/.test(shippingInfo.delivery_phone.replace(/\s/g, '')))
+                                               newErrors.delivery_phone   = 'Please provide a valid Nepal phone number';
     if (!shippingInfo.delivery_address.trim()) newErrors.delivery_address = 'Address is required';
     if (!shippingInfo.delivery_city.trim())    newErrors.delivery_city    = 'City is required';
     setErrors(newErrors);
@@ -94,12 +94,8 @@ const Checkout = () => {
 
       if (res.data.success) {
         if (paymentMethod === 'khalti' && res.data.data.payment_url) {
-          // Cart is NOT cleared yet — backend clears it after Khalti payment confirmed
-          // pointsUpdated + cartUpdated fired in KhaltiCallback.jsx after verification
           window.location.href = res.data.data.payment_url;
         } else {
-          // COD — backend already cleared cart and awarded points
-          // ✅ Fire both events so NavBar badges update immediately without refresh
           window.dispatchEvent(new Event('cartUpdated'));
           window.dispatchEvent(new Event('pointsUpdated'));
           toast.success('Order placed successfully!');
@@ -169,7 +165,7 @@ const Checkout = () => {
                 </div>
                 <div className="form-field">
                   <label>{t('checkout.phone')} *</label>
-                  <input type="tel" name="delivery_phone" value={shippingInfo.delivery_phone} onChange={handleChange} placeholder="9812345678" className={errors.delivery_phone ? 'error' : ''} />
+                  <input type="tel" name="delivery_phone" value={shippingInfo.delivery_phone} onChange={handleChange} placeholder="98XXXXXXXX" className={errors.delivery_phone ? 'error' : ''} />
                   {errors.delivery_phone && <span className="error-msg">{errors.delivery_phone}</span>}
                 </div>
               </div>

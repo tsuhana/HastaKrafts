@@ -6,7 +6,7 @@ const { sendMessageRules } = require("../validations/message.validation");
 
 router.use(authenticate);
 
-router.post("/send",              sendMessageRules, sendMessageWithImage);
+router.post("/send", sendMessageWithImage);
 router.get("/conversations",      getConversations);
 router.get("/unread-count",       getUnreadCount);
 router.get("/:partner_id",        getMessages);

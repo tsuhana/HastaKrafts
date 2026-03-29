@@ -67,7 +67,7 @@ const getAnalytics = async (req, res) => {
         attributes: [
           [fn("DATE", col("created_at")), "date"],
           [fn("COUNT", col("order_id")), "orders"],
-          [fn("SUM", col("total_amount")), "revenue"],
+          [fn("SUM", col("total")), "revenue"],
         ],
         where: { created_at: { [Op.gte]: sevenDaysAgo }, payment_status: "paid" },
         group: [fn("DATE", col("created_at"))],
@@ -100,7 +100,7 @@ const getAnalytics = async (req, res) => {
         attributes: [
           [fn("TO_CHAR", col("created_at"), "YYYY-MM"), "month_key"],
           [fn("COUNT", col("order_id")), "orders"],
-          [fn("SUM", col("total_amount")), "revenue"],
+          [fn("SUM", col("total")), "revenue"],
         ],
         where: { created_at: { [Op.gte]: sixMonthsAgo }, payment_status: "paid" },
         group: [fn("TO_CHAR", col("created_at"), "YYYY-MM")],

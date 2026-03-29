@@ -1552,3 +1552,21 @@
   background: #b91c1c !important;
   color: #fff !important;
 }
+
+
+.seller-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+
+@media (max-width: 900px) {
+  .seller-sidebar {
+    width: 200px;
+    min-width: 200px;
+  }
+  .seller-main {
+    margin-left: 200px;
+    padding: 1.5rem;
+  }
+}
