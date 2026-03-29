@@ -28,6 +28,52 @@
   height: 100vh;
   overflow-y: auto;
   z-index: 100;
+  overflow: hidden;
+}
+
+/* ── Sidebar decorative bubbles ── */
+.seller-sidebar::before {
+  content: "";
+  position: absolute;
+  top: -60px;
+  right: -50px;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(184,110,56,0.22) 0%, rgba(184,110,56,0.06) 60%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.seller-sidebar::after {
+  content: "";
+  position: absolute;
+  bottom: 80px;
+  left: -55px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(201,133,78,0.18) 0%, rgba(184,110,56,0.05) 65%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Extra mid bubble via a pseudo on nav */
+.sd-nav::before {
+  content: "";
+  position: absolute;
+  top: 200px;
+  right: -30px;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,200,140,0.10) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.sd-nav {
+  position: relative;
 }
 
 /* Brand */
@@ -37,6 +83,8 @@
   gap: 0.75rem;
   padding: 1.5rem 1.25rem 1.25rem;
   border-bottom: 1px solid rgba(255,255,255,0.08);
+  position: relative;
+  z-index: 1;
 }
 
 .sd-brand-mark {
@@ -83,6 +131,8 @@
   letter-spacing: 0.12em;
   padding: 0 0.5rem;
   margin-bottom: 0.5rem;
+  position: relative;
+  z-index: 1;
 }
 
 .sd-nav-item {
@@ -101,6 +151,8 @@
   text-align: left;
   transition: all 0.2s ease;
   margin-bottom: 0.15rem;
+  position: relative;
+  z-index: 1;
 }
 
 .sd-nav-item:hover {
@@ -118,6 +170,9 @@
   width: 18px;
   height: 18px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sd-nav-icon svg {
@@ -147,6 +202,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  position: relative;
+  z-index: 1;
 }
 
 .sd-action-btn {
@@ -191,6 +248,8 @@
 .sd-sidebar-footer {
   padding: 0.75rem;
   border-top: 1px solid rgba(255,255,255,0.08);
+  position: relative;
+  z-index: 1;
 }
 
 .sd-footer-user {
@@ -258,7 +317,7 @@
 }
 
 /* ═══════════════════════════════════════════
-   KPI CARDS
+   KPI CARDS (Overview & generic)
 ═══════════════════════════════════════════ */
 .sd-kpi-grid {
   display: grid;
@@ -303,6 +362,92 @@
 .sd-kpi-meta {
   font-size: 0.8rem;
   opacity: 0.8;
+}
+
+/* ═══════════════════════════════════════════
+   AUCTION STAT CARDS — distinct from KPI cards
+═══════════════════════════════════════════ */
+.sd-auction-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.sd-auction-stat-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  border: 1.5px solid #EDE8E2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.sd-auction-stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 14px 14px 0 0;
+}
+
+.sd-auction-stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  border-color: #d4b896;
+}
+
+.sd-auction-stat-card.asc-total::before  { background: linear-gradient(90deg, #b86e38, #c9854e); }
+.sd-auction-stat-card.asc-live::before   { background: linear-gradient(90deg, #10B981, #059669); }
+.sd-auction-stat-card.asc-upcoming::before { background: linear-gradient(90deg, #3B82F6, #2563EB); }
+.sd-auction-stat-card.asc-ended::before  { background: linear-gradient(90deg, #8B5CF6, #7C3AED); }
+
+.sd-asc-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+  flex-shrink: 0;
+}
+
+.asc-total .sd-asc-icon   { background: #fdf3ea; color: #b86e38; }
+.asc-live .sd-asc-icon    { background: #ecfdf5; color: #10B981; }
+.asc-upcoming .sd-asc-icon { background: #eff6ff; color: #3B82F6; }
+.asc-ended .sd-asc-icon   { background: #f5f3ff; color: #8B5CF6; }
+
+.sd-asc-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #B09070;
+}
+
+.asc-total .sd-asc-label   { color: #b86e38; }
+.asc-live .sd-asc-label    { color: #059669; }
+.asc-upcoming .sd-asc-label { color: #2563EB; }
+.asc-ended .sd-asc-label   { color: #7C3AED; }
+
+.sd-asc-value {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #1a0e04;
+}
+
+.sd-asc-meta {
+  font-size: 0.75rem;
+  color: #8B6F5E;
+  margin-top: 0.1rem;
 }
 
 /* ═══════════════════════════════════════════
@@ -467,7 +612,10 @@
 }
 
 .sd-order-no-img {
-  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #C17D4A;
 }
 
 .sd-order-info { flex: 1; }
@@ -663,7 +811,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
   color: #C17D4A;
 }
 
@@ -945,7 +1094,13 @@
   background: #FDF8F4;
 }
 
-.sd-upload-icon { font-size: 2.5rem; }
+.sd-upload-icon {
+  font-size: 2rem;
+  color: #C17D4A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 .sd-citizenship-upload-zone p {
   font-size: 0.9rem;
@@ -1075,6 +1230,7 @@
 ═══════════════════════════════════════════ */
 @media (max-width: 1200px) {
   .sd-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .sd-auction-stat-grid { grid-template-columns: repeat(2, 1fr); }
   .sd-products-grid { grid-template-columns: repeat(2, 1fr); }
   .sd-mini-charts { grid-template-columns: 1fr; }
 }
@@ -1096,6 +1252,7 @@
   .seller-sidebar { display: none; }
   .seller-main { padding: 1rem; }
   .sd-kpi-grid { grid-template-columns: 1fr 1fr; }
+  .sd-auction-stat-grid { grid-template-columns: 1fr 1fr; }
   .sd-products-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
@@ -1114,7 +1271,7 @@
 }
 .sd-kpi-trend.up   { background: rgba(255,255,255,0.25); color: #fff; }
 .sd-kpi-trend.down { background: rgba(0,0,0,0.18);       color: rgba(255,255,255,0.9); }
-.sd-kpi-trend-icon { width: 11px; height: 11px; flex-shrink: 0; }
+.sd-kpi-trend-icon { width: 11px; height: 11px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 .sd-kpi-trend-icon svg { width: 100%; height: 100%; }
 
 /* ── Two-column layout (overview charts) ── */
@@ -1171,7 +1328,7 @@
 .sd-analytics-cta:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(184,110,56,0.25); }
 .sd-cta-title { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 0.2rem; }
 .sd-cta-sub   { font-size: 0.8rem; color: rgba(255,255,255,0.6); }
-.sd-cta-arrow { width: 22px; height: 22px; color: #f0c898; flex-shrink: 0; }
+.sd-cta-arrow { width: 22px; height: 22px; color: #f0c898; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 .sd-cta-arrow svg { width: 100%; height: 100%; }
 
 /* ── Analytics section headers ── */
@@ -1181,7 +1338,7 @@
   gap: 0.75rem;
   margin: 1.75rem 0 1rem 0;
 }
-.sd-ana-section-icon  { font-size: 1.3rem; }
+.sd-ana-section-icon  { font-size: 1.3rem; display: flex; align-items: center; color: #b86e38; }
 .sd-ana-section-title { font-size: 1.05rem; font-weight: 700; color: #2C1810; }
 .sd-ana-section-sub   { font-size: 0.8rem;  color: #8B6F5E; margin-top: 1px; }
 
@@ -1219,7 +1376,7 @@
   width: 36px; height: 36px; border-radius: 8px;
   overflow: hidden; background: #F5EDE5;
   display: flex; align-items: center; justify-content: center;
-  font-size: 1.1rem; flex-shrink: 0;
+  flex-shrink: 0; color: #C17D4A;
 }
 .sd-stock-img img { width: 100%; height: 100%; object-fit: cover; }
 .sd-stock-info { flex: 1; min-width: 0; }
@@ -1247,10 +1404,13 @@
   background: #FEF3C7; border: 1px solid #FDE68A;
   border-radius: 8px; padding: 0.6rem 1rem;
   margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 /* ── Sidebar action icon ── */
-.sd-action-icon { width: 14px; height: 14px; display: flex; flex-shrink: 0; }
+.sd-action-icon { width: 14px; height: 14px; display: flex; flex-shrink: 0; align-items: center; justify-content: center; }
 .sd-action-icon svg { width: 100%; height: 100%; }
 
 /* ── Responsive for new layouts ── */
@@ -1265,7 +1425,6 @@
 
 /* ═══════════════════════════════════════════
    SELLER DASHBOARD ADDITIONS
-   Add these to the BOTTOM of SellerDashboard.css
 ═══════════════════════════════════════════ */
 
 /* ── Auction Cards (My Auctions tab) ── */
@@ -1304,6 +1463,7 @@
   justify-content: center;
   position: relative;
   border: 1px solid #EDE8E2;
+  color: #C17D4A;
 }
 
 .sd-auction-img img {
@@ -1313,7 +1473,9 @@
 }
 
 .sd-auction-no-img {
-  font-size: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sd-auction-status-badge {
@@ -1393,7 +1555,7 @@
   white-space: nowrap;
 }
 
-/* ── Review styles (ensure these exist) ── */
+/* ── Review styles ── */
 .sd-reviews-summary {
   background: #fff;
   border: 1px solid #EDE8E2;
@@ -1553,12 +1715,10 @@
   color: #fff !important;
 }
 
-
 .seller-layout {
   display: flex;
   min-height: 100vh;
 }
-
 
 @media (max-width: 900px) {
   .seller-sidebar {

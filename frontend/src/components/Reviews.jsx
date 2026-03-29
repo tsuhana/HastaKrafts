@@ -48,6 +48,36 @@ const Stars = ({ value, interactive = false, onChange, size = 18 }) => {
 
 const LABELS = ["", "Poor", "Fair", "Good", "Very good", "Excellent"];
 
+// ── Delete Confirm Modal ─────────────────────────────────────────────────────
+const DeleteConfirmModal = ({ onConfirm, onCancel }) => (
+  <div
+    style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "1rem" }}
+    onClick={onCancel}
+  >
+    <div
+      style={{ background: "#fff", borderRadius: 14, padding: "1.75rem", maxWidth: 400, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#2C1810", marginBottom: "0.5rem" }}>Delete this review?</h3>
+      <p style={{ fontSize: "0.85rem", color: "#8B6F5E", marginBottom: "1.5rem" }}>This action cannot be undone.</p>
+      <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
+        <button
+          onClick={onCancel}
+          style={{ padding: "0.5rem 1rem", border: "1.5px solid #ddd5c4", background: "#fff", borderRadius: 8, cursor: "pointer", fontSize: "0.875rem", fontFamily: "inherit" }}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={onConfirm}
+          style={{ padding: "0.5rem 1.25rem", background: "#dc2626", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontSize: "0.875rem", fontWeight: 600, fontFamily: "inherit" }}
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 // ── Helpful button ───────────────────────────────────────────────────────────
 const HelpfulBtn = ({ reviewId, count, marked, isLoggedIn, onToggle }) => {
   const [optimisticMarked, setOptimisticMarked] = useState(marked);
@@ -138,16 +168,16 @@ const ReplyForm = ({ reviewId, isLoggedIn, onSubmitted, onCancel }) => {
 
 // ── Single review card (recursive for nested replies) ────────────────────────
 const ReviewCard = ({ review, currentUser, isLoggedIn, depth = 0, onRefresh, fmtDate, initials }) => {
-  const [showReplyForm, setShowReplyForm] = useState(false);
-  const [isEditing, setIsEditing]         = useState(false);
-  const [editComment, setEditComment]     = useState(review.comment || "");
-  const [editRating, setEditRating]       = useState(review.rating || 0);
-  const [editSaving, setEditSaving]       = useState(false);
+  const [showReplyForm, setShowReplyForm]       = useState(false);
+  const [isEditing, setIsEditing]               = useState(false);
+  const [editComment, setEditComment]           = useState(review.comment || "");
+  const [editRating, setEditRating]             = useState(review.rating || 0);
+  const [editSaving, setEditSaving]             = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // ← custom modal
   const toast = useToast();
 
   const name      = review.user?.full_name || "Anonymous";
   const isReply   = review.parent_id !== null;
-  // ✅ Owner check: currentUser owns this entry OR currentUser is admin
   const isOwn     = currentUser?.user_id === review.user_id;
   const isAdmin   = currentUser?.role === "admin";
   const canEdit   = isOwn || isAdmin;
@@ -156,7 +186,6 @@ const ReviewCard = ({ review, currentUser, isLoggedIn, depth = 0, onRefresh, fmt
   const indentClass = depth === 0 ? "" : depth === 1 ? "rv-depth1" : "rv-depth2";
 
   const handleDelete = async () => {
-    if (!window.confirm("Delete this review?")) return;
     try {
       await reviewAPI.deleteReview(review.review_id);
       toast.success("Deleted successfully");
@@ -166,7 +195,6 @@ const ReviewCard = ({ review, currentUser, isLoggedIn, depth = 0, onRefresh, fmt
     }
   };
 
-  // ✅ handleEdit: only sends rating for top-level reviews, never for replies
   const handleEdit = async () => {
     if (!isReply && !editRating) {
       toast.warning("Rating is required");
@@ -179,9 +207,7 @@ const ReviewCard = ({ review, currentUser, isLoggedIn, depth = 0, onRefresh, fmt
     setEditSaving(true);
     try {
       const payload = { comment: editComment.trim() };
-      // Only include rating for top-level reviews
       if (!isReply) payload.rating = editRating;
-
       await reviewAPI.updateReview(review.review_id, payload);
       toast.success("Updated successfully!");
       setIsEditing(false);
@@ -200,143 +226,153 @@ const ReviewCard = ({ review, currentUser, isLoggedIn, depth = 0, onRefresh, fmt
   };
 
   return (
-    <div className={`rv-card ${indentClass}`}>
-      {/* Row 1: avatar | name + stars + badge | date + actions */}
-      <div className="rv-cardTop">
-        <div className="rv-user">
-          <div className="rv-avatar">
-            {review.user?.profile_image
-              ? <img src={`${API_URL}${review.user.profile_image}`} alt="" />
-              : initials(name)}
-          </div>
-          <div className="rv-userInfo">
-            <div className="rv-name">{name}</div>
-            <div className="rv-rowSmall">
-              {/* Stars only shown on top-level reviews, not replies */}
-              {review.rating && !isReply && !isEditing && <Stars value={review.rating} size={13} />}
-              {review.verified_purchase && (
-                <span className="rv-badge rv-badge--verified">✓ Verified</span>
-              )}
-              {isReply && <span className="rv-replyBadge">Reply</span>}
-            </div>
-          </div>
-        </div>
-
-        <div className="rv-meta">
-          <span className="rv-date">{fmtDate(review.created_at || review.createdAt)}</span>
-          {/* ✅ Show Edit/Delete for owner OR admin, on BOTH reviews and replies */}
-          {canEdit || canDelete ? (
-            <div className="rv-ownerBtns">
-              {canEdit && (
-                <button
-                  className="rv-editBtn"
-                  onClick={() => isEditing ? cancelEdit() : setIsEditing(true)}
-                >
-                  {isEditing ? "✕ Cancel" : "Edit"}
-                </button>
-              )}
-              {canDelete && (
-                <button className="rv-dangerBtn" onClick={handleDelete}>Delete</button>
-              )}
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      {/* Row 2: comment OR inline edit form */}
-      {isEditing ? (
-        <div className="rv-editForm">
-          {/* Rating row — only for top-level reviews, not replies */}
-          {!isReply && (
-            <div className="rv-editRatingRow">
-              <span className="rv-editLabel">Rating</span>
-              <Stars value={editRating} interactive onChange={setEditRating} size={20} />
-              {editRating > 0 && <span className="rvLabelTag">{LABELS[editRating]}</span>}
-            </div>
-          )}
-          <textarea
-            className="rv-replyTextarea"
-            value={editComment}
-            onChange={(e) => setEditComment(e.target.value)}
-            rows={3}
-            maxLength={isReply ? 500 : 1000}
-            placeholder={isReply ? "Update your reply..." : "Update your review..."}
-          />
-          <div className="rv-replyChar">{editComment.length}/{isReply ? 500 : 1000}</div>
-          <div className="rv-replyActions">
-            <button className="rv-replyCancel" onClick={cancelEdit} disabled={editSaving}>Cancel</button>
-            <button
-              className="rv-replySubmit"
-              onClick={handleEdit}
-              disabled={editSaving || (!isReply && !editRating) || !editComment.trim()}
-            >
-              {editSaving ? "Saving…" : "Save Changes"}
-            </button>
-          </div>
-        </div>
-      ) : (
-        review.comment && <p className="rv-comment">{review.comment}</p>
-      )}
-
-      {/* Row 3: images (top-level only) */}
-      {!isEditing && !isReply && review.images?.length > 0 && (
-        <div className="rv-imgs">
-          {review.images.map((img, i) => (
-            <img key={i} src={`${API_URL}${img}`} alt="" className="rv-img" />
-          ))}
-        </div>
-      )}
-
-      {/* Row 4: helpful + reply actions */}
-      {!isEditing && (
-        <div className="rv-actions">
-          {/* Helpful only on top-level reviews */}
-          {!isReply && (
-            <HelpfulBtn
-              reviewId={review.review_id}
-              count={review.helpful_count || 0}
-              marked={review.user_marked_helpful || false}
-              isLoggedIn={isLoggedIn}
-              onToggle={onRefresh}
-            />
-          )}
-          {/* ✅ Reply button available to all logged-in users, at all depths */}
-          {isLoggedIn && (
-            <button className="rv-replyBtn" onClick={() => setShowReplyForm((v) => !v)}>
-              {showReplyForm ? "Cancel" : "↩ Reply"}
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Reply form */}
-      {showReplyForm && (
-        <ReplyForm
-          reviewId={review.review_id}
-          isLoggedIn={isLoggedIn}
-          onSubmitted={() => { setShowReplyForm(false); onRefresh?.(); }}
-          onCancel={() => setShowReplyForm(false)}
+    <>
+      {/* Custom delete confirm modal */}
+      {showDeleteConfirm && (
+        <DeleteConfirmModal
+          onConfirm={() => { setShowDeleteConfirm(false); handleDelete(); }}
+          onCancel={() => setShowDeleteConfirm(false)}
         />
       )}
 
-      {/* Nested replies (recursive) */}
-      {review.replies?.length > 0 && (
-        <div className="rv-replies">
-          {review.replies.map((reply) => (
-            <ReviewCard
-              key={reply.review_id}
-              review={reply}
-              currentUser={currentUser}
-              isLoggedIn={isLoggedIn}
-              depth={Math.min(depth + 1, 2)}
-              onRefresh={onRefresh}
-              fmtDate={fmtDate}
-              initials={initials}
-            />
-          ))}
+      <div className={`rv-card ${indentClass}`}>
+        {/* Row 1: avatar | name + stars + badge | date + actions */}
+        <div className="rv-cardTop">
+          <div className="rv-user">
+            <div className="rv-avatar">
+              {review.user?.profile_image
+                ? <img src={`${API_URL}${review.user.profile_image}`} alt="" />
+                : initials(name)}
+            </div>
+            <div className="rv-userInfo">
+              <div className="rv-name">{name}</div>
+              <div className="rv-rowSmall">
+                {review.rating && !isReply && !isEditing && <Stars value={review.rating} size={13} />}
+                {review.verified_purchase && (
+                  <span className="rv-badge rv-badge--verified">✓ Verified</span>
+                )}
+                {isReply && <span className="rv-replyBadge">Reply</span>}
+              </div>
+            </div>
+          </div>
+
+          <div className="rv-meta">
+            <span className="rv-date">{fmtDate(review.created_at || review.createdAt)}</span>
+            {canEdit || canDelete ? (
+              <div className="rv-ownerBtns">
+                {canEdit && (
+                  <button
+                    className="rv-editBtn"
+                    onClick={() => isEditing ? cancelEdit() : setIsEditing(true)}
+                  >
+                    {isEditing ? "✕ Cancel" : "Edit"}
+                  </button>
+                )}
+                {canDelete && (
+                  <button
+                    className="rv-dangerBtn"
+                    onClick={() => setShowDeleteConfirm(true)}
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            ) : null}
+          </div>
         </div>
-      )}
-    </div>
+
+        {/* Row 2: comment OR inline edit form */}
+        {isEditing ? (
+          <div className="rv-editForm">
+            {!isReply && (
+              <div className="rv-editRatingRow">
+                <span className="rv-editLabel">Rating</span>
+                <Stars value={editRating} interactive onChange={setEditRating} size={20} />
+                {editRating > 0 && <span className="rvLabelTag">{LABELS[editRating]}</span>}
+              </div>
+            )}
+            <textarea
+              className="rv-replyTextarea"
+              value={editComment}
+              onChange={(e) => setEditComment(e.target.value)}
+              rows={3}
+              maxLength={isReply ? 500 : 1000}
+              placeholder={isReply ? "Update your reply..." : "Update your review..."}
+            />
+            <div className="rv-replyChar">{editComment.length}/{isReply ? 500 : 1000}</div>
+            <div className="rv-replyActions">
+              <button className="rv-replyCancel" onClick={cancelEdit} disabled={editSaving}>Cancel</button>
+              <button
+                className="rv-replySubmit"
+                onClick={handleEdit}
+                disabled={editSaving || (!isReply && !editRating) || !editComment.trim()}
+              >
+                {editSaving ? "Saving…" : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          review.comment && <p className="rv-comment">{review.comment}</p>
+        )}
+
+        {/* Row 3: images (top-level only) */}
+        {!isEditing && !isReply && review.images?.length > 0 && (
+          <div className="rv-imgs">
+            {review.images.map((img, i) => (
+              <img key={i} src={`${API_URL}${img}`} alt="" className="rv-img" />
+            ))}
+          </div>
+        )}
+
+        {/* Row 4: helpful + reply actions */}
+        {!isEditing && (
+          <div className="rv-actions">
+            {!isReply && (
+              <HelpfulBtn
+                reviewId={review.review_id}
+                count={review.helpful_count || 0}
+                marked={review.user_marked_helpful || false}
+                isLoggedIn={isLoggedIn}
+                onToggle={onRefresh}
+              />
+            )}
+            {isLoggedIn && (
+              <button className="rv-replyBtn" onClick={() => setShowReplyForm((v) => !v)}>
+                {showReplyForm ? "Cancel" : "↩ Reply"}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Reply form */}
+        {showReplyForm && (
+          <ReplyForm
+            reviewId={review.review_id}
+            isLoggedIn={isLoggedIn}
+            onSubmitted={() => { setShowReplyForm(false); onRefresh?.(); }}
+            onCancel={() => setShowReplyForm(false)}
+          />
+        )}
+
+        {/* Nested replies (recursive) */}
+        {review.replies?.length > 0 && (
+          <div className="rv-replies">
+            {review.replies.map((reply) => (
+              <ReviewCard
+                key={reply.review_id}
+                review={reply}
+                currentUser={currentUser}
+                isLoggedIn={isLoggedIn}
+                depth={Math.min(depth + 1, 2)}
+                onRefresh={onRefresh}
+                fmtDate={fmtDate}
+                initials={initials}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </>
   );
 };
 

@@ -12,23 +12,50 @@ import { Pagination, FilterBar, SearchInput, SortSelect, DateRangePicker, filter
 import "../styles/SellerDashboard.css";
 import SellerMyBlogs from "../components/SellerMyBlogs";
 import { Link } from "react-router-dom";
+import {
+  FiGrid,
+  FiTrendingUp,
+  FiPackage,
+  FiHome,
+  FiBookOpen,
+  FiPlus,
+  FiChevronRight,
+  FiUpload,
+  FiAlertCircle,
+} from "react-icons/fi";
+import { BsShop, BsBoxSeam } from "react-icons/bs";
 
 const API_URL = "http://localhost:5000";
 
-const Icons = {
-  overview:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
-  analytics: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
-  orders:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>,
-  products:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>,
-  shop:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
-  add:       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>,
-  auction:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2.5l7 7-7 7"/><path d="M9.5 7.5L2.5 14.5"/><path d="M6 21h12"/><path d="M12 17v4"/></svg>,
-  trendUp:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
-  trendDown: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>,
-  blog:      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
-  reviews:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
-  arrow:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
-};
+// ── Icon components matching the shape expected in the codebase ──
+const OverviewIcon  = () => <FiGrid size={16} />;
+const AnalyticsIcon = () => <FiTrendingUp size={16} />;
+const OrdersIcon    = () => <FiPackage size={16} />;
+const ProductsIcon  = () => <BsBoxSeam size={16} />;
+const ShopIcon      = () => <BsShop size={16} />;
+const AddIcon       = () => <FiPlus size={14} />;
+const AuctionIcon   = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+    <path d="M14.5 2.5l7 7-7 7"/><path d="M9.5 7.5L2.5 14.5"/><path d="M6 21h12"/><path d="M12 17v4"/>
+  </svg>
+);
+const TrendUpIcon   = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: "100%", height: "100%" }}>
+    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+  </svg>
+);
+const TrendDownIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: "100%", height: "100%" }}>
+    <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/>
+  </svg>
+);
+const BlogIcon      = () => <FiBookOpen size={16} />;
+const ReviewsIcon   = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+  </svg>
+);
+const ArrowIcon     = () => <FiChevronRight size={22} />;
 
 const STATUS_COLORS = { delivered: "#10B981", pending: "#F59E0B", processing: "#3B82F6", shipped: "#8B5CF6", cancelled: "#EF4444" };
 const DONUT_COLORS  = ["#10B981", "#F59E0B", "#3B82F6", "#8B5CF6", "#EF4444"];
@@ -72,12 +99,22 @@ const KpiCard = ({ label, value, meta, color, trend, onClick }) => (
     <div className="sd-kpi-value">{value}</div>
     {trend !== undefined && trend !== null ? (
       <div className={`sd-kpi-trend ${trend >= 0 ? "up" : "down"}`}>
-        <span className="sd-kpi-trend-icon">{trend >= 0 ? Icons.trendUp : Icons.trendDown}</span>
+        <span className="sd-kpi-trend-icon">{trend >= 0 ? <TrendUpIcon /> : <TrendDownIcon />}</span>
         {Math.abs(trend)}% vs last month
       </div>
     ) : (
       meta && <div className="sd-kpi-meta">{meta}</div>
     )}
+  </div>
+);
+
+// ── Distinct auction stat card (not colored gradient like KpiCard) ──
+const AuctionStatCard = ({ label, value, meta, variant, icon }) => (
+  <div className={`sd-auction-stat-card asc-${variant}`}>
+    <div className="sd-asc-icon">{icon}</div>
+    <div className="sd-asc-label">{label}</div>
+    <div className="sd-asc-value">{value}</div>
+    {meta && <div className="sd-asc-meta">{meta}</div>}
   </div>
 );
 
@@ -93,7 +130,6 @@ const StarRating = ({ rating }) => {
   );
 };
 
-// ✅ Review Reply Modal — maxLength={500} added to textarea
 const ReviewReplyModal = ({ modal, setModal, onSubmit, loading }) => {
   if (!modal.open || !modal.review) return null;
   return (
@@ -113,7 +149,6 @@ const ReviewReplyModal = ({ modal, setModal, onSubmit, loading }) => {
           <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "#9a8268", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5 }}>Their Review</div>
           {modal.review.comment || "(no comment)"}
         </div>
-        {/* FIX 1: maxLength={500} added */}
         <textarea
           value={modal.text}
           onChange={(e) => setModal((m) => ({ ...m, text: e.target.value }))}
@@ -475,14 +510,14 @@ const SellerDashboard = () => {
           <nav className="sd-nav">
             <div className="sd-nav-label">Navigation</div>
             {[
-              { key: "overview",  label: "Overview",        icon: Icons.overview },
-              { key: "analytics", label: "Analytics",       icon: Icons.analytics },
-              { key: "orders",    label: "All Orders",      icon: Icons.orders, badge: pendingCount },
-              { key: "products",  label: "My Products",     icon: Icons.products },
-              { key: "auctions",  label: "My Auctions",     icon: Icons.auction, badge: auctions.filter((a) => a.status === "live").length },
-              { key: "reviews",   label: "My Reviews",      icon: Icons.reviews },
-              { key: "blogs",     label: "My Blogs",        icon: Icons.blog },
-              { key: "shop",      label: "Shop Management", icon: Icons.shop },
+              { key: "overview",  label: "Overview",        icon: <OverviewIcon /> },
+              { key: "analytics", label: "Analytics",       icon: <AnalyticsIcon /> },
+              { key: "orders",    label: "All Orders",      icon: <OrdersIcon />, badge: pendingCount },
+              { key: "products",  label: "My Products",     icon: <ProductsIcon /> },
+              { key: "auctions",  label: "My Auctions",     icon: <AuctionIcon />, badge: auctions.filter((a) => a.status === "live").length },
+              { key: "reviews",   label: "My Reviews",      icon: <ReviewsIcon /> },
+              { key: "blogs",     label: "My Blogs",        icon: <BlogIcon /> },
+              { key: "shop",      label: "Shop Management", icon: <ShopIcon /> },
             ].map((item) => (
               <button key={item.key} className={`sd-nav-item ${activeTab === item.key ? "active" : ""}`} onClick={() => setActiveTab(item.key)}>
                 <span className="sd-nav-icon">{item.icon}</span>
@@ -493,8 +528,12 @@ const SellerDashboard = () => {
           </nav>
 
           <div className="sd-sidebar-actions">
-            <Link to="/seller/add-product" className="sd-action-btn"><span className="sd-action-icon">{Icons.add}</span> Add Product</Link>
-            <Link to="/seller/create-auction" className="sd-action-btn sd-action-secondary"><span className="sd-action-icon">{Icons.auction}</span> Create Auction</Link>
+            <Link to="/seller/add-product" className="sd-action-btn">
+              <span className="sd-action-icon"><AddIcon /></span> Add Product
+            </Link>
+            <Link to="/seller/create-auction" className="sd-action-btn sd-action-secondary">
+              <span className="sd-action-icon"><AuctionIcon /></span> Create Auction
+            </Link>
           </div>
 
           <div className="sd-sidebar-footer">
@@ -594,7 +633,7 @@ const SellerDashboard = () => {
                           <div className="sd-order-meta">{item.product_name} · {item.order?.user?.full_name} · Rs. {parseFloat(item.subtotal).toLocaleString()}</div>
                         </div>
                         <div className={`sd-status-text status-text-${item.order?.order_status}`}>
-                          {item.order?.order_status ? item.order.order_status.charAt(0).toUpperCase() + item.order.order_status.slice(1) : ""} ✓
+                          {item.order?.order_status ? item.order.order_status.charAt(0).toUpperCase() + item.order.order_status.slice(1) : ""}
                         </div>
                       </div>
                     ))}
@@ -603,8 +642,8 @@ const SellerDashboard = () => {
               </div>
 
               <button className="sd-analytics-cta" onClick={() => setActiveTab("analytics")}>
-                <div><div className="sd-cta-title">Deep Dive into Analytics</div><div className="sd-cta-sub">Revenue breakdowns, product performance & more</div></div>
-                <span className="sd-cta-arrow">{Icons.arrow}</span>
+                <div><div className="sd-cta-title">Deep Dive into Analytics</div><div className="sd-cta-sub">Revenue breakdowns, product performance &amp; more</div></div>
+                <span className="sd-cta-arrow"><ArrowIcon /></span>
               </button>
             </div>
           )}
@@ -616,15 +655,74 @@ const SellerDashboard = () => {
                 <div><h1>Analytics</h1><p>Comprehensive business insights for your shop</p></div>
               </div>
 
-              <div className="sd-kpi-grid">
-                <KpiCard label="Total Revenue"    value={`Rs. ${(analytics.kpis?.totalRevenue || stats.totalSales).toLocaleString()}`} trend={analytics.kpis?.momGrowth} color="sales" />
-                <KpiCard label="This Month"       value={`Rs. ${(analytics.kpis?.thisMonthRevenue || 0).toLocaleString()}`} meta={`Last month: Rs. ${(analytics.kpis?.lastMonthRevenue || 0).toLocaleString()}`} color="orders" />
-                <KpiCard label="Avg. Order Value" value={`Rs. ${(analytics.kpis?.aov || 0).toLocaleString()}`} meta="Per order item" color="products" />
-                <KpiCard label="Total Orders"     value={analytics.kpis?.totalOrders || stats.totalOrders} meta={`${analytics.kpis?.deliveredOrders || 0} delivered`} color="items" />
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "1.25rem", marginBottom: "2rem" }}>
+                {[
+                  {
+                    label: "Total Revenue",
+                    value: `Rs. ${(analytics.kpis?.totalRevenue || stats.totalSales).toLocaleString()}`,
+                    icon: <FiTrendingUp size={26} />,
+                    color: "#b86e38",
+                    bg: "linear-gradient(135deg,#fdf3ea,#fbe8d4)",
+                    extra: analytics.kpis?.momGrowth !== undefined ? (
+                      <div style={{ fontSize: "0.72rem", marginTop: "0.4rem", color: analytics.kpis.momGrowth >= 0 ? "#059669" : "#dc2626", fontWeight: 600 }}>
+                        {analytics.kpis.momGrowth >= 0 ? "↑" : "↓"} {Math.abs(analytics.kpis.momGrowth)}% vs last month
+                      </div>
+                    ) : null,
+                  },
+                  {
+                    label: "This Month",
+                    value: `Rs. ${(analytics.kpis?.thisMonthRevenue || 0).toLocaleString()}`,
+                    icon: <FiPackage size={26} />,
+                    color: "#059669",
+                    bg: "linear-gradient(135deg,#ecfdf5,#d1fae5)",
+                    extra: <div style={{ fontSize: "0.72rem", marginTop: "0.4rem", color: "#6b7280" }}>Last month: Rs. {(analytics.kpis?.lastMonthRevenue || 0).toLocaleString()}</div>,
+                  },
+                  {
+                    label: "Avg. Order Value",
+                    value: `Rs. ${(analytics.kpis?.aov || 0).toLocaleString()}`,
+                    icon: <FiGrid size={26} />,
+                    color: "#2563eb",
+                    bg: "linear-gradient(135deg,#eff6ff,#dbeafe)",
+                    extra: <div style={{ fontSize: "0.72rem", marginTop: "0.4rem", color: "#6b7280" }}>Per order item</div>,
+                  },
+                  {
+                    label: "Total Orders",
+                    value: analytics.kpis?.totalOrders || stats.totalOrders,
+                    icon: <BsBoxSeam size={26} />,
+                    color: "#7c3aed",
+                    bg: "linear-gradient(135deg,#f5f3ff,#ede9fe)",
+                    extra: <div style={{ fontSize: "0.72rem", marginTop: "0.4rem", color: "#6b7280" }}>{analytics.kpis?.deliveredOrders || 0} delivered</div>,
+                  },
+                ].map((card) => (
+                  <div key={card.label} style={{
+                    background: card.bg,
+                    borderRadius: 16,
+                    padding: "1.25rem 1.5rem",
+                    border: `1px solid ${card.color}22`,
+                    position: "relative",
+                    overflow: "hidden",
+                    boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+                    transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.12)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,0.06)"; }}
+                  >
+                    <div style={{ position: "absolute", top: -15, right: -15, width: 80, height: 80, borderRadius: "50%", background: card.color, opacity: 0.08 }} />
+                    <div style={{ position: "absolute", bottom: -20, left: -10, width: 60, height: 60, borderRadius: "50%", background: card.color, opacity: 0.05 }} />
+                    <div style={{ color: card.color, marginBottom: "0.6rem", display: "flex" }}>{card.icon}</div>
+                    <div style={{ fontSize: "0.68rem", fontWeight: 700, color: card.color, textTransform: "uppercase", letterSpacing: "0.09em", marginBottom: "0.35rem" }}>
+                      {card.label}
+                    </div>
+                    <div style={{ fontSize: "1.55rem", fontWeight: 800, color: "#1a0e04", letterSpacing: "-0.5px", lineHeight: 1 }}>
+                      {card.value}
+                    </div>
+                    {card.extra}
+                  </div>
+                ))}
               </div>
 
               <div className="sd-ana-section-head">
-                <span className="sd-ana-section-icon">📈</span>
+                <span className="sd-ana-section-icon"><FiTrendingUp size={20} /></span>
                 <div><div className="sd-ana-section-title">Revenue Analytics</div><div className="sd-ana-section-sub">Track your earnings over time</div></div>
               </div>
 
@@ -689,7 +787,7 @@ const SellerDashboard = () => {
               </div>
 
               <div className="sd-ana-section-head">
-                <span className="sd-ana-section-icon">📦</span>
+                <span className="sd-ana-section-icon"><FiPackage size={20} /></span>
                 <div><div className="sd-ana-section-title">Order Analytics</div><div className="sd-ana-section-sub">Order patterns and fulfillment performance</div></div>
               </div>
 
@@ -741,7 +839,7 @@ const SellerDashboard = () => {
                         </BarChart>
                       </ResponsiveContainer>
                       {bestDow && bestDow.orders > 0 && (
-                        <div className="sd-peak-note">📈 Peak day: <strong>{bestDow.day}</strong> ({bestDow.orders} orders avg)</div>
+                        <div className="sd-peak-note">Peak day: <strong>{bestDow.day}</strong> ({bestDow.orders} orders avg)</div>
                       )}
                     </>
                   )}
@@ -749,7 +847,7 @@ const SellerDashboard = () => {
               </div>
 
               <div className="sd-ana-section-head">
-                <span className="sd-ana-section-icon">🏪</span>
+                <span className="sd-ana-section-icon"><BsShop size={20} /></span>
                 <div><div className="sd-ana-section-title">Stock Health</div><div className="sd-ana-section-sub">Inventory levels across your catalog</div></div>
               </div>
 
@@ -766,7 +864,7 @@ const SellerDashboard = () => {
                       return (
                         <div key={p.id} className="sd-stock-row">
                           <div className="sd-stock-img">
-                            {p.image ? <img src={`${API_URL}${p.image}`} alt={p.name} /> : <span>📦</span>}
+                            {p.image ? <img src={`${API_URL}${p.image}`} alt={p.name} /> : <BsBoxSeam size={16} />}
                           </div>
                           <div className="sd-stock-info">
                             <div className="sd-stock-name">{p.name}</div>
@@ -775,7 +873,7 @@ const SellerDashboard = () => {
                             </div>
                           </div>
                           <div className={`sd-stock-count ${isOut ? "out" : isLow ? "low" : "ok"}`}>
-                            {isOut ? "Out of stock" : `${p.stock} units`}{isLow ? " ⚠️" : ""}
+                            {isOut ? "Out of stock" : `${p.stock} units`}{isLow ? " !" : ""}
                           </div>
                           <Link to={`/seller/edit-product/${p.id}`} className="sd-stock-edit">Restock</Link>
                         </div>
@@ -783,7 +881,8 @@ const SellerDashboard = () => {
                     })}
                     {analytics.stockHealth.filter((p) => p.stock <= 3).length > 0 && (
                       <div className="sd-restock-alert">
-                        ⚠️ {analytics.stockHealth.filter((p) => p.stock <= 3).length} product{analytics.stockHealth.filter((p) => p.stock <= 3).length !== 1 ? "s" : ""} need restocking: {analytics.stockHealth.filter((p) => p.stock <= 3).map((p) => p.name).join(", ")}
+                        <FiAlertCircle size={14} />
+                        {analytics.stockHealth.filter((p) => p.stock <= 3).length} product{analytics.stockHealth.filter((p) => p.stock <= 3).length !== 1 ? "s" : ""} need restocking: {analytics.stockHealth.filter((p) => p.stock <= 3).map((p) => p.name).join(", ")}
                       </div>
                     )}
                   </div>
@@ -831,7 +930,7 @@ const SellerDashboard = () => {
                           {item.product?.images?.[0] ? (
                             <img src={`${API_URL}${item.product.images[0]}`} alt={item.product_name} />
                           ) : (
-                            <div className="sd-order-no-img">📦</div>
+                            <div className="sd-order-no-img"><FiPackage size={20} /></div>
                           )}
                         </div>
                         <div className="sd-order-info sd-order-info-full">
@@ -906,7 +1005,7 @@ const SellerDashboard = () => {
                             {product.images?.[0] ? (
                               <img src={`${API_URL}${product.images[0]}`} alt={product.name} />
                             ) : (
-                              <div className="sd-no-img">No Image</div>
+                              <div className="sd-no-img"><BsBoxSeam size={28} /></div>
                             )}
                             <span className={`sd-status-badge status-${product.status}`}>{product.status}</span>
                             {dp && <span className="sd-discount-badge">-{product.discount_percentage}%</span>}
@@ -955,7 +1054,7 @@ const SellerDashboard = () => {
 
               {auctions.filter((a) => a.approval_status === "pending").length > 0 && (
                 <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem", background: "#fdf5e0", border: "1.5px solid #e0cc80", borderRadius: 10, padding: "0.875rem 1.1rem", marginBottom: "1.25rem" }}>
-                  <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>⏳</span>
+                  <span style={{ flexShrink: 0, color: "#92400E", display: "flex", alignItems: "center" }}><FiAlertCircle size={18} /></span>
                   <div>
                     <p style={{ fontWeight: 700, color: "#9a6410", margin: 0, fontSize: "0.875rem" }}>
                       {auctions.filter((a) => a.approval_status === "pending").length} auction{auctions.filter((a) => a.approval_status === "pending").length > 1 ? "s" : ""} awaiting admin approval
@@ -968,11 +1067,35 @@ const SellerDashboard = () => {
               )}
 
               {auctions.length > 0 && (
-                <div className="sd-kpi-grid" style={{ marginBottom: "1.5rem" }}>
-                  <KpiCard label="Total Auctions" value={auctions.length}                                              meta="All time"        color="sales" />
-                  <KpiCard label="Live Now"        value={auctions.filter((a) => a.status === "live").length}          meta="Active bidding"  color="orders" />
-                  <KpiCard label="Upcoming"        value={auctions.filter((a) => a.status === "upcoming").length}      meta="Scheduled"       color="products" />
-                  <KpiCard label="Ended"           value={auctions.filter((a) => a.status === "ended").length}         meta={`${auctions.filter((a) => a.status === "ended" && a.winner_id).length} with winner`} color="items" />
+                <div className="sd-auction-stat-grid">
+                  <AuctionStatCard
+                    variant="total"
+                    label="Total Auctions"
+                    value={auctions.length}
+                    meta="All time"
+                    icon={<AuctionIcon />}
+                  />
+                  <AuctionStatCard
+                    variant="live"
+                    label="Live Now"
+                    value={auctions.filter((a) => a.status === "live").length}
+                    meta="Active bidding"
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
+                  />
+                  <AuctionStatCard
+                    variant="upcoming"
+                    label="Upcoming"
+                    value={auctions.filter((a) => a.status === "upcoming").length}
+                    meta="Scheduled"
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>}
+                  />
+                  <AuctionStatCard
+                    variant="ended"
+                    label="Ended"
+                    value={auctions.filter((a) => a.status === "ended").length}
+                    meta={`${auctions.filter((a) => a.status === "ended" && a.winner_id).length} with winner`}
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}><polyline points="20 6 9 17 4 12"/></svg>}
+                  />
                 </div>
               )}
 
@@ -983,11 +1106,11 @@ const SellerDashboard = () => {
               </div>
               <FilterBar theme="seller" active={auctionFilter} onChange={(f) => { setAuctionFilter(f); setAuctionPage(1); }}
                 filters={[
-                  { key: "all",       label: "All",        count: auctions.length },
-                  { key: "live",      label: "🔴 Live",    count: auctions.filter((a) => a.status === "live").length },
-                  { key: "upcoming",  label: "Upcoming",   count: auctions.filter((a) => a.status === "upcoming").length },
-                  { key: "ended",     label: "Ended",      count: auctions.filter((a) => a.status === "ended").length },
-                  { key: "cancelled", label: "Cancelled",  count: auctions.filter((a) => a.status === "cancelled").length },
+                  { key: "all",       label: "All",       count: auctions.length },
+                  { key: "live",      label: "Live",      count: auctions.filter((a) => a.status === "live").length },
+                  { key: "upcoming",  label: "Upcoming",  count: auctions.filter((a) => a.status === "upcoming").length },
+                  { key: "ended",     label: "Ended",     count: auctions.filter((a) => a.status === "ended").length },
+                  { key: "cancelled", label: "Cancelled", count: auctions.filter((a) => a.status === "cancelled").length },
                 ]}
               />
 
@@ -1018,7 +1141,7 @@ const SellerDashboard = () => {
                             {auction.images?.[0] ? (
                               <img src={`${API_URL}${auction.images[0]}`} alt={auction.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                             ) : (
-                              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.6rem" }}>🔨</div>
+                              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#C17D4A" }}><AuctionIcon /></div>
                             )}
                           </div>
 
@@ -1026,9 +1149,9 @@ const SellerDashboard = () => {
                             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.3rem", flexWrap: "wrap" }}>
                               <div className="sd-order-num" style={{ fontSize: "0.95rem" }}>{auction.title}</div>
                               <span style={{ ...approvalStatusStyle(auction.approval_status), padding: "2px 8px", borderRadius: 999, fontSize: "0.62rem", fontWeight: 700 }}>
-                                {auction.approval_status === "pending" ? "⏳ Awaiting Approval"
-                                  : auction.approval_status === "approved" ? "✓ Approved"
-                                  : "✗ Rejected"}
+                                {auction.approval_status === "pending" ? "Awaiting Approval"
+                                  : auction.approval_status === "approved" ? "Approved"
+                                  : "Rejected"}
                               </span>
                             </div>
 
@@ -1051,7 +1174,7 @@ const SellerDashboard = () => {
                             </div>
                             {auction.status === "ended" && auction.winner && (
                               <div style={{ fontSize: "0.78rem", color: "#059669", marginTop: 2, fontWeight: 600 }}>
-                                🏆 Winner: {auction.winner.full_name}
+                                Winner: {auction.winner.full_name}
                               </div>
                             )}
                             {auction.status === "ended" && !auction.winner && (
@@ -1061,7 +1184,7 @@ const SellerDashboard = () => {
 
                           <div className="sd-order-actions" style={{ alignItems: "flex-end", gap: "0.4rem", minWidth: 130 }}>
                             <span style={{ ...auctionStatusStyle(auction.status), padding: "3px 10px", borderRadius: 999, fontSize: "0.68rem", fontWeight: 700 }}>
-                              {auction.status === "live" ? "🔴 Live" : auction.status?.charAt(0).toUpperCase() + auction.status?.slice(1)}
+                              {auction.status === "live" ? "Live" : auction.status?.charAt(0).toUpperCase() + auction.status?.slice(1)}
                             </span>
 
                             {canEndEarly && (
@@ -1147,11 +1270,11 @@ const SellerDashboard = () => {
               <FilterBar theme="seller" active={reviewRating} onChange={(f) => { setReviewRating(f); setReviewPage(1); }}
                 filters={[
                   { key: "all", label: "All ratings", count: reviews.length },
-                  { key: "5",   label: "★★★★★",       count: reviews.filter((r) => r.rating === 5).length },
-                  { key: "4",   label: "★★★★",         count: reviews.filter((r) => r.rating === 4).length },
-                  { key: "3",   label: "★★★",           count: reviews.filter((r) => r.rating === 3).length },
-                  { key: "2",   label: "★★",            count: reviews.filter((r) => r.rating === 2).length },
-                  { key: "1",   label: "★",             count: reviews.filter((r) => r.rating === 1).length },
+                  { key: "5",   label: "5 stars",     count: reviews.filter((r) => r.rating === 5).length },
+                  { key: "4",   label: "4 stars",     count: reviews.filter((r) => r.rating === 4).length },
+                  { key: "3",   label: "3 stars",     count: reviews.filter((r) => r.rating === 3).length },
+                  { key: "2",   label: "2 stars",     count: reviews.filter((r) => r.rating === 2).length },
+                  { key: "1",   label: "1 star",      count: reviews.filter((r) => r.rating === 1).length },
                 ]}
               />
 
@@ -1180,7 +1303,7 @@ const SellerDashboard = () => {
                             <StarRating rating={review.rating} />
                             <div className="sd-review-date">{fmtDate(review.created_at || review.createdAt)}</div>
                             {review.verified_purchase && (
-                              <span className="sd-verified-badge">✓ Verified Purchase</span>
+                              <span className="sd-verified-badge">Verified Purchase</span>
                             )}
                           </div>
                         </div>
@@ -1198,7 +1321,7 @@ const SellerDashboard = () => {
                             style={{ fontSize: "0.78rem", padding: "5px 12px" }}
                             onClick={() => setReviewReplyModal({ open: true, review, text: "" })}
                           >
-                            💬 Reply
+                            Reply
                           </button>
                         </div>
                       </div>
@@ -1325,6 +1448,7 @@ const ShopManagement = ({ toast, t }) => {
           <div className="sd-logo-actions">
             <p className="sd-logo-hint">Upload a square image (recommended 400×400px, max 2MB)</p>
             <label className="sd-upload-btn">
+              <FiUpload size={14} />
               {uploadingLogo ? "Uploading…" : "Upload Logo"}
               <input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploadingLogo} style={{ display: "none" }} />
             </label>
@@ -1348,7 +1472,6 @@ const ShopManagement = ({ toast, t }) => {
           <form onSubmit={handleSave} className="sd-edit-form">
             <div className="sd-form-grid">
               <div className="sd-form-field"><label>Shop Name *</label><input type="text" value={form.shop_name} onChange={(e) => setForm({ ...form, shop_name: e.target.value })} required /></div>
-              {/* FIX 2: maxLength={1000} added to shop_description textarea */}
               <div className="sd-form-field sd-form-full"><label>Shop Description</label><textarea rows={3} maxLength={1000} value={form.shop_description} onChange={(e) => setForm({ ...form, shop_description: e.target.value })} /></div>
               <div className="sd-form-field"><label>City *</label><input type="text" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} required /></div>
               <div className="sd-form-field sd-form-full"><label>Address *</label><textarea rows={2} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} required /></div>
@@ -1376,6 +1499,7 @@ const ShopManagement = ({ toast, t }) => {
               <img src={`http://localhost:5000${seller.citizenship_image}`} alt="Citizenship" />
               <div className="sd-citizenship-overlay">
                 <label className="sd-upload-btn">
+                  <FiUpload size={14} />
                   {uploadingCitizenship ? "Uploading…" : "Update Document"}
                   <input type="file" accept="image/*" onChange={handleCitizenshipUpload} disabled={uploadingCitizenship} style={{ display: "none" }} />
                 </label>
@@ -1383,7 +1507,7 @@ const ShopManagement = ({ toast, t }) => {
             </div>
           ) : (
             <label className="sd-citizenship-upload-zone">
-              <div className="sd-upload-icon">📄</div>
+              <div className="sd-upload-icon"><FiUpload size={32} /></div>
               <p>{uploadingCitizenship ? "Uploading…" : "Click to upload citizenship photo"}</p>
               <span>JPG, PNG up to 5MB</span>
               <input type="file" accept="image/*" onChange={handleCitizenshipUpload} disabled={uploadingCitizenship} style={{ display: "none" }} />
