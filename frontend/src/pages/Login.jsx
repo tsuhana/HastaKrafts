@@ -6,18 +6,19 @@ import BrandLogo from '../components/BrandLogo';
 import '../styles/Login.css';
 
 const Login = () => {
-  const navigate   = useNavigate();
-  const { t }      = useTranslation();
+  const navigate = useNavigate();
+  const { t }    = useTranslation();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe]     = useState(true); 
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     if (error) setError('');
   };
 
-  // Basic client-side checks before hitting the server
   const validate = () => {
     const { email, password } = formData;
     if (!email.trim())    return 'Email is required';
@@ -28,7 +29,7 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    e.stopPropagation(); // ✅ FIXED: prevent any parent handlers firing
+    e.stopPropagation();
 
     const validationError = validate();
     if (validationError) { setError(validationError); return; }
@@ -45,18 +46,23 @@ const Login = () => {
       if (response.data.success) {
         const { token, user } = response.data.data;
 
-        // ✅ FIXED: Set localStorage BEFORE calling navigate
-        // so the 401 interceptor in axios.js doesn't fire on
-        // the first dashboard API calls (token must exist first)
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
+        // ← REMEMBER ME LOGIC
+        if (rememberMe) {
+          localStorage.setItem('token', token);
+          localStorage.setItem('user', JSON.stringify(user));
+        } else {
+          sessionStorage.setItem('token', token);
+          sessionStorage.setItem('user', JSON.stringify(user));
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
+
         window.dispatchEvent(new Event('userLoggedIn'));
 
         const role = user.role;
-        // ✅ FIXED: replace:true prevents back-button returning to login
-        if (role === 'admin')        navigate('/admin/dashboard', { replace: true });
-        else if (role === 'seller')  navigate('/seller/dashboard', { replace: true });
-        else                         navigate('/', { replace: true });
+        if (role === 'admin')       navigate('/admin/dashboard', { replace: true });
+        else if (role === 'seller') navigate('/seller/dashboard', { replace: true });
+        else                        navigate('/', { replace: true });
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');
@@ -69,11 +75,27 @@ const Login = () => {
     window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/google`;
   };
 
+  const EyeIcon = ({ show }) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      {show ? (
+        <>
+          <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
+          <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
+          <line x1="1" y1="1" x2="23" y2="23"/>
+        </>
+      ) : (
+        <>
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </>
+      )}
+    </svg>
+  );
+
   return (
     <div className="auth-page">
       <div className="auth-container">
 
-        {/* Left — Form */}
         <div className="auth-form-section">
           <div className="auth-form-wrapper">
             <div className="auth-header">
@@ -110,25 +132,38 @@ const Login = () => {
                   disabled={loading}
                 />
               </div>
+
               <div className="form-group">
                 <label>{t('auth.password')}</label>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="Enter your password"
-                  autoComplete="current-password"
-                  disabled={loading}
-                />
+                <div className="password-wrapper">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="Enter your password"
+                    autoComplete="current-password"
+                    disabled={loading}
+                  />
+                  <button type="button" className="eye-btn" onClick={() => setShowPassword(p => !p)}>
+                    <EyeIcon show={showPassword} />
+                  </button>
+                </div>
               </div>
+
               <div className="form-options">
+                {/* ← UPDATED CHECKBOX */}
                 <label className="remember-me">
-                  <input type="checkbox" />
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
                   <span>{t('auth.remember_me')}</span>
                 </label>
                 <Link to="/forgot-password" className="forgot-link">{t('auth.forgot_password')}</Link>
               </div>
+
               <button type="submit" disabled={loading} className="submit-btn">
                 {loading ? t('auth.signing_in') : t('auth.sign_in').toUpperCase()}
               </button>
@@ -141,7 +176,6 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Right — Decorative */}
         <div className="auth-decoration">
           <div className="decoration-content">
             <h2>Hello, User!</h2>

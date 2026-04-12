@@ -255,12 +255,12 @@ const EditProduct = () => {
             <div className="form-row">
               <div className="form-group">
                 <label>Price (Rs.) *</label>
-                <input type="number" name="price" value={formData.price} onChange={handleChange} min="0" step="0.01" className={errors.price ? 'error' : ''} />
+                <input type="number" name="price" value={formData.price} onChange={handleChange} step="0.01" className={errors.price ? 'error' : ''} />
                 {errors.price && <p className="error-text">{errors.price}</p>}
               </div>
               <div className="form-group">
                 <label>Stock Quantity *</label>
-                <input type="number" name="stock_quantity" value={formData.stock_quantity} onChange={handleChange} min="0" className={errors.stock_quantity ? 'error' : ''} />
+                <input type="number" name="stock_quantity" value={formData.stock_quantity} onChange={handleChange} className={errors.stock_quantity ? 'error' : ''} />
                 {errors.stock_quantity && <p className="error-text">{errors.stock_quantity}</p>}
               </div>
               <div className="form-group">

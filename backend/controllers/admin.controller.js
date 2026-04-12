@@ -329,7 +329,7 @@ const approveProduct = async (req, res) => {
       if (product.seller.user.webpushr_sid) {
         sendPushNotification(product.seller.user.webpushr_sid, "✅ Product Approved!", `Your product "${product.name}" is now live on HastaKrafts!`, "http://localhost:5173/seller/dashboard").catch(() => {});
       }
-      // ✅ In-app
+      //  In-app
       createNotification(product.seller.user.user_id, "product_approved", "✅ Product Approved!", `Your product "${product.name}" is now live. Buyers can discover it now!`, "/seller/dashboard", { product_id: product.product_id }).catch(() => {});
     }
  
@@ -469,7 +469,7 @@ const toggleBlockUser = async (req, res) => {
     
     res.status(200).json({
       success: true,
-      message: newStatus ? "User unblocked successfully" : "User blocked successfully", // ✅ correct now
+      message: newStatus ? "User unblocked successfully" : "User blocked successfully", 
       data: { user_id: user.user_id, is_active: newStatus },
     });
   } catch (error) {
@@ -712,9 +712,9 @@ module.exports = {
   deleteReview,
   toggleBlockUser,
   getAllAuctionsAdmin,
-  approveAuction,   // 
-  rejectAuction,    // 
-  deleteAuction,    // 
+  approveAuction,   
+  rejectAuction,    
+  deleteAuction,    
   getAllBanners,
   createBanner,
   toggleBannerStatus,

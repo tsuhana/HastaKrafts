@@ -50,14 +50,12 @@ const Home = () => {
       const userId = currentUser?.user_id;
       if (!userId) return;
 
-      // 1. Get recommended product IDs from Flask ML API
       const mlRes = await fetch(`${ML_API}/recommend/user/${userId}?n=6`);
       const mlData = await mlRes.json();
       const recProductIds = mlData.recommendations?.map((r) => r.product_id) || [];
 
       if (recProductIds.length === 0) return;
 
-      // 2. Fetch full product details from Node.js backend
       const productPromises = recProductIds.map((id) =>
         productAPI.getProductById(id).catch(() => null)
       );
@@ -163,6 +161,8 @@ const Home = () => {
         await wishlistAPI.addToWishlist({ product_id: productId });
         setWishlistItems((prev) => new Set(prev).add(productId));
       }
+      // ✅ FIX: Notify navbar to update wishlist count
+      window.dispatchEvent(new Event('wishlistUpdated'));
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update wishlist');
     }

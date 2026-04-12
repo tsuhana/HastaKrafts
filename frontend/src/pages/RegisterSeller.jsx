@@ -16,10 +16,14 @@ const RegisterSeller = () => {
     shop_name: '', shop_description: '', address: '', city: '', citizenship_number: '',
     bank_name: '', bank_account_number: '', bank_account_name: '',
   });
-  const [errors, setErrors]   = useState({});
+  const [errors, setErrors]     = useState({});
   const [apiError, setApiError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [step, setStep]       = useState(1);
+  const [loading, setLoading]   = useState(false);
+  const [step, setStep]         = useState(1);
+
+  // ← ADD THESE 2
+  const [showPassword, setShowPassword]        = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -28,7 +32,6 @@ const RegisterSeller = () => {
     if (apiError) setApiError('');
   };
 
-  // Step-specific validation
   const validateStep1 = () => {
     const errs = {};
     const { full_name, email, password, confirmPassword, phone } = formData;
@@ -109,10 +112,7 @@ const RegisterSeller = () => {
     if (step === 1) errs = validateStep1();
     if (step === 2) errs = validateStep2();
 
-    if (Object.keys(errs).length > 0) {
-      setErrors(errs);
-      return;
-    }
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
     setErrors({});
     setApiError('');
     setStep(step + 1);
@@ -148,9 +148,26 @@ const RegisterSeller = () => {
     }
   };
 
-  // Helper to show field error
   const FieldError = ({ name }) =>
     errors[name] ? <span className="field-error">{errors[name]}</span> : null;
+
+  // ← EYE ICON SVG
+  const EyeIcon = ({ show }) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      {show ? (
+        <>
+          <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
+          <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
+          <line x1="1" y1="1" x2="23" y2="23"/>
+        </>
+      ) : (
+        <>
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </>
+      )}
+    </svg>
+  );
 
   return (
     <div className="seller-register-page">
@@ -162,7 +179,6 @@ const RegisterSeller = () => {
           <p className="seller-subtitle">Join our marketplace and showcase your handmade crafts</p>
         </div>
 
-        {/* Progress Steps */}
         <div className="progress-steps">
           <div className="progress-bar" data-step={step}>
             {[1, 2, 3].map((s, i) => (
@@ -183,7 +199,6 @@ const RegisterSeller = () => {
 
         <form onSubmit={step === 3 ? handleSubmit : handleNext} className="seller-form" noValidate>
 
-          {/* ── STEP 1: Personal Info ── */}
           {step === 1 && (
             <div className="form-step">
               <h3 className="step-heading">{t('profile.personal_info')}</h3>
@@ -223,31 +238,46 @@ const RegisterSeller = () => {
               </div>
 
               <div className="form-row">
+                {/* ← PASSWORD FIELD WITH EYE */}
                 <div className="form-group">
                   <label>{t('auth.password')} *</label>
-                  <input
-                    type="password" name="password" value={formData.password}
-                    onChange={handleChange} placeholder="At least 6 characters with a letter and number"
-                    autoComplete="new-password" disabled={loading}
-                    className={errors.password ? 'input-error' : ''}
-                  />
+                  <div className="password-wrapper">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="password" value={formData.password}
+                      onChange={handleChange}
+                      placeholder="At least 6 characters with a letter and number"
+                      autoComplete="new-password" disabled={loading}
+                      className={errors.password ? 'input-error' : ''}
+                    />
+                    <button type="button" className="eye-btn" onClick={() => setShowPassword(p => !p)}>
+                      <EyeIcon show={showPassword} />
+                    </button>
+                  </div>
                   <FieldError name="password" />
                 </div>
+
+                {/* ← CONFIRM PASSWORD FIELD WITH EYE */}
                 <div className="form-group">
                   <label>{t('auth.confirm_password')} *</label>
-                  <input
-                    type="password" name="confirmPassword" value={formData.confirmPassword}
-                    onChange={handleChange} placeholder="Re-enter your password"
-                    autoComplete="new-password" disabled={loading}
-                    className={errors.confirmPassword ? 'input-error' : ''}
-                  />
+                  <div className="password-wrapper">
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      name="confirmPassword" value={formData.confirmPassword}
+                      onChange={handleChange} placeholder="Re-enter your password"
+                      autoComplete="new-password" disabled={loading}
+                      className={errors.confirmPassword ? 'input-error' : ''}
+                    />
+                    <button type="button" className="eye-btn" onClick={() => setShowConfirmPassword(p => !p)}>
+                      <EyeIcon show={showConfirmPassword} />
+                    </button>
+                  </div>
                   <FieldError name="confirmPassword" />
                 </div>
               </div>
             </div>
           )}
 
-          {/* ── STEP 2: Shop Details ── */}
           {step === 2 && (
             <div className="form-step">
               <h3 className="step-heading">Shop Details</h3>
@@ -305,7 +335,6 @@ const RegisterSeller = () => {
             </div>
           )}
 
-          {/* ── STEP 3: Bank Info ── */}
           {step === 3 && (
             <div className="form-step">
               <h3 className="step-heading">Bank Information <span className="optional">(Optional)</span></h3>
@@ -343,7 +372,6 @@ const RegisterSeller = () => {
             </div>
           )}
 
-          {/* Navigation */}
           <div className="form-navigation">
             {step > 1 && (
               <button type="button" onClick={handleBack} className="back-btn" disabled={loading}>
@@ -351,11 +379,7 @@ const RegisterSeller = () => {
               </button>
             )}
             <button type="submit" disabled={loading} className="next-btn">
-              {loading
-                ? t('common.loading')
-                : step === 3
-                  ? t('common.submit')
-                  : t('common.next')}
+              {loading ? t('common.loading') : step === 3 ? t('common.submit') : t('common.next')}
             </button>
           </div>
         </form>

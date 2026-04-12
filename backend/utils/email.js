@@ -10,6 +10,8 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+const YEAR = new Date().getFullYear();
+
 // ==================== SHARED STYLES ====================
 const baseStyles = `
   body { font-family: Arial, sans-serif; line-height: 1.6; color: #2C1810; margin: 0; padding: 0; }
@@ -110,7 +112,7 @@ const sendOTPEmail = async (email, otp) => {
             </div>
 
             <div class="footer">
-              <p>&copy; 2025 HastaKrafts Nepal. All rights reserved.</p>
+              <p>&copy; ${YEAR} HastaKrafts Nepal. All rights reserved.</p>
               <p>This is an automated email. Please do not reply.</p>
             </div>
           </div>
@@ -217,7 +219,7 @@ const sendSellerApprovalEmail = async (email, sellerName, shopName) => {
             </div>
 
             <div class="footer">
-              <p>&copy; 2025 HastaKrafts Nepal. All rights reserved.</p>
+              <p>&copy; ${YEAR} HastaKrafts Nepal. All rights reserved.</p>
               <p>Supporting local artisans, preserving traditional crafts.</p>
             </div>
           </div>
@@ -311,7 +313,6 @@ const sendSellerRejectionEmail = async (email, sellerName, shopName, rejectionRe
                 <p style="margin:0 0 8px; font-weight:700; color:#2C1810;">
                   Tips for a successful application:
                 </p>
-
                 <ul>
                   <li>Upload a clear, valid citizenship document</li>
                   <li>Provide a complete shop description</li>
@@ -321,7 +322,7 @@ const sendSellerRejectionEmail = async (email, sellerName, shopName, rejectionRe
               </div>
 
               <center>
-                <p class="btn btn-reapply">Re-apply as Seller</p>
+                <a href="${reapplyUrl}" class="btn btn-reapply">Re-apply as Seller</a>
               </center>
 
               <p style="color:#78716C; font-size:13px;">
@@ -330,7 +331,7 @@ const sendSellerRejectionEmail = async (email, sellerName, shopName, rejectionRe
             </div>
 
             <div class="footer">
-              <p>&copy; 2025 HastaKrafts Nepal. All rights reserved.</p>
+              <p>&copy; ${YEAR} HastaKrafts Nepal. All rights reserved.</p>
               <p>Supporting local artisans, preserving traditional crafts.</p>
             </div>
           </div>
@@ -404,7 +405,7 @@ const sendContactReplyEmail = async (email, name, subject, userMessage, adminRep
             </div>
 
             <div class="footer">
-              <p>&copy; 2025 HastaKrafts Nepal</p>
+              <p>&copy; ${YEAR} HastaKrafts Nepal</p>
             </div>
           </div>
         </body>
@@ -434,9 +435,9 @@ const sendWelcomeEmail = async (email, fullName) => {
         <div class="content">
           <h2>Welcome, ${fullName}! 🎉</h2>
           <p>Your account is ready. Start exploring authentic Nepali handicrafts.</p>
-          <center><a href="http://localhost:5173/products" class="btn" style="background:#D4813F;">Shop Now</a></center>
+          <center><a href="${process.env.FRONTEND_URL || "http://localhost:5173"}/products" class="btn" style="background:#D4813F;">Shop Now</a></center>
         </div>
-        <div class="footer"><p>&copy; 2025 HastaKrafts Nepal</p></div>
+        <div class="footer"><p>&copy; ${YEAR} HastaKrafts Nepal</p></div>
       </div></body></html>
     `,
   };
@@ -453,5 +454,5 @@ module.exports = {
   sendSellerApprovalEmail,
   sendSellerRejectionEmail,
   sendContactReplyEmail,
-   sendWelcomeEmail,
+  sendWelcomeEmail,
 };

@@ -18,7 +18,6 @@ const NavBar = () => {
   const [showDropdown, setShowDropdown]     = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
-  //  Notification bell state
   const [notifications, setNotifications]         = useState([]);
   const [unreadNotifs, setUnreadNotifs]            = useState(0);
   const [showNotifDropdown, setShowNotifDropdown]  = useState(false);
@@ -40,7 +39,6 @@ const NavBar = () => {
     };
   }, []);
 
-  // Close notif dropdown on outside click
   useEffect(() => {
     const handler = (e) => {
       if (notifRef.current && !notifRef.current.contains(e.target)) {
@@ -51,7 +49,6 @@ const NavBar = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  //  Real-time socket notification listener
   useEffect(() => {
     if (!isLoggedIn) return;
     const handleNew = (notif) => {
@@ -65,8 +62,10 @@ const NavBar = () => {
   }, [isLoggedIn]);
 
   const checkLoginStatus = () => {
-    const token    = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
+    // ← CHANGED: sessionStorage pani check garcha
+    const token    = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const userData = localStorage.getItem('user')  || sessionStorage.getItem('user');
+
     if (token && userData) {
       setIsLoggedIn(true);
       const parsedUser = JSON.parse(userData);
@@ -113,7 +112,6 @@ const NavBar = () => {
     } catch { setUserPoints(0); }
   };
 
-  //  Fetch notifications from backend
   const fetchNotifications = async () => {
     try {
       const res = await notificationAPI.getAll();
@@ -149,6 +147,8 @@ const NavBar = () => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    sessionStorage.removeItem('token');  // ← ADDED
+    sessionStorage.removeItem('user');   // ← ADDED
     setIsLoggedIn(false); setUser(null);
     setCartCount(0); setWishlistCount(0); setUnreadMessages(0); setUserPoints(0);
     setNotifications([]); setUnreadNotifs(0); setShowDropdown(false);
@@ -215,7 +215,6 @@ const NavBar = () => {
                 </Link>
               )}
 
-              {/*  NOTIFICATION BELL */}
               <div className="notif-bell-container" ref={notifRef}>
                 <button
                   className="nav-icon-btn notif-bell-btn"
@@ -342,7 +341,6 @@ const NavBar = () => {
             </>
           ) : (
             <>
-              {/* Language switcher in mobile menu for logged-out users */}
               <div className="mobile-link" style={{ paddingTop: '0.5rem', paddingBottom: '0.5rem' }}>
                 <LanguageSwitcher />
               </div>

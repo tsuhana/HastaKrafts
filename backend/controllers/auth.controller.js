@@ -166,7 +166,7 @@ const registerSeller = async (req, res) => {
       return { user, seller };
     });
 
-    // ✅ Notify all admins of new seller application
+    //  Notify all admins of new seller application
     try {
       const admins = await db.User.findAll({ where: { role: "admin" } });
       for (const admin of admins) {
@@ -339,6 +339,7 @@ const requestPasswordReset = async (req, res) => {
       console.log("[FORGOT PASSWORD] User not found for email:", email);
       return res.status(200).json({
         success: true,
+        emailExists: false, // ← ADDED
         message: "If that email exists, an OTP has been sent",
       });
     }
@@ -375,6 +376,7 @@ const requestPasswordReset = async (req, res) => {
 
     return res.status(200).json({
       success: true,
+      emailExists: true, // ← ADDED
       message: "OTP sent to your email. Please check your inbox.",
       data: {
         email: user.email,
@@ -388,7 +390,6 @@ const requestPasswordReset = async (req, res) => {
     });
   }
 };
-
 // ==================== VERIFY OTP ====================
 const verifyOTP = async (req, res) => {
   try {
@@ -526,6 +527,11 @@ const googleAuthSuccess = (req, res) => {
   try {
     if (!req.user) {
       return res.redirect(`${process.env.FRONTEND_URL}/login?error=auth_failed`);
+    }
+
+    // ← ADD THESE 3 LINES
+    if (req.user.isNewUser) {
+      sendWelcomeEmail(req.user.email, req.user.full_name).catch(() => {});
     }
 
     const token = jwt.sign(

@@ -73,6 +73,8 @@ const Wishlist = () => {
         await wishlistAPI.removeFromWishlist(productId);
         const updated = wishlist.filter(item => item.product_id !== productId);
         setWishlist(updated);
+        // ✅ FIX: Notify navbar to update wishlist count
+        window.dispatchEvent(new Event('wishlistUpdated'));
         // If we removed the last item on this page, go back one page
         const newTotalPages = Math.ceil(updated.length / WISHLIST_PER_PAGE);
         if (page > newTotalPages && newTotalPages > 0) setPage(newTotalPages);
@@ -104,6 +106,8 @@ const Wishlist = () => {
         setWishlist([]);
         setPage(1);
         toast.success('Wishlist cleared');
+        // ✅ FIX: Notify navbar to update wishlist count
+        window.dispatchEvent(new Event('wishlistUpdated'));
       } catch (err) {
         toast.error('Failed to clear wishlist');
       }

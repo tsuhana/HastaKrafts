@@ -333,6 +333,43 @@
   color: var(--secondary-color);
 }
 
+.input-error {
+  border: 2px solid #DC2626 !important;
+  background: #FFF5F5 !important;
+}
+
+.field-error {
+  color: #DC2626;
+  font-size: 0.85rem;
+  margin-top: 2px;
+  display: block;
+}
+.password-wrapper {
+  position: relative;
+}
+
+.password-wrapper input {
+  width: 100%;
+  padding-right: 42px;
+}
+
+.eye-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #78716C;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.eye-btn:hover {
+  color: #D4813F;
+}
 /* ==================== RESPONSIVE ==================== */
 @media (max-width: 768px) {
   .seller-register-container {

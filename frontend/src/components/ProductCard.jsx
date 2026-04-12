@@ -59,6 +59,8 @@ const ProductCard = ({ product, showWishlist = true }) => {
         await wishlistAPI.addToWishlist({ product_id: product.product_id });
         setInWishlist(true);
       }
+      // ✅ FIX: Notify navbar to update wishlist count
+      window.dispatchEvent(new Event('wishlistUpdated'));
     } catch (err) {
       console.error('Wishlist toggle error:', err);
       alert(err.response?.data?.message || 'Failed to update wishlist');
@@ -66,8 +68,6 @@ const ProductCard = ({ product, showWishlist = true }) => {
       setWishlistLoading(false);
     }
   };
-
-  //  REMOVED: getStatusBadge() — no more "Live" badge shown to buyers
 
   return (
     <div className="product-card">
@@ -86,21 +86,18 @@ const ProductCard = ({ product, showWishlist = true }) => {
             </div>
           )}
 
-          {/*  Discount badge — top LEFT */}
           {product.has_discount && product.discount_percentage > 0 && (
             <span className="discount-badge">
               -{product.discount_percentage}%
             </span>
           )}
 
-          {/*  Featured badge — top RIGHT, now dark red and visible */}
           {product.is_featured && (
             <span className="featured-badge">
               Featured
             </span>
           )}
 
-          {/* Wishlist Heart Button */}
           {isLoggedIn && isBuyer && showWishlist && (
             <button
               className={`wishlist-btn ${inWishlist ? 'active' : ''}`}

@@ -256,7 +256,32 @@
   color: var(--primary-color);
   transform: translateY(-2px);
 }
+.password-wrapper {
+  position: relative;
+}
 
+.password-wrapper input {
+  width: 100%;
+  padding-right: 42px;
+}
+
+.eye-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #78716C;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.eye-btn:hover {
+  color: #D4813F;
+}
 @media (max-width: 968px) {
   .auth-decoration {
     display: none;

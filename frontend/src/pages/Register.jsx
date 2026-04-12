@@ -11,14 +11,15 @@ const Register = () => {
   const [formData, setFormData] = useState({
     full_name: '', email: '', password: '', confirmPassword: '', phone: '',
   });
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors]     = useState({});
   const [apiError, setApiError] = useState('');
   const [loading, setLoading]   = useState(false);
+  const [showPassword, setShowPassword]               = useState(false); // ← ADD
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // ← ADD
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    // Clear field error on change
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
     if (apiError) setApiError('');
   };
@@ -27,7 +28,6 @@ const Register = () => {
     const errs = {};
     const { full_name, email, password, confirmPassword, phone } = formData;
 
-    // Full name — letters and spaces only, min 2 real characters
     if (!full_name.trim()) {
       errs.full_name = 'Full name is required';
     } else if (full_name.trim().replace(/\s+/g, '').length < 2) {
@@ -36,19 +36,16 @@ const Register = () => {
       errs.full_name = 'Full name must contain only letters and spaces';
     }
 
-    // Email
     if (!email.trim()) {
       errs.email = 'Email is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       errs.email = 'Please provide a valid email address';
     }
 
-    // Phone — optional but must be valid if provided
     if (phone && !/^[0-9+\-\s]{7,15}$/.test(phone.trim())) {
       errs.phone = 'Please provide a valid phone number';
     }
 
-    // Password
     if (!password) {
       errs.password = 'Password is required';
     } else if (password.length < 6) {
@@ -59,7 +56,6 @@ const Register = () => {
       errs.password = 'Password must contain at least one number';
     }
 
-    // Confirm password
     if (!confirmPassword) {
       errs.confirmPassword = 'Please confirm your password';
     } else if (password !== confirmPassword) {
@@ -99,11 +95,27 @@ const Register = () => {
     window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/google`;
   };
 
+  const EyeIcon = ({ show }) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      {show ? (
+        <>
+          <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
+          <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
+          <line x1="1" y1="1" x2="23" y2="23"/>
+        </>
+      ) : (
+        <>
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </>
+      )}
+    </svg>
+  );
+
   return (
     <div className="auth-page">
       <div className="auth-container register-container">
 
-        {/* Left — Decorative */}
         <div className="auth-decoration">
           <div className="decoration-content">
             <h2>{t('auth.welcome_back')}</h2>
@@ -112,7 +124,6 @@ const Register = () => {
           </div>
         </div>
 
-        {/* Right — Form */}
         <div className="auth-form-section">
           <div className="auth-form-wrapper">
             <div className="auth-header">
@@ -141,13 +152,9 @@ const Register = () => {
               <div className="form-group">
                 <label>{t('auth.full_name')}</label>
                 <input
-                  type="text"
-                  name="full_name"
-                  value={formData.full_name}
-                  onChange={handleChange}
-                  placeholder="Enter your full name"
-                  autoComplete="name"
-                  disabled={loading}
+                  type="text" name="full_name" value={formData.full_name}
+                  onChange={handleChange} placeholder="Enter your full name"
+                  autoComplete="name" disabled={loading}
                   className={errors.full_name ? 'input-error' : ''}
                 />
                 {errors.full_name && <span className="field-error">{errors.full_name}</span>}
@@ -156,13 +163,9 @@ const Register = () => {
               <div className="form-group">
                 <label>{t('auth.email')}</label>
                 <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="Enter your email"
-                  autoComplete="email"
-                  disabled={loading}
+                  type="email" name="email" value={formData.email}
+                  onChange={handleChange} placeholder="Enter your email"
+                  autoComplete="email" disabled={loading}
                   className={errors.email ? 'input-error' : ''}
                 />
                 {errors.email && <span className="field-error">{errors.email}</span>}
@@ -171,13 +174,9 @@ const Register = () => {
               <div className="form-group">
                 <label>{t('auth.phone')} <span className="optional"></span></label>
                 <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  placeholder="9800000000"
-                  autoComplete="tel"
-                  disabled={loading}
+                  type="tel" name="phone" value={formData.phone}
+                  onChange={handleChange} placeholder="9800000000"
+                  autoComplete="tel" disabled={loading}
                   className={errors.phone ? 'input-error' : ''}
                 />
                 {errors.phone && <span className="field-error">{errors.phone}</span>}
@@ -185,31 +184,36 @@ const Register = () => {
 
               <div className="form-group">
                 <label>{t('auth.password')}</label>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="At least 6 characters with a letter and number"
-                  autoComplete="new-password"
-                  disabled={loading}
-                  className={errors.password ? 'input-error' : ''}
-                />
+                <div className="password-wrapper">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password" value={formData.password}
+                    onChange={handleChange}
+                    placeholder="At least 6 characters with a letter and number"
+                    autoComplete="new-password" disabled={loading}
+                    className={errors.password ? 'input-error' : ''}
+                  />
+                  <button type="button" className="eye-btn" onClick={() => setShowPassword(p => !p)}>
+                    <EyeIcon show={showPassword} />
+                  </button>
+                </div>
                 {errors.password && <span className="field-error">{errors.password}</span>}
               </div>
 
               <div className="form-group">
                 <label>{t('auth.confirm_password')}</label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  placeholder="Re-enter your password"
-                  autoComplete="new-password"
-                  disabled={loading}
-                  className={errors.confirmPassword ? 'input-error' : ''}
-                />
+                <div className="password-wrapper">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    name="confirmPassword" value={formData.confirmPassword}
+                    onChange={handleChange} placeholder="Re-enter your password"
+                    autoComplete="new-password" disabled={loading}
+                    className={errors.confirmPassword ? 'input-error' : ''}
+                  />
+                  <button type="button" className="eye-btn" onClick={() => setShowConfirmPassword(p => !p)}>
+                    <EyeIcon show={showConfirmPassword} />
+                  </button>
+                </div>
                 {errors.confirmPassword && <span className="field-error">{errors.confirmPassword}</span>}
               </div>
 

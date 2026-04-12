@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { userAPI, orderAPI, sellerAPI } from '../api/axios';
+import { userAPI, orderAPI, sellerAPI, pointsAPI } from '../api/axios';
+import Icons from '../utils/icons';
 import { useToast } from '../context/ToastContext';
 import { useTranslation } from 'react-i18next';
 import {
@@ -111,7 +112,6 @@ const UserProfile = () => {
     return Object.keys(e).length === 0;
   };
 
-  // FIX 1: Added letter + number check to match backend user.validator.js
   const validatePasswordForm = () => {
     const e = {};
     if (!passwordData.currentPassword)
@@ -147,7 +147,6 @@ const UserProfile = () => {
     }
   };
 
-  // FIX 2: Send current_password and new_password (snake_case) to match backend
   const handleChangePassword = async (e) => {
     e.preventDefault();
     if (!validatePasswordForm()) return;
@@ -269,6 +268,15 @@ const UserProfile = () => {
               onClick={() => setActiveTab('orders')}
             >
               {t('profile.order_history')}
+            </button>
+          )}
+          {/* ✅ Points tab */}
+          {isBuyer && (
+            <button
+              className={`tab-btn ${activeTab === 'points' ? 'active' : ''}`}
+              onClick={() => setActiveTab('points')}
+            >
+              <Icons.Gift size={15} style={{ marginRight: 6 }} />Points History
             </button>
           )}
           {isSeller && (
@@ -477,6 +485,13 @@ const UserProfile = () => {
             </div>
           )}
 
+          {/* ✅ Points History (buyers only) */}
+          {activeTab === 'points' && isBuyer && (
+            <div className="tab-content">
+              <PointsHistory t={t} />
+            </div>
+          )}
+
           {/* ── Shop Info (sellers only) ── */}
           {activeTab === 'shop' && isSeller && (
             <div className="tab-content">
@@ -653,6 +668,125 @@ const OrderHistory = ({ t }) => {
             Showing {(page - 1) * ORDERS_PER_PAGE + 1}–{Math.min(page * ORDERS_PER_PAGE, filtered.length)} of {filtered.length}
           </p>
         </>
+      )}
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════
+// ✅ POINTS HISTORY
+// ══════════════════════════════════════════════════════════════
+const PointsHistory = ({ t }) => {
+  const [history, setHistory] = useState([]);
+  const [balance, setBalance] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPoints = async () => {
+      try {
+        const [balRes, histRes] = await Promise.all([
+          pointsAPI.getBalance(),
+          pointsAPI.getHistory(),
+        ]);
+        if (balRes.data.success) setBalance(balRes.data.data.total_points || 0);
+        if (histRes.data.success) setHistory(histRes.data.data || []);
+      } catch (err) {
+        console.error('Points fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPoints();
+  }, []);
+
+  if (loading) return <div className="loading">{t('common.loading')}</div>;
+
+  return (
+    <div>
+      <h2 style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icons.Gift size={22} /> Points & Rewards</h2>
+
+      {/* Balance Card */}
+      <div style={{
+        background: 'linear-gradient(135deg, #b86e38, #d4813f)',
+        borderRadius: 16,
+        padding: '1.5rem 2rem',
+        color: '#fff',
+        marginBottom: '1.5rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '1rem',
+      }}>
+        <Icons.Dollar size={40} style={{ color: '#fff', opacity: 0.9 }} />
+        <div>
+          <div style={{ fontSize: '0.8rem', opacity: 0.85, fontWeight: 600, letterSpacing: '0.05em' }}>
+            TOTAL POINTS BALANCE
+          </div>
+          <div style={{ fontSize: '2.5rem', fontWeight: 800, lineHeight: 1 }}>
+            {balance}
+          </div>
+          <div style={{ fontSize: '0.75rem', opacity: 0.8, marginTop: 4 }}>
+            {balance >= 150
+              ? <><Icons.CheckCircle size={14} style={{ marginRight: 4, verticalAlign: 'middle' }} />Eligible for free delivery!</>
+              : `Need ${150 - balance} more points for free delivery`}
+          </div>
+        </div>
+      </div>
+
+      {/* History Table */}
+      <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#2C1810', marginBottom: '1rem' }}>
+        Transaction History
+      </h3>
+
+      {history.length === 0 ? (
+        <div className="empty-state">
+          <p>No points transactions yet. Place an order to earn points!</p>
+        </div>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+            <thead>
+              <tr style={{ background: '#faf7f2', borderBottom: '2px solid #e8e0d5' }}>
+                <th style={{ padding: '0.75rem 1rem', textAlign: 'left', color: '#5D4E37', fontWeight: 700 }}>Date</th>
+                <th style={{ padding: '0.75rem 1rem', textAlign: 'left', color: '#5D4E37', fontWeight: 700 }}>Description</th>
+                <th style={{ padding: '0.75rem 1rem', textAlign: 'left', color: '#5D4E37', fontWeight: 700 }}>Type</th>
+                <th style={{ padding: '0.75rem 1rem', textAlign: 'right', color: '#5D4E37', fontWeight: 700 }}>Points</th>
+              </tr>
+            </thead>
+            <tbody>
+              {history.map((entry, index) => {
+                const isEarned = entry.transaction_type === 'earned' || entry.points > 0;
+                return (
+                  <tr key={index} style={{ borderBottom: '1px solid #f0ebe5' }}>
+                    <td style={{ padding: '0.75rem 1rem', color: '#8B6F5E' }}>
+                      {new Date(entry.created_at || entry.createdAt).toLocaleDateString('en-US', {
+                        year: 'numeric', month: 'short', day: 'numeric'
+                      })}
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem', color: '#2C1810' }}>
+                      {entry.description || entry.reason || 'Points transaction'}
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem' }}>
+                      <span style={{
+                        padding: '2px 10px',
+                        borderRadius: 999,
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        background: isEarned ? '#D1FAE5' : '#FEE2E2',
+                        color: isEarned ? '#065F46' : '#991B1B',
+                      }}>
+                        {isEarned ? 'Earned' : 'Redeemed'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 700,
+                      color: isEarned ? '#059669' : '#DC2626', fontSize: '1rem' }}>
+                      {isEarned ? '+' : '-'}{Math.abs(entry.points)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

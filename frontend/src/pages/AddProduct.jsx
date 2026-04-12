@@ -272,7 +272,6 @@ const AddProduct = () => {
                   value={formData.price}
                   onChange={handleChange}
                   placeholder="e.g., 1500"
-                  min="0"
                   step="0.01"
                   className={errors.price ? 'error' : ''}
                 />
@@ -287,7 +286,6 @@ const AddProduct = () => {
                   value={formData.stock_quantity}
                   onChange={handleChange}
                   placeholder="e.g., 10"
-                  min="0"
                   className={errors.stock_quantity ? 'error' : ''}
                 />
                 {errors.stock_quantity && <p className="error-text">{errors.stock_quantity}</p>}

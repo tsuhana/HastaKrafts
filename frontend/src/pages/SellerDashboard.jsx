@@ -27,7 +27,7 @@ import { BsShop, BsBoxSeam } from "react-icons/bs";
 
 const API_URL = "http://localhost:5000";
 
-// ── Icon components matching the shape expected in the codebase ──
+// ── Icon components ──
 const OverviewIcon  = () => <FiGrid size={16} />;
 const AnalyticsIcon = () => <FiTrendingUp size={16} />;
 const OrdersIcon    = () => <FiPackage size={16} />;
@@ -108,7 +108,6 @@ const KpiCard = ({ label, value, meta, color, trend, onClick }) => (
   </div>
 );
 
-// ── Distinct auction stat card (not colored gradient like KpiCard) ──
 const AuctionStatCard = ({ label, value, meta, variant, icon }) => (
   <div className={`sd-auction-stat-card asc-${variant}`}>
     <div className="sd-asc-icon">{icon}</div>
@@ -197,6 +196,9 @@ const SellerDashboard = () => {
   });
   const [analyticsLoaded, setAnalyticsLoaded] = useState(false);
   const [confirmModal, setConfirmModal]       = useState({ isOpen: false, productId: null, type: "product", auctionId: null, auctionAction: null });
+
+  // ── Mobile sidebar state ──
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [auctionActionLoading, setAuctionActionLoading] = useState({});
 
@@ -497,8 +499,23 @@ const SellerDashboard = () => {
 
       <div className="seller-layout">
 
+        {/* ── Mobile overlay ── */}
+        <div
+          className={`sidebar-overlay ${sidebarOpen ? "active" : ""}`}
+          onClick={() => setSidebarOpen(false)}
+        />
+
+        {/* ── Mobile toggle button ── */}
+        <button
+          className="sidebar-toggle-btn"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          aria-label="Toggle sidebar"
+        >
+          ☰
+        </button>
+
         {/* ── SIDEBAR ── */}
-        <aside className="seller-sidebar">
+        <aside className={`seller-sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
           <div className="sd-sidebar-brand">
             <div className="sd-brand-mark">हK</div>
             <div>
@@ -519,7 +536,11 @@ const SellerDashboard = () => {
               { key: "blogs",     label: "My Blogs",        icon: <BlogIcon /> },
               { key: "shop",      label: "Shop Management", icon: <ShopIcon /> },
             ].map((item) => (
-              <button key={item.key} className={`sd-nav-item ${activeTab === item.key ? "active" : ""}`} onClick={() => setActiveTab(item.key)}>
+              <button
+                key={item.key}
+                className={`sd-nav-item ${activeTab === item.key ? "active" : ""}`}
+                onClick={() => { setActiveTab(item.key); setSidebarOpen(false); }}
+              >
                 <span className="sd-nav-icon">{item.icon}</span>
                 <span className="sd-nav-label-text">{item.label}</span>
                 {item.badge > 0 && <span className="sd-badge">{item.badge}</span>}
@@ -528,10 +549,10 @@ const SellerDashboard = () => {
           </nav>
 
           <div className="sd-sidebar-actions">
-            <Link to="/seller/add-product" className="sd-action-btn">
+            <Link to="/seller/add-product" className="sd-action-btn" onClick={() => setSidebarOpen(false)}>
               <span className="sd-action-icon"><AddIcon /></span> Add Product
             </Link>
-            <Link to="/seller/create-auction" className="sd-action-btn sd-action-secondary">
+            <Link to="/seller/create-auction" className="sd-action-btn sd-action-secondary" onClick={() => setSidebarOpen(false)}>
               <span className="sd-action-icon"><AuctionIcon /></span> Create Auction
             </Link>
           </div>
@@ -1068,34 +1089,13 @@ const SellerDashboard = () => {
 
               {auctions.length > 0 && (
                 <div className="sd-auction-stat-grid">
-                  <AuctionStatCard
-                    variant="total"
-                    label="Total Auctions"
-                    value={auctions.length}
-                    meta="All time"
-                    icon={<AuctionIcon />}
-                  />
-                  <AuctionStatCard
-                    variant="live"
-                    label="Live Now"
-                    value={auctions.filter((a) => a.status === "live").length}
-                    meta="Active bidding"
-                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
-                  />
-                  <AuctionStatCard
-                    variant="upcoming"
-                    label="Upcoming"
-                    value={auctions.filter((a) => a.status === "upcoming").length}
-                    meta="Scheduled"
-                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>}
-                  />
-                  <AuctionStatCard
-                    variant="ended"
-                    label="Ended"
-                    value={auctions.filter((a) => a.status === "ended").length}
-                    meta={`${auctions.filter((a) => a.status === "ended" && a.winner_id).length} with winner`}
-                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}><polyline points="20 6 9 17 4 12"/></svg>}
-                  />
+                  <AuctionStatCard variant="total" label="Total Auctions" value={auctions.length} meta="All time" icon={<AuctionIcon />} />
+                  <AuctionStatCard variant="live" label="Live Now" value={auctions.filter((a) => a.status === "live").length} meta="Active bidding"
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>} />
+                  <AuctionStatCard variant="upcoming" label="Upcoming" value={auctions.filter((a) => a.status === "upcoming").length} meta="Scheduled"
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>} />
+                  <AuctionStatCard variant="ended" label="Ended" value={auctions.filter((a) => a.status === "ended").length} meta={`${auctions.filter((a) => a.status === "ended" && a.winner_id).length} with winner`}
+                    icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}><polyline points="20 6 9 17 4 12"/></svg>} />
                 </div>
               )}
 
@@ -1188,33 +1188,22 @@ const SellerDashboard = () => {
                             </span>
 
                             {canEndEarly && (
-                              <button
-                                className="sd-btn-outline"
-                                style={{ fontSize: "0.72rem", padding: "4px 10px", whiteSpace: "nowrap" }}
-                                disabled={isActionLoading}
-                                onClick={() => handleEndEarly(auction.auction_id)}
-                              >
+                              <button className="sd-btn-outline" style={{ fontSize: "0.72rem", padding: "4px 10px", whiteSpace: "nowrap" }}
+                                disabled={isActionLoading} onClick={() => handleEndEarly(auction.auction_id)}>
                                 {auctionActionLoading?.[auction.auction_id] === "ending" ? "Ending…" : "End Early"}
                               </button>
                             )}
 
                             {canCancel && (
-                              <button
-                                style={{ fontSize: "0.72rem", padding: "4px 10px", color: "#92400E", borderColor: "#FDE68A", background: "#FEF3C7", border: "1.5px solid #FDE68A", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
-                                disabled={isActionLoading}
-                                onClick={() => handleCancelAuction(auction.auction_id)}
-                              >
+                              <button style={{ fontSize: "0.72rem", padding: "4px 10px", color: "#92400E", borderColor: "#FDE68A", background: "#FEF3C7", border: "1.5px solid #FDE68A", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
+                                disabled={isActionLoading} onClick={() => handleCancelAuction(auction.auction_id)}>
                                 {auctionActionLoading?.[auction.auction_id] === "cancelling" ? "Cancelling…" : "Cancel"}
                               </button>
                             )}
 
                             {canDelete && (
-                              <button
-                                className="sd-btn-icon sd-btn-icon-danger"
-                                style={{ fontSize: "0.72rem", padding: "4px 10px", flex: "none", whiteSpace: "nowrap" }}
-                                disabled={isActionLoading}
-                                onClick={() => handleDeleteSellerAuction(auction.auction_id)}
-                              >
+                              <button className="sd-btn-icon sd-btn-icon-danger" style={{ fontSize: "0.72rem", padding: "4px 10px", flex: "none", whiteSpace: "nowrap" }}
+                                disabled={isActionLoading} onClick={() => handleDeleteSellerAuction(auction.auction_id)}>
                                 {auctionActionLoading?.[auction.auction_id] === "deleting" ? "Deleting…" : "Delete"}
                               </button>
                             )}
@@ -1316,11 +1305,8 @@ const SellerDashboard = () => {
                           </div>
                         )}
                         <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.5rem" }}>
-                          <button
-                            className="sd-btn-outline"
-                            style={{ fontSize: "0.78rem", padding: "5px 12px" }}
-                            onClick={() => setReviewReplyModal({ open: true, review, text: "" })}
-                          >
+                          <button className="sd-btn-outline" style={{ fontSize: "0.78rem", padding: "5px 12px" }}
+                            onClick={() => setReviewReplyModal({ open: true, review, text: "" })}>
                             Reply
                           </button>
                         </div>

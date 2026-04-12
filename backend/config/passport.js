@@ -22,7 +22,7 @@ passport.use(
             user.profile_image = profile_image;
             await user.save();
           }
-          return done(null, user);
+          return done(null, { ...user.toJSON(), isNewUser: false }); // ← CHANGED
         }
 
         user = await db.User.create({
@@ -33,7 +33,8 @@ passport.use(
           profile_image,
         });
 
-        return done(null, user);
+        return done(null, { ...user.toJSON(), isNewUser: true }); // ← CHANGED
+
       } catch (error) {
         console.error("Google Strategy error:", error);
         return done(error, null);
