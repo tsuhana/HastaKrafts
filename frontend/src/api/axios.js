@@ -7,7 +7,7 @@ const API = axios.create({
 
 API.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')|| sessionStorage.getItem('token');
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token')|| sessionStorage.getItem('token');
     if (token) config.headers.Authorization = `Bearer ${token}`;
     const language = localStorage.getItem('language') || 'en';
     config.headers['Accept-Language'] = language;
@@ -125,6 +125,7 @@ export const cartAPI = {
 // ORDERS
 export const orderAPI = {
   createOrder: (data) => API.post("/orders/create", data),
+  createAuctionOrder: (data) => API.post("/orders/auction-checkout", data), // ✅ NEW
   getMyOrders: () => API.get("/orders/my-orders"),
   getOrderById: (id) => API.get(`/orders/${id}`),
   verifyKhaltiPayment: ({ pidx, order_id }) =>

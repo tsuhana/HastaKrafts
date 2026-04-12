@@ -63,8 +63,8 @@ const NavBar = () => {
 
   const checkLoginStatus = () => {
     // ← CHANGED: sessionStorage pani check garcha
-    const token    = localStorage.getItem('token') || sessionStorage.getItem('token');
-    const userData = localStorage.getItem('user')  || sessionStorage.getItem('user');
+    const token    = localStorage.getItem('token') || sessionStorage.getItem('token') || sessionStorage.getItem('token');
+    const userData = localStorage.getItem('user') || sessionStorage.getItem('user')  || sessionStorage.getItem('user');
 
     if (token && userData) {
       setIsLoggedIn(true);

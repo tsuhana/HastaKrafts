@@ -65,8 +65,6 @@ Product.belongsTo(Seller, { foreignKey: "seller_id", as: "seller" });
 Category.hasMany(Product, { foreignKey: "category_id", as: "products" });
 Product.belongsTo(Category, { foreignKey: "category_id", as: "category" });
 
-//  Renamed alias from "translations" to "productTranslations" to avoid
-// collision with the existing JSONB "translations" column on Product model
 Product.hasMany(ProductTranslation, { foreignKey: "product_id", as: "productTranslations" });
 ProductTranslation.belongsTo(Product, { foreignKey: "product_id", as: "product" });
 
@@ -90,11 +88,15 @@ Order.belongsTo(User, { foreignKey: "user_id", as: "user" });
 Order.hasMany(OrderItem, { foreignKey: "order_id", as: "items" });
 OrderItem.belongsTo(Order, { foreignKey: "order_id", as: "order" });
 
-Product.hasMany(OrderItem, { foreignKey: "product_id", as: "orderItems" });
-OrderItem.belongsTo(Product, { foreignKey: "product_id", as: "product" });
+Product.hasMany(OrderItem, { foreignKey: "product_id", as: "orderItems",constraints: false });
+OrderItem.belongsTo(Product, { foreignKey: "product_id", as: "product", constraints: false  });
 
 Seller.hasMany(OrderItem, { foreignKey: "seller_id", as: "orderItems" });
 OrderItem.belongsTo(Seller, { foreignKey: "seller_id", as: "seller" });
+
+// Order ↔ Auction (auction winner checkout)
+Auction.hasMany(Order, { foreignKey: "auction_id", as: "auctionOrders", constraints: false  });
+Order.belongsTo(Auction, { foreignKey: "auction_id", as: "auction" , constraints: false });
 
 // ── Auction / Bid ─────────────────────────────────────────────
 Seller.hasMany(Auction, { foreignKey: "seller_id", as: "auctions" });

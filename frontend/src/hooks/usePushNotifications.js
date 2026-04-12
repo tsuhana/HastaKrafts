@@ -8,7 +8,8 @@ const usePushNotifications = () => {
     const saveSid = async (sid) => {
       try {
         if (!sid) return;
-        const token = localStorage.getItem("token");
+        // FIX: localStorage || sessionStorage (Remember Me support)
+        const token = localStorage.getItem("token") || sessionStorage.getItem("token");
         if (!token) { console.warn("❌ No token found"); return; }
         await userAPI.savePushSid({ sid });
         console.log("✅ Push sid saved:", sid);

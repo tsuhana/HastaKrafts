@@ -503,7 +503,16 @@ const endAuctionEarly = async (req, res) => {
         { auction_id: parseInt(id) }
       ).catch(() => {});
     }
-
+    // Auto message to winner from seller
+if (highestBid?.user && auction.seller) {
+  db.Message.create({
+    sender_id: auction.seller.seller_id,
+    receiver_id: highestBid.user.user_id,
+    auction_id: parseInt(id),
+    message_text: `Congratulations! You won the auction for "${auction.title}" with Rs. ${parseFloat(highestBid.bid_amount).toLocaleString()}. Please contact us to arrange payment and delivery.`,
+    is_read: false,
+  }).catch(() => {});
+}
     // In-app to seller — auction ended
     createNotification(
       req.user.user_id,
@@ -542,7 +551,27 @@ const cancelAuction = async (req, res) => {
     }
 
     await auction.update({ status: "cancelled" });
-    return res.status(200).json({ success: true, message: "Auction cancelled successfully", data: auction });
+
+// Notify all bidders
+const bids = await db.Bid.findAll({
+  where: { auction_id: id },
+  include: [{ model: db.User, as: "user", attributes: ["user_id"] }],
+});
+const uniqueBidders = [...new Map(bids.map(b => [b.user_id, b])).values()];
+for (const bid of uniqueBidders) {
+  if (bid.user?.user_id) {
+    createNotification(
+      bid.user.user_id,
+      "auction_cancelled",
+      "❌ Auction Cancelled",
+      `The auction "${auction.title}" has been cancelled by the seller.`,
+      "/auctions",
+      { auction_id: parseInt(id) }
+    ).catch(() => {});
+  }
+}
+
+return res.status(200).json({ success: true, message: "Auction cancelled successfully", data: auction });
   } catch (error) {
     console.error("Cancel auction error:", error);
     return res.status(500).json({ success: false, message: "Failed to cancel auction" });

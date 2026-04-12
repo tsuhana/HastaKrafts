@@ -65,6 +65,12 @@ const User = sequelize.define(
       type: DataTypes.STRING(255),
       allowNull: true,
     },
+    
+    preferred_language: {
+      type: DataTypes.STRING(10),
+      allowNull: true,
+      defaultValue: 'en',
+    },
   },
   {
     tableName: "users",

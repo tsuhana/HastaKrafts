@@ -16,8 +16,8 @@ const ProductCard = ({ product, showWishlist = true }) => {
   const [inWishlist, setInWishlist] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
 
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-  const isLoggedIn = !!localStorage.getItem('token');
+  const currentUser = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || '{}');
+  const isLoggedIn = !!localStorage.getItem('token') || sessionStorage.getItem('token');
   const isBuyer = currentUser?.role === 'buyer';
 
   useEffect(() => {

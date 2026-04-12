@@ -17,12 +17,20 @@ const Order = sequelize.define(
         key: "user_id",
       },
     },
+
+    // Auction reference (null for normal orders)
+    auction_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null,
+    },
+
     order_number: {
       type: DataTypes.STRING(50),
       unique: true,
       allowNull: false,
     },
-    
+
     // Delivery Info
     delivery_name: {
       type: DataTypes.STRING(100),
@@ -52,7 +60,7 @@ const Order = sequelize.define(
     delivery_landmark: {
       type: DataTypes.STRING(255),
     },
-    
+
     // Payment Info
     payment_method: {
       type: DataTypes.STRING(50),
@@ -62,7 +70,7 @@ const Order = sequelize.define(
       type: DataTypes.STRING(50),
       defaultValue: "pending",
     },
-    
+
     // Order Info
     subtotal: {
       type: DataTypes.DECIMAL(10, 2),
@@ -76,7 +84,7 @@ const Order = sequelize.define(
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
     },
-    
+
     points_redeemed: {
       type: DataTypes.INTEGER,
       defaultValue: 0,
@@ -87,13 +95,19 @@ const Order = sequelize.define(
       defaultValue: 0,
       comment: "Points earned from this order",
     },
-    
+
+    // Notes
+    order_notes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+
     // Status
     order_status: {
       type: DataTypes.STRING(50),
       defaultValue: "pending",
     },
-    
+
     // Payment Gateway Data
     transaction_id: {
       type: DataTypes.STRING(255),
@@ -101,7 +115,7 @@ const Order = sequelize.define(
     payment_data: {
       type: DataTypes.JSONB,
     },
-    
+
     // Timestamps
     paid_at: {
       type: DataTypes.DATE,

@@ -58,7 +58,6 @@ const Chat = () => {
   const [onlineUsers, setOnlineUsers]               = useState(new Set());
   const [partnerLoadedFromUrl, setPartnerLoadedFromUrl] = useState(false);
 
-  // ✅ Image upload state
   const [imageFile, setImageFile]       = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [lightbox, setLightbox]         = useState(null);
@@ -69,13 +68,15 @@ const Chat = () => {
   const textareaRef      = useRef(null);
   const fileInputRef     = useRef(null);
 
-  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+  //  localStorage || sessionStorage (Remember Me support)
+  const currentUser = JSON.parse(
+    localStorage.getItem("user") || sessionStorage.getItem("user") || "{}"
+  );
 
   useEffect(() => {
     activePartnerRef.current = activePartner;
   }, [activePartner]);
 
-  // ── SOCKET SETUP ──────────────────────────────────────────
   useEffect(() => {
     const socket = io(API_BASE, { transports: ["websocket", "polling"] });
     socketRef.current = socket;
@@ -102,6 +103,8 @@ const Chat = () => {
         markAsRead(partner?.partner_id);
       }
       fetchConversations();
+      //  Update navbar unread count on incoming message
+      window.dispatchEvent(new Event('messagesUpdated'));
     });
 
     socket.on("message_read", () => {
@@ -119,10 +122,8 @@ const Chat = () => {
 
     fetchConversations();
     return () => socket.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── URL partner param ──────────────────────────────────────
   useEffect(() => {
     const partnerId = searchParams.get("partner");
     if (!partnerId || partnerLoadedFromUrl) return;
@@ -150,7 +151,6 @@ const Chat = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ── API ──────────────────────────────────────────────────
   const fetchConversations = async () => {
     try {
       const res = await messageAPI.getConversations();
@@ -184,13 +184,14 @@ const Chat = () => {
           prev.map((c) => c.partner_id === partner.partner_id ? { ...c, unread_count: 0 } : c)
         );
         markAsRead(partner.partner_id);
+        // ✅ FIX: Update navbar when messages are read
+        window.dispatchEvent(new Event('messagesUpdated'));
       }
     } catch (err) {
       console.error("selectConversation:", err);
     }
   };
 
-  // ✅ Image selection
   const handleImageSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -209,7 +210,6 @@ const Chat = () => {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // ✅ Send — handles both text-only and image (multipart)
   const handleSend = async () => {
     const text = newMessage.trim();
     if (!text && !imageFile) return;
@@ -223,7 +223,6 @@ const Chat = () => {
       let res;
 
       if (imageFile) {
-        // Use multipart/form-data
         const fd = new FormData();
         fd.append("receiver_id", activePartner.partner_id);
         if (text) fd.append("message_text", text);
@@ -240,6 +239,8 @@ const Chat = () => {
         clearImageSelection();
         setMessages((prev) => [...prev, res.data.data]);
         fetchConversations();
+        // ✅ FIX: Update navbar unread count after sending
+        window.dispatchEvent(new Event('messagesUpdated'));
       }
     } catch (err) {
       console.error("handleSend:", err);
@@ -257,7 +258,6 @@ const Chat = () => {
     }
   };
 
-  // ── HELPERS ──────────────────────────────────────────────
   const getInitials = (name) => {
     if (!name || name === "Artisan") return "?";
     return name.split(" ").filter(Boolean).map((n) => n[0]).join("").toUpperCase().slice(0, 2);
@@ -441,7 +441,6 @@ const Chat = () => {
 
                         <div className="message-bubble-group">
                           <div className={`message-bubble ${isMine ? "bubble-mine" : "bubble-theirs"}`}>
-                            {/* ✅ Image inside bubble */}
                             {msg.image_url && (
                               <img
                                 src={`${API_BASE}${msg.image_url}`}
@@ -450,7 +449,6 @@ const Chat = () => {
                                 onClick={() => setLightbox(`${API_BASE}${msg.image_url}`)}
                               />
                             )}
-                            {/* Text below image if both present */}
                             {msg.message_text && (
                               <span className={msg.image_url ? "msg-text-below-img" : ""}>
                                 {msg.message_text}
@@ -481,7 +479,6 @@ const Chat = () => {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* ✅ Image preview strip above input */}
               {imagePreview && (
                 <div className="chat-image-preview">
                   <div className="chat-image-preview-inner">
@@ -497,7 +494,6 @@ const Chat = () => {
               {/* Input */}
               <div className="chat-input-area">
                 <div className="chat-input-wrapper">
-                  {/* ✅ Image upload button */}
                   <button
                     className="chat-img-btn"
                     type="button"
@@ -547,7 +543,6 @@ const Chat = () => {
         </div>
       </div>
 
-      {/*  Image lightbox */}
       {lightbox && (
         <div className="chat-lightbox" onClick={() => setLightbox(null)}>
           <button className="chat-lightbox-x">×</button>

@@ -49,7 +49,7 @@ const Blog = () => {
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, storyId: null });
   const [page, setPage]                 = useState(1);
 
-  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  const user = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || 'null');
 
   useEffect(() => { fetchStories(); }, [activeCategory]);
 

@@ -19,7 +19,7 @@ const AuctionDetail = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [bidHistory, setBidHistory] = useState([]);
   const socketRef = useRef(null);
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const currentUser = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || sessionStorage.getItem('user') || '{}');
   const isAdmin = currentUser?.role === 'admin';
 
   useEffect(() => {
@@ -121,7 +121,6 @@ const AuctionDetail = () => {
     }
   };
 
-  // ✅ Fixed formatDate — handles createdAt, created_at, and null gracefully
   const formatDate = (dateStr) => {
     if (!dateStr) return '—';
     try {
@@ -136,7 +135,6 @@ const AuctionDetail = () => {
     }
   };
 
-  // ✅ Get time from bid — supports both createdAt and created_at
   const getBidTime = (bid) => {
     return bid?.createdAt || bid?.created_at || null;
   };
@@ -160,6 +158,9 @@ const AuctionDetail = () => {
   const isEnded = auction.status === 'ended';
   const images = auction.images || [];
   const canBid = isLive && !isOwner && !isSeller && !isAdmin && currentUser?.user_id;
+
+  // ✅ Check if current user is the winner
+  const isWinner = isEnded && auction.winner_id === currentUser?.user_id;
 
   return (
     <div className="ad-page">
@@ -216,6 +217,17 @@ const AuctionDetail = () => {
                 <span className="ad-winner-label">🏆 {t('auctions.winner')}</span>
                 <span className="ad-winner-name">{auction.winner.full_name}</span>
               </div>
+            )}
+
+            {/* ✅ NEW: Checkout button for winner */}
+            {isWinner && (
+              <button
+                className="ad-bid-btn"
+                onClick={() => navigate(`/auction-checkout/${id}`)}
+                style={{ marginTop: '1rem' }}
+              >
+                🏆 Proceed to Checkout
+              </button>
             )}
 
             <div className="ad-stats-grid">
@@ -327,7 +339,6 @@ const AuctionDetail = () => {
                         <span className="ad-bid-name">
                           {i === 0 ? '👑 ' : ''}{bid.user?.full_name || 'Anonymous'}
                         </span>
-                        {/* use getBidTime to handle both field names */}
                         <span className="ad-bid-time">{formatDate(getBidTime(bid))}</span>
                       </div>
                     </div>

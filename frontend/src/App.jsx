@@ -39,6 +39,7 @@ import Wishlist from "./pages/Wishlist";
 import Auctions from "./pages/Auctions";
 import AuctionDetail from "./pages/AuctionDetail";
 import CreateAuction from "./pages/CreateAuction";
+import AuctionCheckout from "./pages/AuctionCheckout"; 
 
 import SellerDashboard from "./pages/SellerDashboard.jsx";
 import AddProduct from "./pages/AddProduct";
@@ -57,8 +58,6 @@ const AppContent = () => {
   const showFooter = !NO_FOOTER_PATHS.some((p) => location.pathname.startsWith(p));
   usePushNotifications();
 
-  // Global socket setup — runs once on app load
-  // Sets window.__socket so NavBar notification bell gets real-time updates
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token && !window.__socket) {
@@ -69,7 +68,6 @@ const AppContent = () => {
       }
     }
 
-    // Cleanup on unmount (rare but correct)
     return () => {
       if (window.__socket) {
         window.__socket.disconnect();
@@ -91,6 +89,16 @@ const AppContent = () => {
 
           <Route path="/auctions" element={<Auctions />} />
           <Route path="/auctions/:id" element={<AuctionDetail />} />
+
+          {/* ✅ NEW: Auction Checkout for winners */}
+          <Route
+            path="/auction-checkout/:auction_id"
+            element={
+              <ProtectedRoute allowedRoles={["buyer"]}>
+                <AuctionCheckout />
+              </ProtectedRoute>
+            }
+          />
 
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:id" element={<BlogDetail />} />

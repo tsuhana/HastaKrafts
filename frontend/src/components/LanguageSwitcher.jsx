@@ -5,7 +5,7 @@ import './LanguageSwitcher.css';
 
 const LanguageSwitcher = () => {
   const { i18n } = useTranslation();
-  const isLoggedIn = !!localStorage.getItem('token');
+  const isLoggedIn = !!localStorage.getItem('token') || sessionStorage.getItem('token');
 
   const languages = [
     { code: 'en', name: 'English', flag: '🇬🇧' },
@@ -26,7 +26,7 @@ const LanguageSwitcher = () => {
 
     if (isLoggedIn) {
       try {
-        await userAPI.updateLanguagePreference({ language_code: code });
+        await userAPI.updateLanguagePreference({ preferred_language: code });
       } catch (err) {
         console.error('Failed to save language preference:', err);
       }

@@ -29,7 +29,7 @@ const BlogDetail = () => {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
 
-  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  const user = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || 'null');
 
   // Category label map using translation keys
   const getCategoryLabel = (val) => {

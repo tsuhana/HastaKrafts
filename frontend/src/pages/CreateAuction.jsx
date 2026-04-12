@@ -8,7 +8,7 @@ const CreateAuction = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false); // ✅ show approval notice
+  const [submitted, setSubmitted] = useState(false); // show approval notice
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -61,6 +61,9 @@ const CreateAuction = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
+    // token check
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token') || sessionStorage.getItem('token');
+  if (!token) { toast.error('Please login again'); navigate('/login'); return; }
     setLoading(true);
     try {
       const data = new FormData();
@@ -68,7 +71,7 @@ const CreateAuction = () => {
       images.forEach((img) => data.append('images', img));
       const res = await auctionAPI.createAuction(data);
       if (res.data.success) {
-        setSubmitted(true); // ✅ show success screen instead of redirecting
+        setSubmitted(true); // show success screen instead of redirecting
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to create auction');
@@ -77,7 +80,7 @@ const CreateAuction = () => {
     }
   };
 
-  // ✅ Success / approval pending screen
+  //  Success / approval pending screen
   if (submitted) {
     return (
       <div className="create-auction-page">

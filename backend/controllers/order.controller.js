@@ -263,10 +263,8 @@ const createOrder = async (req, res) => {
     if (payment_method === "cod") {
       await awardPoints(req.user.user_id, order.order_id, subtotal);
 
-      // Push + In-app to seller(s)
       notifySellerNewOrder(orderItemsData, order_number, order.order_id).catch(() => {});
 
-      // In-app to buyer
       createNotification(
         req.user.user_id,
         "order_placed",
@@ -276,7 +274,6 @@ const createOrder = async (req, res) => {
         { order_id: order.order_id }
       ).catch(() => {});
 
-      // Low stock check for seller(s)
       for (const item of orderItemsData) {
         const product = await db.Product.findByPk(item.product_id, {
           include: [
@@ -313,7 +310,6 @@ const createOrder = async (req, res) => {
       });
     }
 
-    // Khalti — initiate payment
     const paymentUrl = await initiateKhaltiPayment(order);
     return res.status(201).json({
       success: true,
@@ -333,6 +329,187 @@ const createOrder = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message || "Failed to create order",
+    });
+  }
+};
+
+// ==================== CREATE AUCTION ORDER ✅ NEW ====================
+const createAuctionOrder = async (req, res) => {
+  const transaction = await db.sequelize.transaction();
+  try {
+    const {
+      auction_id,
+      delivery_name,
+      delivery_phone,
+      delivery_email,
+      delivery_address,
+      delivery_city,
+      delivery_state,
+      delivery_postal_code,
+      delivery_landmark,
+      payment_method,
+      order_notes,
+    } = req.body;
+
+    // Validate payment method
+    if (!["khalti", "cod"].includes(payment_method)) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment method. Choose 'khalti' or 'cod'",
+      });
+    }
+
+    // Validate delivery info
+    if (!delivery_name || !delivery_phone || !delivery_address || !delivery_city) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Please provide all delivery information",
+      });
+    }
+
+    // Fetch auction with seller info
+    const auction = await db.Auction.findByPk(auction_id, {
+      include: [
+        {
+          model: db.Seller,
+          as: "seller",
+          attributes: ["seller_id"],
+          include: [{ model: db.User, as: "user", attributes: ["user_id", "webpushr_sid"] }],
+        },
+      ],
+    });
+
+    if (!auction) {
+      await transaction.rollback();
+      return res.status(404).json({ success: false, message: "Auction not found" });
+    }
+
+    // Must be ended
+    if (auction.status !== "ended") {
+      await transaction.rollback();
+      return res.status(400).json({ success: false, message: "Auction has not ended yet" });
+    }
+
+    // Must be the winner
+    if (auction.winner_id !== req.user.user_id) {
+      await transaction.rollback();
+      return res.status(403).json({ success: false, message: "You are not the winner of this auction" });
+    }
+
+    // Check if already ordered
+    const existingOrder = await db.Order.findOne({
+      where: { auction_id: auction.auction_id, user_id: req.user.user_id },
+    });
+    if (existingOrder) {
+      await transaction.rollback();
+      return res.status(400).json({ success: false, message: "You have already placed an order for this auction" });
+    }
+
+    const winningBid   = parseFloat(auction.current_bid);
+    const delivery_fee = 150;
+    const total        = winningBid + delivery_fee;
+    const order_number = generateOrderNumber();
+    const points_to_earn = Math.floor(winningBid / 100);
+
+    const orderItemData = {
+      product_id:    null,
+      seller_id:     auction.seller.seller_id,
+      product_name:  auction.title,
+      product_price: winningBid,
+      original_price: winningBid,
+      discount_percentage: 0,
+      product_image: auction.images?.[0] || null,
+      quantity:      1,
+      subtotal:      winningBid,
+    };
+
+    // Create the order
+    const order = await db.Order.create(
+      {
+        user_id:              req.user.user_id,
+        auction_id:           auction.auction_id, // ✅ links to auction
+        order_number,
+        delivery_name,
+        delivery_phone,
+        delivery_email:       delivery_email || req.user.email,
+        delivery_address,
+        delivery_city,
+        delivery_state:       delivery_state || null,
+        delivery_postal_code: delivery_postal_code || null,
+        delivery_landmark:    delivery_landmark || null,
+        payment_method,
+        payment_status:       "pending",
+        subtotal:             winningBid,
+        delivery_fee,
+        total,
+        order_status:         "pending",
+        order_notes:          order_notes || null,
+        points_redeemed:      0,
+        points_earned:        points_to_earn,
+      },
+      { transaction }
+    );
+
+    // Create order item
+    await db.OrderItem.create(
+      { order_id: order.order_id, ...orderItemData },
+      { transaction }
+    );
+
+    await transaction.commit();
+
+    // Notify seller
+    notifySellerNewOrder([orderItemData], order_number, order.order_id).catch(() => {});
+
+    // Notify buyer
+    createNotification(
+      req.user.user_id,
+      "order_placed",
+      "🏆 Auction Order Placed!",
+      `Your auction order #${order_number} for "${auction.title}" has been placed. Est. delivery: 3-5 days.`,
+      "/profile",
+      { order_id: order.order_id }
+    ).catch(() => {});
+
+    // COD — no redirect needed
+    if (payment_method === "cod") {
+      await awardPoints(req.user.user_id, order.order_id, winningBid);
+
+      return res.status(201).json({
+        success: true,
+        message: "Auction order placed successfully!",
+        data: {
+          order_id:       order.order_id,
+          order_number:   order.order_number,
+          total:          order.total,
+          payment_method: "cod",
+          points_earned:  points_to_earn,
+        },
+      });
+    }
+
+    // Khalti — initiate payment
+    const paymentUrl = await initiateKhaltiPayment(order);
+    return res.status(201).json({
+      success: true,
+      message: "Auction order created. Proceed to payment.",
+      data: {
+        order_id:       order.order_id,
+        order_number:   order.order_number,
+        total:          order.total,
+        payment_method: "khalti",
+        payment_url:    paymentUrl,
+        points_earned:  points_to_earn,
+      },
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Create auction order error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to create auction order",
     });
   }
 };
@@ -406,14 +583,12 @@ const verifyKhaltiPayment = async (req, res) => {
 
       await awardPoints(order.user_id, order.order_id, order.subtotal);
 
-      // Push + In-app to seller(s)
       const orderItemsData = order.items.map((i) => ({
         seller_id:    i.seller_id,
         product_name: i.product_name,
       }));
       notifySellerNewOrder(orderItemsData, order.order_number, order.order_id).catch(() => {});
 
-      // In-app to buyer — order confirmed
       createNotification(
         order.user_id,
         "order_placed",
@@ -423,7 +598,6 @@ const verifyKhaltiPayment = async (req, res) => {
         { order_id: order.order_id }
       ).catch(() => {});
 
-      // In-app to buyer — points earned
       createNotification(
         order.user_id,
         "points_earned",
@@ -563,7 +737,6 @@ const updateOrderStatus = async (req, res) => {
 
     await order.update(updateData);
 
-    // Push + In-app to buyer
     try {
       const buyer = await db.User.findByPk(order.user_id, {
         attributes: ["user_id", "webpushr_sid"],
@@ -613,7 +786,6 @@ const updateOrderStatus = async (req, res) => {
           ).catch(() => {});
         }
 
-        // Points earned on COD delivery
         if (order_status === "delivered" && order.payment_method === "cod" && order.points_earned > 0) {
           createNotification(
             buyer.user_id,
@@ -642,6 +814,7 @@ const updateOrderStatus = async (req, res) => {
 
 module.exports = {
   createOrder,
+  createAuctionOrder, 
   verifyKhaltiPayment,
   getUserOrders,
   getOrderById,

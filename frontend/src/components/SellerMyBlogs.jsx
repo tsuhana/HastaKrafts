@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { storyAPI } from "../api/axios";
 import "./SellerMyBlogs.css";
- 
+
 const API_URL = "http://localhost:5000";
  
 const CATEGORY_LABELS = {
@@ -23,7 +24,7 @@ const CATEGORY_COLORS = {
 };
  
 const SellerMyBlogs = ({ toast, t }) => {
-  const [stories, setStories]             = useState([]);
+  const [stories, setStories]             = useState([]); 
   const [loading, setLoading]             = useState(true);
   const [filter, setFilter]               = useState("all");
   const [searchQuery, setSearchQuery]     = useState("");
@@ -38,11 +39,8 @@ const SellerMyBlogs = ({ toast, t }) => {
   const fetchMyStories = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_URL}/api/stories/seller/my-stories`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      const data = await res.json();
-      if (data.success) setStories(data.data || []);
+      const res = await storyAPI.getMyStories();
+      if (res.data.success) setStories(res.data.data || []);
       else toast?.error("Failed to load your blogs");
     } catch (err) {
       console.error("fetchMyStories:", err);
@@ -55,16 +53,8 @@ const SellerMyBlogs = ({ toast, t }) => {
   const handleTogglePublish = async (story) => {
     setTogglingId(story.story_id);
     try {
-      const res = await fetch(`${API_URL}/api/stories/${story.story_id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({ is_published: !story.is_published }),
-      });
-      const data = await res.json();
-      if (data.success) {
+      const res = await storyAPI.updateStory(story.story_id, { is_published: !story.is_published });
+      if (res.data.success) {
         setStories((prev) =>
           prev.map((s) =>
             s.story_id === story.story_id
@@ -74,7 +64,7 @@ const SellerMyBlogs = ({ toast, t }) => {
         );
         toast?.success(story.is_published ? "Story moved to drafts" : "Story published!");
       } else {
-        toast?.error(data.message || "Failed to update story");
+        toast?.error(res.data.message || "Failed to update story");
       }
     } catch (err) {
       console.error("togglePublish:", err);
@@ -88,16 +78,12 @@ const SellerMyBlogs = ({ toast, t }) => {
     setDeletingId(storyId);
     setConfirmDelete(null);
     try {
-      const res = await fetch(`${API_URL}/api/stories/${storyId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      const data = await res.json();
-      if (data.success) {
+      const res = await storyAPI.deleteStory(storyId);
+      if (res.data.success) {
         setStories((prev) => prev.filter((s) => s.story_id !== storyId));
         toast?.success("Story deleted");
       } else {
-        toast?.error(data.message || "Failed to delete story");
+        toast?.error(res.data.message || "Failed to delete story");
       }
     } catch (err) {
       console.error("deleteStory:", err);
