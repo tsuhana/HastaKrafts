@@ -202,15 +202,15 @@ const SellerDashboard = () => {
 
   const [auctionActionLoading, setAuctionActionLoading] = useState({});
 
-  const [reviewReplyModal, setReviewReplyModal]   = useState({ open: false, review: null, text: "" });
+  const [reviewReplyModal, setReviewReplyModal]     = useState({ open: false, review: null, text: "" });
   const [reviewReplyLoading, setReviewReplyLoading] = useState(false);
 
   // Orders tab
-  const [orderSearch, setOrderSearch]   = useState("");
-  const [orderFilter, setOrderFilter]   = useState("all");
-  const [orderSort, setOrderSort]       = useState("newest");
-  const [orderDate, setOrderDate]       = useState({ startDate: "", endDate: "" });
-  const [orderPage, setOrderPage]       = useState(1);
+  const [orderSearch, setOrderSearch] = useState("");
+  const [orderFilter, setOrderFilter] = useState("all");
+  const [orderSort, setOrderSort]     = useState("newest");
+  const [orderDate, setOrderDate]     = useState({ startDate: "", endDate: "" });
+  const [orderPage, setOrderPage]     = useState(1);
   const ORDERS_PER_PAGE = 10;
 
   // Products tab
@@ -291,11 +291,23 @@ const SellerDashboard = () => {
     finally { setAuctionsLoading(false); }
   };
 
+  // ✅ FIX: Instant local state update — no full refetch needed
   const handleStatusChange = async (orderId, newStatus) => {
     try {
       const res = await orderAPI.updateOrderStatus(orderId, { order_status: newStatus });
-      if (res.data.success) { toast.success("Order status updated"); fetchAll(); }
-    } catch { toast.error("Failed to update order status"); }
+      if (res.data.success) {
+        toast.success("Order status updated");
+        setOrders((prev) =>
+          prev.map((item) =>
+            item.order?.order_id === orderId
+              ? { ...item, order: { ...item.order, order_status: newStatus } }
+              : item
+          )
+        );
+      }
+    } catch {
+      toast.error("Failed to update order status");
+    }
   };
 
   const handleDeleteConfirm = async () => {
@@ -1126,10 +1138,10 @@ const SellerDashboard = () => {
                   <div className="sd-orders-list">
                     {pagedAuctions.map((auction) => {
                       const isActionLoading = !!auctionActionLoading?.[auction.auction_id];
-                      const hasBids    = (auction.total_bids || 0) > 0;
+                      const hasBids     = (auction.total_bids || 0) > 0;
                       const canEndEarly = auction.status === "live" && auction.approval_status === "approved";
-                      const canCancel  = ["live", "upcoming"].includes(auction.status) && auction.approval_status === "approved";
-                      const canDelete  =
+                      const canCancel   = ["live", "upcoming"].includes(auction.status) && auction.approval_status === "approved";
+                      const canDelete   =
                         auction.approval_status === "pending" ||
                         auction.approval_status === "rejected" ||
                         auction.status === "cancelled" ||

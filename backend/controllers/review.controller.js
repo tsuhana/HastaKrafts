@@ -135,7 +135,7 @@ const createReview = async (req, res) => {
           {
             model: db.Order,
             as: "order",
-            where: { user_id: req.user.user_id, payment_status: "paid" },
+            where: { user_id: req.user.user_id, order_status: "delivered" },
           },
         ],
         where: { product_id },
@@ -167,7 +167,7 @@ const createReview = async (req, res) => {
         ],
       });
 
-      // ✅ Notify seller of new review
+      //  Notify seller of new review
       if (product.seller?.user?.user_id) {
         createNotification(
           product.seller.user.user_id,
@@ -241,7 +241,7 @@ const createReply = async (req, res) => {
       ],
     });
 
-    // ✅ Push + in-app notification to original reviewer
+    // Push + in-app notification to original reviewer
     if (parentReview.user && parentReview.user_id !== req.user.user_id) {
       if (parentReview.user.webpushr_sid) {
         sendPushNotification(
@@ -314,17 +314,18 @@ const getProductReviews = async (req, res) => {
     const currentUserId = req.user?.user_id || null;
 
     const reviews = await fetchReviewsWithReplies(product_id, currentUserId);
-    const totalReviews = reviews.length;
+
+    // Only top-level reviews with actual ratings (exclude replies)
+    const ratedReviews = reviews.filter((r) => r.rating !== null && r.rating > 0);
+    const totalReviews = ratedReviews.length;
     const avgRating =
       totalReviews > 0
-        ? reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / totalReviews
+        ? ratedReviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews
         : 0;
 
     const ratingCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-    reviews.forEach((r) => {
-      if (r.rating) {
-        ratingCounts[r.rating] = (ratingCounts[r.rating] || 0) + 1;
-      }
+    ratedReviews.forEach((r) => {
+      ratingCounts[r.rating] = (ratingCounts[r.rating] || 0) + 1;
     });
 
     return res.status(200).json({

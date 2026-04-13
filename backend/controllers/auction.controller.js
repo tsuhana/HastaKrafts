@@ -430,7 +430,22 @@ const rejectAuction = async (req, res) => {
       rejection_reason: rejection_reason.trim(),
       status:           "cancelled",
     });
-
+    // Notify seller of rejection
+if (auction.seller_id) {
+  const seller = await db.Seller.findByPk(auction.seller_id, {
+    include: [{ model: db.User, as: "user", attributes: ["user_id"] }]
+  });
+  if (seller?.user?.user_id) {
+    createNotification(
+      seller.user.user_id,
+      "auction_rejected",
+      "❌ Auction Rejected",
+      `Your auction "${auction.title}" was rejected. Reason: ${rejection_reason.trim()}`,
+      "/seller/dashboard",
+      { auction_id: parseInt(id) }
+    ).catch(() => {});
+  }
+}
     return res.status(200).json({ success: true, message: "Auction rejected", data: auction });
   } catch (error) {
     console.error("Reject auction error:", error);

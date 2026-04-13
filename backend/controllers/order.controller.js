@@ -333,7 +333,7 @@ const createOrder = async (req, res) => {
   }
 };
 
-// ==================== CREATE AUCTION ORDER ✅ NEW ====================
+// ==================== CREATE AUCTION ORDER ====================
 const createAuctionOrder = async (req, res) => {
   const transaction = await db.sequelize.transaction();
   try {
@@ -351,7 +351,6 @@ const createAuctionOrder = async (req, res) => {
       order_notes,
     } = req.body;
 
-    // Validate payment method
     if (!["khalti", "cod"].includes(payment_method)) {
       await transaction.rollback();
       return res.status(400).json({
@@ -360,7 +359,6 @@ const createAuctionOrder = async (req, res) => {
       });
     }
 
-    // Validate delivery info
     if (!delivery_name || !delivery_phone || !delivery_address || !delivery_city) {
       await transaction.rollback();
       return res.status(400).json({
@@ -369,7 +367,6 @@ const createAuctionOrder = async (req, res) => {
       });
     }
 
-    // Fetch auction with seller info
     const auction = await db.Auction.findByPk(auction_id, {
       include: [
         {
@@ -386,19 +383,16 @@ const createAuctionOrder = async (req, res) => {
       return res.status(404).json({ success: false, message: "Auction not found" });
     }
 
-    // Must be ended
     if (auction.status !== "ended") {
       await transaction.rollback();
       return res.status(400).json({ success: false, message: "Auction has not ended yet" });
     }
 
-    // Must be the winner
     if (auction.winner_id !== req.user.user_id) {
       await transaction.rollback();
       return res.status(403).json({ success: false, message: "You are not the winner of this auction" });
     }
 
-    // Check if already ordered
     const existingOrder = await db.Order.findOne({
       where: { auction_id: auction.auction_id, user_id: req.user.user_id },
     });
@@ -407,29 +401,28 @@ const createAuctionOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: "You have already placed an order for this auction" });
     }
 
-    const winningBid   = parseFloat(auction.current_bid);
-    const delivery_fee = 150;
-    const total        = winningBid + delivery_fee;
-    const order_number = generateOrderNumber();
+    const winningBid     = parseFloat(auction.current_bid);
+    const delivery_fee   = 150;
+    const total          = winningBid + delivery_fee;
+    const order_number   = generateOrderNumber();
     const points_to_earn = Math.floor(winningBid / 100);
 
     const orderItemData = {
-      product_id:    null,
-      seller_id:     auction.seller.seller_id,
-      product_name:  auction.title,
-      product_price: winningBid,
-      original_price: winningBid,
+      product_id:          null,
+      seller_id:           auction.seller.seller_id,
+      product_name:        auction.title,
+      product_price:       winningBid,
+      original_price:      winningBid,
       discount_percentage: 0,
-      product_image: auction.images?.[0] || null,
-      quantity:      1,
-      subtotal:      winningBid,
+      product_image:       auction.images?.[0] || null,
+      quantity:            1,
+      subtotal:            winningBid,
     };
 
-    // Create the order
     const order = await db.Order.create(
       {
         user_id:              req.user.user_id,
-        auction_id:           auction.auction_id, // ✅ links to auction
+        auction_id:           auction.auction_id,
         order_number,
         delivery_name,
         delivery_phone,
@@ -452,7 +445,6 @@ const createAuctionOrder = async (req, res) => {
       { transaction }
     );
 
-    // Create order item
     await db.OrderItem.create(
       { order_id: order.order_id, ...orderItemData },
       { transaction }
@@ -460,10 +452,8 @@ const createAuctionOrder = async (req, res) => {
 
     await transaction.commit();
 
-    // Notify seller
     notifySellerNewOrder([orderItemData], order_number, order.order_id).catch(() => {});
 
-    // Notify buyer
     createNotification(
       req.user.user_id,
       "order_placed",
@@ -473,7 +463,6 @@ const createAuctionOrder = async (req, res) => {
       { order_id: order.order_id }
     ).catch(() => {});
 
-    // COD — no redirect needed
     if (payment_method === "cod") {
       await awardPoints(req.user.user_id, order.order_id, winningBid);
 
@@ -490,7 +479,6 @@ const createAuctionOrder = async (req, res) => {
       });
     }
 
-    // Khalti — initiate payment
     const paymentUrl = await initiateKhaltiPayment(order);
     return res.status(201).json({
       success: true,
@@ -697,10 +685,10 @@ const getSellerOrders = async (req, res) => {
     });
 
     const totalSales = orderItems.reduce((sum, item) => {
-      if (item.order?.order_status === 'cancelled') return sum;
-     return sum + parseFloat(item.subtotal || 0);
+      if (item.order?.order_status === "cancelled") return sum;
+      return sum + parseFloat(item.subtotal || 0);
     }, 0);
-    
+
     const stats = {
       total_orders: orderItems.length,
       total_sales:  totalSales,
@@ -721,7 +709,7 @@ const getSellerOrders = async (req, res) => {
 // ==================== UPDATE ORDER STATUS ====================
 const updateOrderStatus = async (req, res) => {
   try {
-    const { order_id }   = req.params;
+    const { order_id }     = req.params;
     const { order_status } = req.body;
 
     const validStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
@@ -746,9 +734,9 @@ const updateOrderStatus = async (req, res) => {
     if (order_status === "cancelled") {
       for (const item of order.items || []) {
         if (item.product_id) {
-          await db.Product.increment('stock_quantity', {
-            by: item.quantity,
-            where: { product_id: item.product_id }
+          await db.Product.increment("stock_quantity", {
+            by:    item.quantity,
+            where: { product_id: item.product_id },
           });
         }
       }
@@ -762,6 +750,18 @@ const updateOrderStatus = async (req, res) => {
       });
 
       if (buyer) {
+        // ✅ FIX: processing notification added
+        if (order_status === "processing") {
+          createNotification(
+            buyer.user_id,
+            "order_processing",
+            "⚙️ Order Processing!",
+            `Your order #${order.order_number} is being processed by the seller.`,
+            "/profile",
+            { order_id: order.order_id }
+          ).catch(() => {});
+        }
+
         if (order_status === "shipped") {
           sendPushNotification(
             buyer.webpushr_sid,
@@ -833,7 +833,7 @@ const updateOrderStatus = async (req, res) => {
 
 module.exports = {
   createOrder,
-  createAuctionOrder, 
+  createAuctionOrder,
   verifyKhaltiPayment,
   getUserOrders,
   getOrderById,

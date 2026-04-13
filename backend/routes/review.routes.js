@@ -12,7 +12,7 @@ router.get("/my-reviews",            authenticate, getUserReviews);
 router.get("/seller/my-reviews",     authenticate, getSellerReviews);
 
 // Authenticated actions
-router.post("/",                     authenticate, createReviewRules,  createReview);
+router.post("/",                     authenticate,  createReview);
 router.post("/:review_id/reply",     authenticate, createReplyRules,   createReply);
 router.post("/:review_id/helpful",   authenticate, toggleHelpful);
 router.put("/:review_id",            authenticate, updateReviewRules,  updateReview);

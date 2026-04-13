@@ -391,7 +391,7 @@ const AdminDashboard = () => {
     try { const res = await adminAPI.getAllReviews(); if (res.data.success) setAllReviews(res.data.data || []); } catch {}
   };
 
-  // ✅ FIX: Uses adminAPI (sees ALL auctions regardless of approval_status)
+  //  Uses adminAPI (sees ALL auctions regardless of approval_status)
   const fetchAllAuctions = async () => {
     try { const res = await adminAPI.getAllAuctions(); if (res.data.success) setAllAuctions(res.data.data || []); }
     catch (err) { console.error("fetchAllAuctions:", err); }
