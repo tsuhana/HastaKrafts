@@ -63,7 +63,7 @@ const changePassword = async (req, res) => {
     }
     const isPasswordValid = await user.comparePassword(currentPassword);
     if (!isPasswordValid) {
-      return res.status(401).json({ success: false, message: "Current password is incorrect" });
+      return res.status(400).json({ success: false, message: "Current password is incorrect" });
     }
     user.password = newPassword;
     await user.save();

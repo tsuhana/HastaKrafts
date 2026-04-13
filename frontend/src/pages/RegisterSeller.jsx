@@ -21,9 +21,11 @@ const RegisterSeller = () => {
   const [loading, setLoading]   = useState(false);
   const [step, setStep]         = useState(1);
 
-  // ← ADD THESE 2
+  // 
   const [showPassword, setShowPassword]        = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [citizenshipFile, setCitizenshipFile] = useState(null);
+  const [citizenshipPreview, setCitizenshipPreview] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -31,6 +33,22 @@ const RegisterSeller = () => {
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
     if (apiError) setApiError('');
   };
+
+  const handleCitizenshipUpload = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+  if (!allowed.includes(file.type)) {
+    toast.error("Please upload JPG, PNG or WEBP image");
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    toast.error("Image must be under 5MB");
+    return;
+  }
+  setCitizenshipFile(file);
+  setCitizenshipPreview(URL.createObjectURL(file));
+};
 
   const validateStep1 = () => {
     const errs = {};
@@ -125,29 +143,35 @@ const RegisterSeller = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setApiError('');
-    try {
-      const { confirmPassword, ...submitData } = formData;
-      submitData.full_name = submitData.full_name.trim();
-      submitData.email     = submitData.email.trim().toLowerCase();
-      submitData.shop_name = submitData.shop_name.trim();
-      submitData.city      = submitData.city.trim();
-      submitData.address   = submitData.address.trim();
+  e.preventDefault();
+  setLoading(true);
+  setApiError('');
+  try {
+    const fd = new FormData();
+    const { confirmPassword, ...submitData } = formData;
+    submitData.full_name = submitData.full_name.trim();
+    submitData.email     = submitData.email.trim().toLowerCase();
+    submitData.shop_name = submitData.shop_name.trim();
+    submitData.city      = submitData.city.trim();
+    submitData.address   = submitData.address.trim();
 
-      const response = await authAPI.registerSeller(submitData);
-      if (response.data.success) {
-        toast.success('Registration successful! Your account is pending admin approval.');
-        navigate('/login');
-      }
-    } catch (err) {
-      setApiError(err.response?.data?.message || 'Registration failed. Please try again.');
-    } finally {
-      setLoading(false);
+    Object.entries(submitData).forEach(([key, val]) => {
+      if (val !== undefined && val !== null) fd.append(key, val);
+    });
+
+    if (citizenshipFile) fd.append('citizenship_image', citizenshipFile);
+
+    const response = await authAPI.registerSeller(fd);
+    if (response.data.success) {
+      toast.success('Registration successful! Your account is pending admin approval.');
+      navigate('/login');
     }
-  };
-
+  } catch (err) {
+    setApiError(err.response?.data?.message || 'Registration failed. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
   const FieldError = ({ name }) =>
     errors[name] ? <span className="field-error">{errors[name]}</span> : null;
 
@@ -321,6 +345,29 @@ const RegisterSeller = () => {
                   <FieldError name="citizenship_number" />
                 </div>
               </div>
+              <div className="form-group full-width">
+          <label>Citizenship Document Photo <span className="optional">(recommended)</span></label>
+          <div
+            style={{ border: "2px dashed #c9b99a", borderRadius: 10, padding: "1rem", textAlign: "center", cursor: "pointer", background: "#faf7f2" }}
+            onClick={() => document.getElementById("citizenship-img-input").click()}
+          >
+          {citizenshipPreview ? (
+            <img src={citizenshipPreview} alt="Citizenship preview" style={{ maxHeight: 160, borderRadius: 8, objectFit: "contain" }} />
+          ) : (
+            <div style={{ color: "#9a8268", fontSize: "0.85rem" }}>
+            <div style={{ fontSize: "2rem", marginBottom: 6 }}>📄</div>
+                Click to upload citizenship document photo
+              <div style={{ fontSize: "0.72rem", marginTop: 4 }}>JPG, PNG or WEBP · Max 5MB</div>
+            </div>
+            )}
+          </div>
+       <input id="citizenship-img-input" type="file" accept="image/*" onChange={handleCitizenshipUpload} style={{ display: "none" }} disabled={loading} />
+         {citizenshipPreview && (
+           <button type="button" onClick={() => { setCitizenshipFile(null); setCitizenshipPreview(null); }} style={{ marginTop: 6, fontSize: "0.75rem", color: "#b86e38", background: "none", border: "none", cursor: "pointer" }}>
+               ✕ Remove image
+            </button>
+            )}
+          </div>
 
               <div className="form-group">
                 <label>{t('checkout.address')} *</label>

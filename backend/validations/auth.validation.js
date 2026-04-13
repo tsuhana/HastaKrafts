@@ -70,10 +70,10 @@ const registerSellerRules = [
     .matches(/^[A-Za-z\s\u0900-\u097F-]+$/).withMessage("City name must contain only letters"),
 
   body("citizenship_number")
-    .trim()
-    .notEmpty().withMessage("Citizenship number is required")
-    .isLength({ min: 5, max: 20 }).withMessage("Please enter a valid citizenship number"),
-
+  .trim()
+  .notEmpty().withMessage("Citizenship number is required")
+  .isLength({ min: 5, max: 30 }).withMessage("Please enter a valid citizenship number")
+  .matches(/^[\d\-\/]+$/).withMessage("Citizenship number can only contain digits, hyphens, and slashes"),
   handleValidation,
 ];
 

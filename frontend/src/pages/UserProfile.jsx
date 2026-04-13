@@ -270,7 +270,7 @@ const UserProfile = () => {
               {t('profile.order_history')}
             </button>
           )}
-          {/* ✅ Points tab */}
+          {/* Points tab */}
           {isBuyer && (
             <button
               className={`tab-btn ${activeTab === 'points' ? 'active' : ''}`}
@@ -485,7 +485,7 @@ const UserProfile = () => {
             </div>
           )}
 
-          {/* ✅ Points History (buyers only) */}
+          {/* Points History (buyers only) */}
           {activeTab === 'points' && isBuyer && (
             <div className="tab-content">
               <PointsHistory t={t} />
@@ -539,7 +539,7 @@ const OrderHistory = ({ t }) => {
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((o) =>
-        (o.order_number || '').toLowerCase().includes(q) ||
+        (o.order_number || '').toLowerCase().includes(q.replace(/^order\s*#?\s*/i, '').replace('#', '').trim()) ||
         o.items?.some((i) => (i.product_name || '').toLowerCase().includes(q))
       );
     }
@@ -674,7 +674,7 @@ const OrderHistory = ({ t }) => {
 };
 
 // ══════════════════════════════════════════════════════════════
-// ✅ POINTS HISTORY
+// POINTS HISTORY
 // ══════════════════════════════════════════════════════════════
 const PointsHistory = ({ t }) => {
   const [history, setHistory] = useState([]);

@@ -36,7 +36,9 @@ export const authAPI = {
   login: (data) => API.post('/auth/login', data),
   register: (data) => API.post('/auth/register/buyer', data),
   registerBuyer: (data) => API.post('/auth/register/buyer', data),
-  registerSeller: (data) => API.post('/auth/register/seller', data),
+  registerSeller: (data) => API.post('/auth/register/seller', data, {
+  headers: { 'Content-Type': 'multipart/form-data' }
+  }),
   forgotPassword: (data) => API.post('/auth/forgot-password', data),
   verifyOTP: (data) => API.post('/auth/verify-otp', data),
   resetPassword: (data) => API.post('/auth/reset-password', data),

@@ -88,6 +88,10 @@ const registerSeller = async (req, res) => {
       bank_account_name,
     } = req.body;
 
+    const citizenshipImagePath = req.file
+    ? `/uploads/sellers/citizenship/${req.file.filename}`
+    : null;
+
     if (
       !full_name ||
       !email ||
@@ -155,6 +159,7 @@ const registerSeller = async (req, res) => {
           address,
           city,
           citizenship_number,
+          citizenship_image: citizenshipImagePath,
           bank_name,
           bank_account_number,
           bank_account_name,

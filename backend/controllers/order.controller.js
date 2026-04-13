@@ -696,7 +696,11 @@ const getSellerOrders = async (req, res) => {
       order: [["created_at", "DESC"]],
     });
 
-    const totalSales = orderItems.reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
+    const totalSales = orderItems.reduce((sum, item) => {
+      if (item.order?.order_status === 'cancelled') return sum;
+     return sum + parseFloat(item.subtotal || 0);
+    }, 0);
+    
     const stats = {
       total_orders: orderItems.length,
       total_sales:  totalSales,
@@ -704,6 +708,7 @@ const getSellerOrders = async (req, res) => {
       processing:   orderItems.filter((i) => i.order.order_status === "processing").length,
       shipped:      orderItems.filter((i) => i.order.order_status === "shipped").length,
       delivered:    orderItems.filter((i) => i.order.order_status === "delivered").length,
+      cancelled:    orderItems.filter((i) => i.order?.order_status === "cancelled").length,
     };
 
     return res.status(200).json({ success: true, data: { orders: orderItems, stats } });
@@ -724,7 +729,9 @@ const updateOrderStatus = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid order status" });
     }
 
-    const order = await db.Order.findByPk(order_id);
+    const order = await db.Order.findByPk(order_id, {
+      include: [{ model: db.OrderItem, as: "items" }],
+    });
     if (!order) return res.status(404).json({ success: false, message: "Order not found" });
 
     const updateData = { order_status };
@@ -733,6 +740,18 @@ const updateOrderStatus = async (req, res) => {
     if (order_status === "delivered" && order.payment_method === "cod") {
       updateData.payment_status = "paid";
       updateData.paid_at        = new Date();
+    }
+
+    // Restore stock when order is cancelled
+    if (order_status === "cancelled") {
+      for (const item of order.items || []) {
+        if (item.product_id) {
+          await db.Product.increment('stock_quantity', {
+            by: item.quantity,
+            where: { product_id: item.product_id }
+          });
+        }
+      }
     }
 
     await order.update(updateData);

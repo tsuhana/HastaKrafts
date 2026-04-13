@@ -965,6 +965,19 @@ const AdminDashboard = () => {
                           <div className="v-field"><label>Account No.</label><p>{safe(seller.bank_account_number)}</p></div>
                           <div className="v-field"><label>Account Name</label><p>{safe(seller.bank_account_name)}</p></div>
                         </div>
+                        {seller.citizenship_image && (
+                        <div className="v-field" style={{ marginTop: 8 }}>
+                     <label>Citizenship Document</label>
+                     <a href={`${API_URL}${seller.citizenship_image}`} target="_blank" rel="noreferrer">
+                     <img
+                      src={`${API_URL}${seller.citizenship_image}`}
+                            alt="Citizenship"
+                            style={{ maxWidth: 220, maxHeight: 130, borderRadius: 8, border: "1px solid #e0d5c5", objectFit: "cover", marginTop: 4, cursor: "pointer" }}
+                        title="Click to open full size"
+                        />
+                      </a>
+                    </div>
+                      )}
                       </div>
                       <div className="v-right">
                         <button className="btn-approve" onClick={() => setConfirmModal({ isOpen: true, type: "approveSeller", id: seller.seller_id })}>Approve</button>
