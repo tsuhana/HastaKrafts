@@ -521,7 +521,7 @@ const endAuctionEarly = async (req, res) => {
     // Auto message to winner from seller
 if (highestBid?.user && auction.seller) {
   db.Message.create({
-    sender_id: auction.seller.seller_id,
+    sender_id: req.user.user_id,
     receiver_id: highestBid.user.user_id,
     auction_id: parseInt(id),
     message_text: `Congratulations! You won the auction for "${auction.title}" with Rs. ${parseFloat(highestBid.bid_amount).toLocaleString()}. Please contact us to arrange payment and delivery.`,

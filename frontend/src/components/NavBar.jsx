@@ -40,6 +40,13 @@ const NavBar = () => {
   }, []);
 
   useEffect(() => {
+  if (!isLoggedIn) return;
+  const handler = () => fetchNotifications();
+  window.addEventListener('notificationUpdate', handler);
+  return () => window.removeEventListener('notificationUpdate', handler);
+}, [isLoggedIn]);
+
+  useEffect(() => {
     const handler = (e) => {
       if (notifRef.current && !notifRef.current.contains(e.target)) {
         setShowNotifDropdown(false);

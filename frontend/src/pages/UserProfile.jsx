@@ -518,12 +518,18 @@ const OrderHistory = ({ t }) => {
   const [page, setPage]                   = useState(1);
 
   useEffect(() => {
+  const loadOrders = () => {
     orderAPI.getMyOrders()
       .then((res) => { if (res.data.success) setOrders(res.data.data || []); })
       .catch((err) => console.error('Orders error:', err))
       .finally(() => setLoading(false));
-  }, []);
+  };
 
+  loadOrders(); // initial fetch
+
+  window.addEventListener('orderUpdated', loadOrders);
+  return () => window.removeEventListener('orderUpdated', loadOrders);
+}, []);
   useEffect(() => { setPage(1); }, [statusFilter, paymentFilter, search, dateRange, sort]);
 
   const statusCounts = useMemo(() => {

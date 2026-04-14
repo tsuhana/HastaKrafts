@@ -291,7 +291,7 @@ const SellerDashboard = () => {
     finally { setAuctionsLoading(false); }
   };
 
-  // ✅ FIX: Instant local state update — no full refetch needed
+  // Instant local state update — no full refetch needed
   const handleStatusChange = async (orderId, newStatus) => {
     try {
       const res = await orderAPI.updateOrderStatus(orderId, { order_status: newStatus });
@@ -304,6 +304,9 @@ const SellerDashboard = () => {
               : item
           )
         );
+        
+      window.dispatchEvent(new CustomEvent('orderUpdated'));
+      window.dispatchEvent(new CustomEvent('notificationUpdate'));
       }
     } catch {
       toast.error("Failed to update order status");
