@@ -750,7 +750,7 @@ const updateOrderStatus = async (req, res) => {
       });
 
       if (buyer) {
-        // ✅ FIX: processing notification added
+        // FIX: processing notification added
         if (order_status === "processing") {
           createNotification(
             buyer.user_id,

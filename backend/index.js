@@ -215,15 +215,14 @@ const autoEndAuctions = async () => {
           { auction_id: auction.auction_id }
         ).catch(() => {});
       }
-            // Auto message to winner from seller
-        if (highestBid?.user && auction.seller?.user) {
+      if (highestBid?.user && auction.seller?.user) {
         await db.Message.create({
          sender_id: auction.seller.user.user_id,
-        receiver_id: highestBid.user.user_id,
-        auction_id: auction.auction_id,
+         receiver_id: highestBid.user.user_id,
+         auction_id: auction.auction_id,
         message_text: `Congratulations! You won the auction for "${auction.title}" with Rs. ${parseFloat(highestBid.bid_amount).toLocaleString()}. Please contact us to arrange payment and delivery.`,
         is_read: false,
-      }).catch(() => {});
+        }).catch((err) => console.error("Auto message error:", err.message));
       }
       //  Push + in-app to seller
       if (auction.seller?.user) {

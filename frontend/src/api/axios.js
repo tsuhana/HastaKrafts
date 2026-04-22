@@ -127,7 +127,7 @@ export const cartAPI = {
 // ORDERS
 export const orderAPI = {
   createOrder: (data) => API.post("/orders/create", data),
-  createAuctionOrder: (data) => API.post("/orders/auction-checkout", data), // ✅ NEW
+  createAuctionOrder: (data) => API.post("/orders/auction-checkout", data), 
   getMyOrders: () => API.get("/orders/my-orders"),
   getOrderById: (id) => API.get(`/orders/${id}`),
   verifyKhaltiPayment: ({ pidx, order_id }) =>

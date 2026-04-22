@@ -73,7 +73,9 @@ const createAuction = async (req, res) => {
         auction_end,
         product_id,
       } = req.body;
-
+      
+      console.log("FULL BODY:", req.body);
+      console.log("auction_end value:", auction_end);
       const seller = await db.Seller.findOne({ where: { user_id: req.user.user_id } });
       if (!seller) {
         return res.status(403).json({ success: false, message: "Only sellers can create auctions" });

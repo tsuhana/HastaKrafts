@@ -536,8 +536,8 @@ const OrderHistory = ({ t }) => {
     const c = { all: orders.length };
     orders.forEach((o) => { const s = o.order_status; c[s] = (c[s] || 0) + 1; });
     return c;
-  }, [orders]);
-
+  }, [orders]); 
+ 
   const filtered = useMemo(() => {
     let list = [...orders];
     if (statusFilter !== 'all') list = list.filter((o) => o.order_status === statusFilter);

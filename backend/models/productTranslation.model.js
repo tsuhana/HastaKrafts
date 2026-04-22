@@ -4,7 +4,7 @@ const sequelize = require("../config/HastaKrafts_db");
 const ProductTranslation = sequelize.define(
   "ProductTranslation",
   {
-    translation_id: {
+    id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
@@ -12,28 +12,23 @@ const ProductTranslation = sequelize.define(
     product_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      references: {
-        model: "products",
-        key: "product_id",
-      },
     },
     language_code: {
-      type: DataTypes.STRING(5),
+      type: DataTypes.STRING(10),
       allowNull: false,
     },
     name: {
-      type: DataTypes.STRING(255),
-      allowNull: false,
+      type: DataTypes.STRING(200),
+      allowNull: true,
     },
     description: {
       type: DataTypes.TEXT,
-      allowNull: false,
+      allowNull: true,
     },
   },
   {
     tableName: "product_translations",
-    timestamps: true,
-    underscored: true,
+    timestamps: false,
   }
 );
 
