@@ -200,13 +200,13 @@ Student ID: 23056364
 Module: CS6P05NI — Final Year Project  
 Institution: Islington College, Kathmandu  
 Affiliation: London Metropolitan University  
-Academic Year: 2024/2025  
+Academic Year: 2026
 
 ---
 
 ##  License
 
-This project was developed as an academic final year project. All rights reserved © 2025 Suhana Thapa.
+This project was developed as an academic final year project. All rights reserved © 2026 Suhana Thapa.
 
 ---
 
